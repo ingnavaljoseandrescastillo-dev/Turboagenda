@@ -5,12 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { LoginSchema, type LoginInput } from '@/lib/validators'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
 
 export function LoginForm() {
   const { login } = useAuth()
+  const { t } = useLanguage()
+  const l = t.login
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -24,21 +27,26 @@ export function LoginForm() {
     try {
       await login(data)
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Erro ao iniciar sessão')
+      setServerError(err instanceof Error ? err.message : l.error)
     }
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold text-zinc-100 mb-1">{l.title}</h1>
+        <p className="text-sm text-zinc-500">{l.subtitle}</p>
+      </div>
+
       <Input
-        label="Email"
+        label={l.email}
         type="email"
         placeholder="seu@email.com"
         error={errors.email?.message}
         {...register('email')}
       />
       <Input
-        label="Senha"
+        label={l.password}
         type="password"
         placeholder="••••••••"
         error={errors.password?.message}
@@ -52,13 +60,13 @@ export function LoginForm() {
       )}
 
       <Button type="submit" loading={isSubmitting} className="w-full mt-2">
-        Entrar
+        {l.submit}
       </Button>
 
       <p className="text-center text-sm text-zinc-500">
-        Não tem conta?{' '}
+        {l.noAccount}{' '}
         <Link href="/register" className="text-emerald-500 hover:text-emerald-400 transition-colors">
-          Registar gratuitamente
+          {l.registerLink}
         </Link>
       </p>
     </form>

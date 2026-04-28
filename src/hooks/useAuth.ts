@@ -37,26 +37,30 @@ export function useAuth() {
   }
 
   async function register({ email, password, businessName, phone }: RegisterInput) {
-    const { data: authData, error: authError } = await supabase.auth.signUp({ email, password })
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: 'https://turboagenda.pt/auth/callback',
+        data: { businessName, phone },
+      },
+    })
     if (authError) throw authError
     if (!authData.user) throw new Error('Erro ao criar utilizador')
 
-    const slug = slugify(businessName) + '-' + Math.random().toString(36).slice(2, 6)
+    // No session means email confirmation is pending — business will be created at /auth/callback
+    if (!authData.session) return 'confirmation_required' as const
 
-    const { data: business, error: bizError } = await supabase
+    // Email confirmation disabled (local dev) — create business immediately
+    const slug = slugify(businessName) + '-' + Math.random().toString(36).slice(2, 6)
+    const { error: bizError } = await supabase
       .from('businesses')
       .insert({ name: businessName, slug, phone, owner_id: authData.user.id })
-      .select()
-      .single()
-
     if (bizError) throw bizError
-
-    await supabase
-      .from('business_owners')
-      .insert({ user_id: authData.user.id, business_id: business.id })
 
     router.push('/dashboard')
     router.refresh()
+    return 'redirected' as const
   }
 
   async function logout() {

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { LanguageProvider } from '@/contexts/LanguageContext'
 
 export const metadata: Metadata = {
   title: 'TurboAgenda — Agenda Online para Negócios',
@@ -11,7 +12,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="pt" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-zinc-950 text-zinc-100" style={{ fontFamily: "'Outfit', -apple-system, sans-serif" }}>
         {/* Google Fonts loaded via CSS @import in globals.css */}
-        {children}
+        <LanguageProvider>
+          {children}
+        </LanguageProvider>
       </body>
     </html>
   )

@@ -1,7 +1,13 @@
+'use client'
+
 import type { ReactNode } from 'react'
 import { Logo } from '@/components/ui/Logo'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
+  const { t } = useLanguage()
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative overflow-hidden">
       {/* Background glow */}
@@ -14,7 +20,10 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           <div className="flex justify-center mb-3">
             <Logo size="lg" />
           </div>
-          <p className="text-sm text-zinc-500">Agenda online para o seu negócio</p>
+          <p className="text-sm text-zinc-500">{t.auth.tagline}</p>
+          <div className="flex justify-center mt-3">
+            <LanguageSwitcher />
+          </div>
         </div>
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 backdrop-blur p-8 shadow-2xl">

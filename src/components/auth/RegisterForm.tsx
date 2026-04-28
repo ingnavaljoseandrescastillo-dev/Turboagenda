@@ -5,13 +5,17 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { RegisterSchema, type RegisterInput } from '@/lib/validators'
 import { useAuth } from '@/hooks/useAuth'
+import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
 
 export function RegisterForm() {
   const { register: registerUser } = useAuth()
+  const { t } = useLanguage()
+  const r = t.register
   const [serverError, setServerError] = useState<string | null>(null)
+  const [emailSent, setEmailSent] = useState(false)
 
   const {
     register,
@@ -22,39 +26,56 @@ export function RegisterForm() {
   async function onSubmit(data: RegisterInput) {
     setServerError(null)
     try {
-      await registerUser(data)
+      const result = await registerUser(data)
+      if (result === 'confirmation_required') setEmailSent(true)
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Erro ao criar conta')
+      setServerError(err instanceof Error ? err.message : r.error)
     }
+  }
+
+  if (emailSent) {
+    return (
+      <div className="text-center space-y-4 py-4">
+        <div className="text-5xl">📧</div>
+        <h2 className="font-semibold text-zinc-100">{r.emailSentTitle}</h2>
+        <p className="text-sm text-zinc-400 whitespace-pre-line">{r.emailSentDesc}</p>
+        <p className="text-xs text-zinc-600">{r.emailSentClose}</p>
+      </div>
+    )
   }
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+      <div className="mb-2">
+        <h1 className="text-2xl font-bold text-zinc-100 mb-1">{r.title}</h1>
+        <p className="text-sm text-zinc-500">{r.subtitle}</p>
+      </div>
+
       <Input
-        label="Nome do Negócio"
+        label={r.businessName}
         type="text"
-        placeholder="Ex: Salão da Maria"
+        placeholder={r.businessNamePlaceholder}
         error={errors.businessName?.message}
         {...register('businessName')}
       />
       <Input
-        label="Telefone"
+        label={r.phone}
         type="tel"
-        placeholder="+351 912 345 678"
+        placeholder={r.phonePlaceholder}
         error={errors.phone?.message}
         {...register('phone')}
       />
       <Input
-        label="Email"
+        label={r.email}
         type="email"
         placeholder="seu@email.com"
         error={errors.email?.message}
         {...register('email')}
       />
       <Input
-        label="Senha"
+        label={r.password}
         type="password"
-        placeholder="Mínimo 6 caracteres"
+        placeholder={r.passwordPlaceholder}
         error={errors.password?.message}
         {...register('password')}
       />
@@ -66,17 +87,15 @@ export function RegisterForm() {
       )}
 
       <Button type="submit" loading={isSubmitting} className="w-full mt-2">
-        Criar conta — 30 dias grátis
+        {r.submit}
       </Button>
 
-      <p className="text-center text-xs text-zinc-500">
-        Sem cartão de crédito. Cancele quando quiser.
-      </p>
+      <p className="text-center text-xs text-zinc-500">{r.noCard}</p>
 
       <p className="text-center text-sm text-zinc-500">
-        Já tem conta?{' '}
+        {r.hasAccount}{' '}
         <Link href="/login" className="text-emerald-500 hover:text-emerald-400 transition-colors">
-          Iniciar sessão
+          {r.loginLink}
         </Link>
       </p>
     </form>
