@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -52,6 +53,7 @@ function EmployeeForm({
 }
 
 export default function TeamPage() {
+  const router = useRouter()
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -64,11 +66,25 @@ export default function TeamPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/employees')
-    const json = await res.json()
-    setEmployees(json.data ?? [])
-    setLoading(false)
-  }, [])
+    setError(null)
+    try {
+      const res = await fetch('/api/employees')
+      const json = await res.json()
+      if (res.status === 404) {
+        router.replace('/dashboard/onboarding')
+        return
+      }
+      if (!res.ok) {
+        console.error('[Team] load failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel carregar colaboradores.')
+      }
+      setEmployees(json.data ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar colaboradores.')
+    } finally {
+      setLoading(false)
+    }
+  }, [router])
 
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
@@ -83,7 +99,11 @@ export default function TeamPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Team] create failed', j.error)
+        throw new Error(j.error)
+      }
       setShowCreate(false)
       await load()
     } catch (err) {
@@ -100,7 +120,11 @@ export default function TeamPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Team] update failed', j.error)
+        throw new Error(j.error)
+      }
       setEditing(null)
       await load()
     } catch (err) {
@@ -112,9 +136,16 @@ export default function TeamPage() {
     if (!deleting) return
     setSaving(true)
     try {
-      await fetch(`/api/employees/${deleting.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/employees/${deleting.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Team] delete failed', j.error)
+        throw new Error(j.error)
+      }
       setDeleting(null)
       await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro')
     } finally { setSaving(false) }
   }
 

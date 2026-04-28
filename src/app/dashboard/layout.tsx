@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { getBusinessForUser } from '@/lib/api-helpers'
 import { Sidebar } from '@/components/dashboard/Sidebar'
 import { TopNav } from '@/components/dashboard/TopNav'
 import type { ReactNode } from 'react'
@@ -10,13 +11,8 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   if (!user) redirect('/login')
 
-  const { data: ownerData } = await supabase
-    .from('business_owners')
-    .select('businesses(name)')
-    .eq('user_id', user.id)
-    .single()
-
-  const businessName = (ownerData?.businesses as unknown as { name: string } | null)?.name
+  const business = await getBusinessForUser(supabase, user.id)
+  const businessName = business?.name
 
   return (
     <div className="flex h-screen overflow-hidden bg-zinc-950">

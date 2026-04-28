@@ -46,9 +46,22 @@ export const BusinessSettingsSchema = z.object({
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug só pode conter letras minúsculas, números e hífens'),
 })
 
+export const BusinessCreateSchema = z.object({
+  name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
+  phone: z.string().optional(),
+  address: z.string().optional(),
+  description: z.string().optional(),
+  slug: z
+    .string()
+    .min(2)
+    .regex(/^[a-z0-9-]+$/, 'Slug só pode conter letras minúsculas, números e hífens')
+    .optional(),
+})
+
 export type LoginInput = z.infer<typeof LoginSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type AppointmentInput = z.infer<typeof AppointmentSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
+export type BusinessCreateInput = z.infer<typeof BusinessCreateSchema>

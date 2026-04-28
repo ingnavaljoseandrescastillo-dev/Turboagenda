@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getBusinessForUser } from '@/lib/api-helpers'
 import { redirect } from 'next/navigation'
 import { AppointmentCard } from '@/components/dashboard/AppointmentCard'
 import { Calendar } from '@/components/dashboard/Calendar'
@@ -10,13 +11,8 @@ async function getDashboardData() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: ownerData } = await supabase
-    .from('business_owners')
-    .select('business_id')
-    .eq('user_id', user.id)
-    .single()
-
-  if (!ownerData) return { appointments: [], metrics: null }
+  const business = await getBusinessForUser(supabase, user.id)
+  if (!business) redirect('/dashboard/onboarding')
 
   const todayStart = startOfDay(new Date()).toISOString()
   const todayEnd = endOfDay(new Date()).toISOString()
@@ -24,7 +20,7 @@ async function getDashboardData() {
   const { data } = await supabase
     .from('appointments')
     .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
-    .eq('business_id', ownerData.business_id)
+    .eq('business_id', business.id)
     .gte('start_time', todayStart)
     .lte('start_time', todayEnd)
     .order('start_time')

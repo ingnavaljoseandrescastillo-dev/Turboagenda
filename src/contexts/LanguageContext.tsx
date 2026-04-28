@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import { createContext, useContext, useState, type ReactNode } from 'react'
 import { translations, type Locale } from '@/i18n/translations'
 
 interface LanguageContextValue {
@@ -12,12 +12,11 @@ interface LanguageContextValue {
 const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>('pt')
-
-  useEffect(() => {
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    if (typeof window === 'undefined') return 'pt'
     const stored = localStorage.getItem('ta_locale') as Locale | null
-    if (stored && stored in translations) setLocaleState(stored)
-  }, [])
+    return stored && stored in translations ? stored : 'pt'
+  })
 
   function setLocale(l: Locale) {
     setLocaleState(l)
