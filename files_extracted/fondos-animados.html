@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fondos Animados — TurboAgenda</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Bricolage+Grotesque:wght@700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0a0a0b;
+    color: #f4f4f5;
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 30px 14px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  
+  .header { text-align:center; margin-bottom: 40px; }
+  .header h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6ee7b7, #34d399, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  .header p { color: #71717a; font-size: 0.9rem; }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px;
+  }
+  
+  .demo {
+    position: relative;
+    height: 280px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 1px solid #27272a;
+    background: #0a0a0b;
+  }
+  
+  .demo-content {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+  }
+  
+  .demo-number {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 0.7rem;
+    color: #34d399;
+    font-weight: 700;
+    letter-spacing: 1px;
+    z-index: 20;
+    background: rgba(0,0,0,0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+  }
+  
+  .demo-title {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 1.6rem;
+    font-weight: 800;
+    margin-bottom: 6px;
+    color: #fafafa;
+  }
+  .demo-desc {
+    font-size: 0.85rem;
+    color: #a1a1aa;
+    max-width: 340px;
+  }
+  
+  .info {
+    padding: 14px 18px;
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-top: 0;
+    border-radius: 0 0 20px 20px;
+    margin-top: -20px;
+    padding-top: 28px;
+    font-size: 0.85rem;
+  }
+  .info-name { color: #34d399; font-weight: 600; margin-bottom: 4px; }
+  .info-desc { color: #71717a; font-size: 0.8rem; }
+  
+  /* ============================================ */
+  /* === FONDO 1: GRADIENT MESH ANIMADO         === */
+  /* ============================================ */
+  .bg-1 {
+    background: #0a0a0b;
+  }
+  .bg-1::before, .bg-1::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+  }
+  .bg-1::before {
+    width: 300px; height: 300px;
+    background: #34d39955;
+    top: -50px; left: -50px;
+    animation: mesh1 8s ease-in-out infinite;
+  }
+  .bg-1::after {
+    width: 250px; height: 250px;
+    background: #10b98166;
+    bottom: -50px; right: -50px;
+    animation: mesh2 10s ease-in-out infinite;
+  }
+  @keyframes mesh1 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(80px, 50px) scale(1.2); }
+  }
+  @keyframes mesh2 {
+    0%, 100% { transform: translate(0,0) scale(1); }
+    50% { transform: translate(-60px, -40px) scale(1.1); }
+  }
+  
+  /* ============================================ */
+  /* === FONDO 2: GRID + SCAN LINE             === */
+  /* ============================================ */
+  .bg-2 {
+    background: 
+      linear-gradient(#34d39908 1px, transparent 1px),
+      linear-gradient(90deg, #34d39908 1px, transparent 1px),
+      #0a0a0b;
+    background-size: 30px 30px;
+  }
+  .bg-2::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(transparent 0%, transparent 49%, #34d39950 50%, transparent 51%, transparent 100%);
+    background-size: 100% 200px;
+    animation: scan 4s linear infinite;
+  }
+  .bg-2::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 50% 50%, transparent 0%, #0a0a0bcc 100%);
+  }
+  @keyframes scan {
+    0% { background-position: 0 -200px; }
+    100% { background-position: 0 100%; }
+  }
+  
+  /* ============================================ */
+  /* === FONDO 3: PARTÍCULAS FLOTANTES         === */
+  /* ============================================ */
+  .bg-3 {
+    background: radial-gradient(ellipse at center, #052e1640 0%, #0a0a0b 70%);
+  }
+  .particle {
+    position: absolute;
+    width: 4px; height: 4px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 12px #34d399;
+  }
+  .particle:nth-child(1) { top: 20%; left: 15%; animation: float1 6s ease-in-out infinite; }
+  .particle:nth-child(2) { top: 60%; left: 25%; animation: float2 7s ease-in-out infinite; opacity: 0.6; }
+  .particle:nth-child(3) { top: 30%; left: 70%; animation: float3 5s ease-in-out infinite; }
+  .particle:nth-child(4) { top: 75%; left: 80%; animation: float1 8s ease-in-out infinite reverse; opacity: 0.7; }
+  .particle:nth-child(5) { top: 45%; left: 50%; animation: float2 6.5s ease-in-out infinite; opacity: 0.5; }
+  .particle:nth-child(6) { top: 15%; left: 85%; animation: float3 7.5s ease-in-out infinite; opacity: 0.8; }
+  .particle:nth-child(7) { top: 85%; left: 10%; animation: float1 5.5s ease-in-out infinite; opacity: 0.4; }
+  .particle:nth-child(8) { top: 50%; left: 90%; animation: float2 9s ease-in-out infinite; }
+  .particle.big { width: 6px; height: 6px; }
+  .particle.small { width: 2px; height: 2px; box-shadow: 0 0 6px #6ee7b7; }
+  @keyframes float1 {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(20px, -30px); }
+  }
+  @keyframes float2 {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(-25px, 20px); }
+  }
+  @keyframes float3 {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(15px, 25px); }
+  }
+  
+  /* ============================================ */
+  /* === FONDO 4: AURORA WAVES                  === */
+  /* ============================================ */
+  .bg-4 {
+    background: #0a0a0b;
+    position: relative;
+  }
+  .aurora {
+    position: absolute;
+    width: 200%;
+    height: 100%;
+    top: 0; left: -50%;
+    background: 
+      radial-gradient(ellipse 800px 200px at 30% 50%, #34d39940, transparent 50%),
+      radial-gradient(ellipse 600px 150px at 70% 60%, #6ee7b730, transparent 50%),
+      radial-gradient(ellipse 700px 180px at 50% 40%, #10b98135, transparent 50%);
+    animation: aurora 12s ease-in-out infinite;
+    filter: blur(20px);
+  }
+  @keyframes aurora {
+    0%, 100% { transform: translateX(0) translateY(0) rotate(0deg); }
+    33% { transform: translateX(-50px) translateY(20px) rotate(2deg); }
+    66% { transform: translateX(50px) translateY(-20px) rotate(-2deg); }
+  }
+  
+  /* ============================================ */
+  /* === FONDO 5: GRID PERSPECTIVA (3D)         === */
+  /* ============================================ */
+  .bg-5 {
+    background: linear-gradient(180deg, #0a0a0b 0%, #052e16 100%);
+    perspective: 800px;
+  }
+  .grid-perspective {
+    position: absolute;
+    bottom: -30%;
+    left: -20%;
+    right: -20%;
+    height: 80%;
+    background: 
+      linear-gradient(#34d39933 1px, transparent 1px),
+      linear-gradient(90deg, #34d39933 1px, transparent 1px);
+    background-size: 50px 50px;
+    transform: rotateX(60deg);
+    animation: gridMove 8s linear infinite;
+  }
+  @keyframes gridMove {
+    0% { background-position: 0 0; }
+    100% { background-position: 0 50px; }
+  }
+  .bg-5::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, #0a0a0b 0%, transparent 30%, transparent 60%, #0a0a0b 100%);
+  }
+  
+  /* ============================================ */
+  /* === FONDO 6: ORBES GLOWING                 === */
+  /* ============================================ */
+  .bg-6 {
+    background: #0a0a0b;
+    overflow: hidden;
+  }
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.6;
+  }
+  .orb-1 {
+    width: 200px; height: 200px;
+    background: #34d399;
+    top: -50px; left: 20%;
+    animation: orb1 10s ease-in-out infinite;
+  }
+  .orb-2 {
+    width: 250px; height: 250px;
+    background: #6ee7b7;
+    bottom: -80px; right: 15%;
+    animation: orb2 12s ease-in-out infinite;
+    opacity: 0.4;
+  }
+  .orb-3 {
+    width: 150px; height: 150px;
+    background: #10b981;
+    top: 40%; left: 60%;
+    animation: orb3 8s ease-in-out infinite;
+    opacity: 0.5;
+  }
+  @keyframes orb1 {
+    0%, 100% { transform: translate(0,0); }
+    33% { transform: translate(80px, 60px); }
+    66% { transform: translate(-50px, 100px); }
+  }
+  @keyframes orb2 {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(-100px, -80px); }
+  }
+  @keyframes orb3 {
+    0%, 100% { transform: translate(0,0); }
+    33% { transform: translate(-70px, -50px); }
+    66% { transform: translate(60px, -30px); }
+  }
+  
+  /* ============================================ */
+  
+  .footer {
+    text-align: center;
+    margin-top: 30px;
+    padding: 20px;
+    background: linear-gradient(135deg, #052e1640, #18181b);
+    border: 1px solid #34d39933;
+    border-radius: 16px;
+    color: #d4d4d8;
+    font-size: 0.9rem;
+  }
+  .footer strong { color: #34d399; }
+</style>
+</head>
+<body>
+<div class="container">
+  
+  <div class="header">
+    <h1>Fondos Animados</h1>
+    <p>6 estilos · elige el que más te guste</p>
+  </div>
+  
+  <div class="grid">
+    
+    <!-- 1. GRADIENT MESH -->
+    <div>
+      <div class="demo bg-1">
+        <div class="demo-number">01</div>
+        <div class="demo-content">
+          <div class="demo-title">Gradient Mesh</div>
+          <div class="demo-desc">Manchas de color que flotan suavemente</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">✨ Suave y orgánico</div>
+        <div class="info-desc">Estilo Stripe/Linear. Movimiento muy lento, elegante. Funciona en cualquier sección.</div>
+      </div>
+    </div>
+    
+    <!-- 2. GRID + SCAN -->
+    <div>
+      <div class="demo bg-2">
+        <div class="demo-number">02</div>
+        <div class="demo-content">
+          <div class="demo-title">Grid Tech</div>
+          <div class="demo-desc">Cuadrícula con barra de escaneo</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">⚡ Tech / Digital</div>
+        <div class="info-desc">Estilo cyberpunk minimalista. Transmite tecnología y precisión. Genial para landing.</div>
+      </div>
+    </div>
+    
+    <!-- 3. PARTÍCULAS -->
+    <div>
+      <div class="demo bg-3">
+        <div class="demo-number">03</div>
+        <span class="particle big"></span>
+        <span class="particle"></span>
+        <span class="particle small"></span>
+        <span class="particle"></span>
+        <span class="particle big"></span>
+        <span class="particle small"></span>
+        <span class="particle"></span>
+        <span class="particle big"></span>
+        <div class="demo-content">
+          <div class="demo-title">Partículas Flotantes</div>
+          <div class="demo-desc">Puntos brillantes que flotan</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">🌟 Mágico / Premium</div>
+        <div class="info-desc">Cada punto se mueve independiente. Da sensación de vida y movimiento sutil.</div>
+      </div>
+    </div>
+    
+    <!-- 4. AURORA -->
+    <div>
+      <div class="demo bg-4">
+        <div class="demo-number">04</div>
+        <div class="aurora"></div>
+        <div class="demo-content">
+          <div class="demo-title">Aurora Waves</div>
+          <div class="demo-desc">Ondas de luz como aurora boreal</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">🌌 Cinemático / WOW</div>
+        <div class="info-desc">Muy llamativo. Estilo Apple Vision / Linear. Se mueve lento y profundo, premium.</div>
+      </div>
+    </div>
+    
+    <!-- 5. GRID PERSPECTIVA -->
+    <div>
+      <div class="demo bg-5">
+        <div class="demo-number">05</div>
+        <div class="grid-perspective"></div>
+        <div class="demo-content">
+          <div class="demo-title">Grid 3D</div>
+          <div class="demo-desc">Cuadrícula en perspectiva infinita</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">🚀 Futurista / Tron</div>
+        <div class="info-desc">Sensación de velocidad y profundidad. Muy bold. Ideal solo para hero, no toda la página.</div>
+      </div>
+    </div>
+    
+    <!-- 6. ORBES -->
+    <div>
+      <div class="demo bg-6">
+        <div class="demo-number">06</div>
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+        <div class="demo-content">
+          <div class="demo-title">Orbes Glowing</div>
+          <div class="demo-desc">Esferas de luz que se mueven</div>
+        </div>
+      </div>
+      <div class="info">
+        <div class="info-name">💫 Moderno / Vercel-style</div>
+        <div class="info-desc">Tendencia 2026. Movimiento amplio, muy aireado. Combina con dashboards y landing.</div>
+      </div>
+    </div>
+    
+  </div>
+  
+  <div class="footer">
+    Dime el número que más te guste y lo aplico al prototipo. <strong>Puedes combinar 2</strong> (uno para landing y otro para dashboards) si quieres.
+  </div>
+  
+</div>
+</body>
+</html>

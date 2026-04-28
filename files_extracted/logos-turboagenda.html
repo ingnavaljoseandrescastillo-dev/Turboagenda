@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Logos TurboAgenda</title>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&family=Bricolage+Grotesque:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: #0a0a0b;
+    color: #f4f4f5;
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .header { text-align:center; margin-bottom: 50px; }
+  .header h1 {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #6ee7b7, #34d399, #10b981);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 10px;
+  }
+  .header p { color: #71717a; font-size: 1rem; }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+  }
+  
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+  
+  .logo-card {
+    background: #18181b;
+    border: 1px solid #27272a;
+    border-radius: 20px;
+    padding: 40px 30px;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .logo-card:hover { border-color: #34d39955; transform: translateY(-2px); }
+  .logo-card .number {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    font-size: 0.7rem;
+    color: #34d399;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  .logo-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 90px;
+    margin-bottom: 20px;
+  }
+  .logo-name {
+    color: #a1a1aa;
+    font-size: 0.85rem;
+    text-align: center;
+    font-weight: 500;
+  }
+  .logo-desc {
+    color: #52525b;
+    font-size: 0.75rem;
+    text-align: center;
+    margin-top: 6px;
+  }
+  
+  /* === LOGO 1: Rayo geométrico + Outfit === */
+  .l1-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #6ee7b7, #10b981);
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 24px -8px #10b98166;
+  }
+  .l1-icon svg { width: 28px; height: 28px; color: #052e16; }
+  .l1-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    letter-spacing: -0.03em;
+    color: #fafafa;
+  }
+  .l1-text span { color: #34d399; }
+
+  /* === LOGO 2: Calendario con check === */
+  .l2-icon {
+    width: 56px; height: 56px;
+    background: #0a0a0b;
+    border: 2px solid #34d399;
+    border-radius: 14px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .l2-icon::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 8px;
+    background: #34d399;
+    border-radius: 12px 12px 0 0;
+  }
+  .l2-icon svg { width: 22px; height: 22px; color: #34d399; margin-top: 6px; }
+  .l2-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    color: #fafafa;
+  }
+  .l2-text span { color: #34d399; font-weight: 500; }
+
+  /* === LOGO 3: Rayo + Calendario fusionados === */
+  .l3-icon {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, #34d399, #059669);
+    border-radius: 16px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 1px 0 #6ee7b7, 0 6px 20px -6px #10b98180;
+  }
+  .l3-icon::before {
+    content: '';
+    position: absolute;
+    top: 5px; left: 50%; transform: translateX(-50%);
+    width: 30px; height: 3px;
+    background: #052e16;
+    border-radius: 2px;
+    opacity: 0.4;
+  }
+  .l3-icon svg { width: 26px; height: 26px; color: #052e16; }
+  .l3-text {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 800;
+    font-size: 1.6rem;
+    letter-spacing: -0.04em;
+    color: #fafafa;
+  }
+  .l3-text span { color: #6ee7b7; }
+
+  /* === LOGO 4: T estilizada con rayo === */
+  .l4-icon {
+    width: 56px; height: 56px;
+    background: linear-gradient(135deg, #d1fae5, #34d399);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .l4-icon span {
+    font-family: 'Bricolage Grotesque', sans-serif;
+    font-weight: 900;
+    font-size: 2rem;
+    color: #052e16;
+    line-height: 1;
+    transform: skewX(-8deg);
+  }
+  .l4-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.55rem;
+    letter-spacing: -0.03em;
+    color: #fafafa;
+  }
+  .l4-text span { color: #6ee7b7; font-weight: 400; }
+
+  /* === LOGO 5: Círculo con anillo (reloj minimalista) === */
+  .l5-icon {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    border: 3px solid #34d399;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .l5-icon::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 50%;
+    width: 2px; height: 18px;
+    background: #34d399;
+    transform: translateX(-50%);
+    border-radius: 2px;
+  }
+  .l5-icon::after {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 14px; height: 2px;
+    background: #6ee7b7;
+    transform: translate(-2px, -50%);
+    border-radius: 2px;
+  }
+  .l5-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+    color: #fafafa;
+  }
+  .l5-text span { color: #34d399; }
+  
+  /* === LOGO 6: Cuadrado con punto + wordmark abajo === */
+  .l6-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .l6-icon {
+    width: 64px; height: 64px;
+    background: #052e16;
+    border: 2px solid #34d399;
+    border-radius: 18px;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .l6-icon::before {
+    content: '';
+    width: 18px; height: 18px;
+    background: #34d399;
+    border-radius: 50%;
+    box-shadow: 0 0 20px #34d399;
+  }
+  .l6-icon::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; right: -4px;
+    width: 12px; height: 12px;
+    background: #6ee7b7;
+    border: 2px solid #18181b;
+    border-radius: 50%;
+  }
+  .l6-text {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 1.4rem;
+    letter-spacing: 0.02em;
+    color: #fafafa;
+    text-transform: uppercase;
+  }
+  .l6-text span { color: #34d399; }
+  
+  .footer {
+    text-align: center;
+    margin-top: 40px;
+    color: #52525b;
+    font-size: 0.85rem;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Propuestas de Logo</h1>
+    <p>6 conceptos en verde menta · elige tu favorito</p>
+  </div>
+  
+  <div class="grid">
+    
+    <!-- LOGO 1 -->
+    <div class="logo-card">
+      <div class="number">01</div>
+      <div class="logo-display">
+        <div class="l1-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <div class="l1-text">Turbo<span>Agenda</span></div>
+      </div>
+      <div class="logo-name">Rayo Sólido</div>
+      <div class="logo-desc">Velocidad, energía, moderno</div>
+    </div>
+    
+    <!-- LOGO 2 -->
+    <div class="logo-card">
+      <div class="number">02</div>
+      <div class="logo-display">
+        <div class="l2-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <div class="l2-text">turbo<span>agenda</span></div>
+      </div>
+      <div class="logo-name">Calendario Check</div>
+      <div class="logo-desc">Confianza, organización, profesional</div>
+    </div>
+    
+    <!-- LOGO 3 -->
+    <div class="logo-card">
+      <div class="number">03</div>
+      <div class="logo-display">
+        <div class="l3-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2L3 14h7l-1 8 10-12h-7l1-8z"/></svg>
+        </div>
+        <div class="l3-text">Turbo<span>Agenda</span></div>
+      </div>
+      <div class="logo-name">Rayo + Calendario</div>
+      <div class="logo-desc">Combinación bold, premium</div>
+    </div>
+    
+    <!-- LOGO 4 -->
+    <div class="logo-card">
+      <div class="number">04</div>
+      <div class="logo-display">
+        <div class="l4-icon">
+          <span>T</span>
+        </div>
+        <div class="l4-text">Turbo<span>Agenda</span></div>
+      </div>
+      <div class="logo-name">T Itálica</div>
+      <div class="logo-desc">Minimalista, dinámico, memorable</div>
+    </div>
+    
+    <!-- LOGO 5 -->
+    <div class="logo-card">
+      <div class="number">05</div>
+      <div class="logo-display">
+        <div class="l5-icon"></div>
+        <div class="l5-text">Turbo<span>Agenda</span></div>
+      </div>
+      <div class="logo-name">Reloj Lineal</div>
+      <div class="logo-desc">Tiempo, simplicidad, elegante</div>
+    </div>
+    
+    <!-- LOGO 6 -->
+    <div class="logo-card">
+      <div class="number">06</div>
+      <div class="logo-display">
+        <div class="l6-icon"></div>
+        <div class="l6-text">Turbo<span>Agenda</span></div>
+      </div>
+      <div class="logo-name">Punto Activo</div>
+      <div class="logo-desc">Tech-startup, distintivo, moderno</div>
+    </div>
+    
+  </div>
+  
+  <div class="footer">
+    Dime el número de tu favorito · podemos ajustar colores, formas o tipografía
+  </div>
+</div>
+</body>
+</html>

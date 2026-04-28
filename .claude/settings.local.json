@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(python -c \"import zipfile; z=zipfile.ZipFile\\('files.zip'\\); print\\('\\\\n'.join\\(z.namelist\\(\\)\\)\\)\")",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)"
+    ]
+  }
+}
