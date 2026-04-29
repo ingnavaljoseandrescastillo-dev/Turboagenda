@@ -93,6 +93,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
     .single()
 
   if (!business) notFound()
+  if (business.is_paused) notFound()
 
   const [{ data: services }, { data: reviews }, { data: employees }] = await Promise.all([
     supabase.from('services').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
