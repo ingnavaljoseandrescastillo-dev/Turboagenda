@@ -43,7 +43,7 @@ export function BookingForm({ businessId, serviceId, employeeId, startTime, onSu
           business_id: businessId,
           service_id: serviceId,
           employee_id: employeeId,
-          start_time: startTime,
+          start_time: new Date(startTime).toISOString(),
           ...data,
         }),
       })

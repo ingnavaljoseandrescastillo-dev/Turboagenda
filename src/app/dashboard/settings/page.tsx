@@ -160,7 +160,7 @@ export default function SettingsPage() {
           <Input
             label="Slug (URL publica)"
             value={form.slug}
-            helper={`turboagenda.com/b/${form.slug}`}
+            helper={`https://turboagenda.pt/b/${form.slug}`}
             onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
           />
           <Input

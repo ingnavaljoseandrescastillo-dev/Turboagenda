@@ -21,8 +21,8 @@ export function useAvailability() {
     try {
       const query = new URLSearchParams(params as unknown as Record<string, string>).toString()
       const res = await fetch(`/api/availability?${query}`)
-      if (!res.ok) throw new Error('Erro ao carregar horários')
       const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Erro ao carregar horarios')
       setSlots(json.data?.slots ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro desconhecido')
