@@ -24,17 +24,17 @@ export function TopNav({ user, businessName, dateLabel }: TopNavProps) {
   const displayName = businessName ?? user?.email ?? ''
 
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur-xl px-6">
-      <div>
+    <header className="sticky top-0 z-10 flex h-16 items-center justify-between gap-3 border-b border-zinc-800/60 bg-zinc-950/80 px-4 backdrop-blur-xl md:px-6">
+      <div className="min-w-0">
         <h1
-          className="text-xl font-bold text-zinc-100"
+          className="truncate text-lg font-bold text-zinc-100 md:text-xl"
           style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}
         >
           {title}
         </h1>
         {dateLabel && <p className="text-xs text-zinc-500 mt-0.5">{dateLabel}</p>}
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex flex-shrink-0 items-center gap-3">
         {businessName && (
           <span className="text-sm text-zinc-500 hidden sm:block">{businessName}</span>
         )}

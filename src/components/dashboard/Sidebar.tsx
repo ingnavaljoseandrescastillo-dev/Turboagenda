@@ -65,7 +65,7 @@ export function Sidebar({ businessName, plan = 'Plus' }: SidebarProps) {
   const { logout } = useAuth()
 
   return (
-    <aside className="flex h-full w-56 flex-col border-r border-zinc-800 bg-zinc-900">
+    <aside className="hidden h-full w-56 flex-col border-r border-zinc-800 bg-zinc-900 md:flex">
       <div className="px-4 py-5 border-b border-zinc-800">
         <Logo size="md" />
       </div>
@@ -116,5 +116,37 @@ export function Sidebar({ businessName, plan = 'Plus' }: SidebarProps) {
         </button>
       </div>
     </aside>
+  )
+}
+
+export function MobileBottomNav() {
+  const pathname = usePathname()
+
+  return (
+    <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-zinc-800 bg-zinc-950/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur-xl md:hidden">
+      <div className="grid grid-cols-5 gap-1">
+        {navItems.map((item) => {
+          const isActive = item.href === '/dashboard'
+            ? pathname === '/dashboard'
+            : pathname.startsWith(item.href)
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                'flex min-w-0 flex-col items-center justify-center gap-1 rounded-lg px-1 py-2 text-[10px] font-semibold',
+                isActive
+                  ? 'bg-emerald-500/10 text-emerald-400'
+                  : 'text-zinc-500 hover:text-zinc-200'
+              )}
+            >
+              {item.icon}
+              <span className="max-w-full truncate">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
   )
 }
