@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getBusinessForUser } from '@/lib/api-helpers'
-import { Sidebar } from '@/components/dashboard/Sidebar'
+import { MobileBottomNav, Sidebar } from '@/components/dashboard/Sidebar'
 import { TopNav } from '@/components/dashboard/TopNav'
 import type { ReactNode } from 'react'
 
@@ -15,14 +15,15 @@ export default async function DashboardLayout({ children }: { children: ReactNod
   const businessName = business?.name
 
   return (
-    <div className="flex h-screen overflow-hidden bg-zinc-950">
+    <div className="flex min-h-screen bg-zinc-950 md:h-screen md:overflow-hidden">
       <Sidebar businessName={businessName} plan="Plus" />
-      <div className="flex flex-1 flex-col overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
         <TopNav user={user} businessName={businessName} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main className="flex-1 overflow-y-auto p-4 pb-24 md:p-6 md:pb-6">
           {children}
         </main>
       </div>
+      <MobileBottomNav />
     </div>
   )
 }
