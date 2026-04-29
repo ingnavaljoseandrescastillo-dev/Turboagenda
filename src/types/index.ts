@@ -16,6 +16,7 @@ export interface BusinessSettings {
   closing_time: string
   slot_duration_minutes: number
   working_days: number[]
+  max_booking_days: number
 }
 
 export interface BusinessOwner {
