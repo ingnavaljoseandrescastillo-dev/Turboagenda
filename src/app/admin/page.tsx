@@ -28,12 +28,22 @@ type BusinessRow = {
   appointments: { id: string; start_time: string; status: string }[]
 }
 
+type AdminSearchParams = {
+  q?: string
+  status?: string
+  plan?: string
+}
+
 function formatDate(value?: string | null) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'medium' }).format(new Date(value))
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({ searchParams }: { searchParams?: Promise<AdminSearchParams> }) {
+  const filters = (await searchParams) ?? {}
+  const query = filters.q?.trim().toLowerCase() ?? ''
+  const statusFilter = filters.status ?? 'all'
+  const planFilter = filters.plan ?? 'all'
   const { supabase, user } = await requirePlatformAdmin()
 
   const { data, error } = await supabase
@@ -72,6 +82,21 @@ export default async function AdminPage() {
       ? business.subscriptions[0] ?? null
       : business.subscriptions,
   }))
+  const filteredBusinesses = businesses.filter((business) => {
+    const subscription = business.subscriptions
+    const matchesQuery =
+      !query ||
+      business.name.toLowerCase().includes(query) ||
+      business.slug.toLowerCase().includes(query) ||
+      (business.phone ?? '').toLowerCase().includes(query)
+    const matchesStatus =
+      statusFilter === 'all' ||
+      (statusFilter === 'paused' ? business.is_paused : subscription?.status === statusFilter)
+    const matchesPlan = planFilter === 'all' || subscription?.plan === planFilter
+
+    return matchesQuery && matchesStatus && matchesPlan
+  })
+
   const total = businesses.length
   const paused = businesses.filter((business) => business.is_paused).length
   const activeSubscriptions = businesses.filter((business) => business.subscriptions?.status === 'active').length
@@ -119,9 +144,51 @@ export default async function AdminPage() {
         </section>
 
         <section className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
-          <div className="border-b border-zinc-800 px-4 py-3">
-            <h2 className="font-bold text-zinc-100">Negocios registrados</h2>
-            <p className="text-sm text-zinc-500">Control manual de planes, pausas y estado de cuenta.</p>
+          <div className="space-y-4 border-b border-zinc-800 px-4 py-4">
+            <div>
+              <h2 className="font-bold text-zinc-100">Negocios registrados</h2>
+              <p className="text-sm text-zinc-500">Control manual de planes, pausas y estado de cuenta.</p>
+            </div>
+            <form className="grid gap-3 md:grid-cols-[1fr_160px_160px_auto]" action="/admin">
+              <input
+                name="q"
+                defaultValue={filters.q ?? ''}
+                placeholder="Buscar por negocio, slug o telefono"
+                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+              />
+              <select
+                name="status"
+                defaultValue={statusFilter}
+                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+              >
+                <option value="all">Todos estados</option>
+                <option value="trial">Trial</option>
+                <option value="active">Activo</option>
+                <option value="past_due">Pago pendiente</option>
+                <option value="cancelled">Cancelado</option>
+                <option value="paused">Pausado</option>
+              </select>
+              <select
+                name="plan"
+                defaultValue={planFilter}
+                className="rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-sm text-zinc-100"
+              >
+                <option value="all">Todos planes</option>
+                <option value="trial">Trial</option>
+                <option value="basic">Basic</option>
+                <option value="plus">Plus</option>
+                <option value="pro">Pro</option>
+              </select>
+              <button
+                type="submit"
+                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
+              >
+                Filtrar
+              </button>
+            </form>
+            <p className="text-xs text-zinc-500">
+              Mostrando {filteredBusinesses.length} de {businesses.length} negocios.
+            </p>
           </div>
 
           <div className="overflow-x-auto">
@@ -137,7 +204,7 @@ export default async function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-800">
-                {businesses.map((business) => {
+                {filteredBusinesses.map((business) => {
                   const subscription = business.subscriptions
                   const plan = subscription?.plan ?? 'trial'
                   const status = subscription?.status ?? 'trial'
@@ -157,6 +224,12 @@ export default async function AdminPage() {
                         >
                           Ver publico
                         </a>
+                        <Link
+                          href={`/admin/businesses/${business.id}`}
+                          className="ml-3 inline-block text-xs font-semibold text-zinc-300 hover:text-white"
+                        >
+                          Abrir ficha
+                        </Link>
                       </td>
                       <td className="px-4 py-4">
                         <span className="rounded-full bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-300">
@@ -198,11 +271,19 @@ export default async function AdminPage() {
                           plan={plan}
                           status={status}
                           priceCents={priceCents}
+                          trialEndsAt={subscription?.trial_ends_at}
                         />
                       </td>
                     </tr>
                   )
                 })}
+                {filteredBusinesses.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-8 text-center text-sm text-zinc-500">
+                      No hay negocios con esos filtros.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
