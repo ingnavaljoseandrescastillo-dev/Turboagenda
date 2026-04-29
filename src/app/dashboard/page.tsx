@@ -3,6 +3,7 @@ import { getBusinessForUser } from '@/lib/api-helpers'
 import { redirect } from 'next/navigation'
 import { AppointmentCard } from '@/components/dashboard/AppointmentCard'
 import { Calendar } from '@/components/dashboard/Calendar'
+import { PublicLinkCard } from '@/components/dashboard/PublicLinkCard'
 import { startOfDay, endOfDay } from 'date-fns'
 import type { Appointment } from '@/types'
 
@@ -28,6 +29,7 @@ async function getDashboardData() {
   const appts = (data ?? []) as Appointment[]
 
   return {
+    business,
     appointments: appts,
     metrics: {
       total: appts.length,
@@ -39,7 +41,7 @@ async function getDashboardData() {
 }
 
 export default async function DashboardPage() {
-  const { appointments, metrics } = await getDashboardData()
+  const { business, appointments, metrics } = await getDashboardData()
 
   const kpiCards = metrics ? [
     { label: 'Marcações hoje', value: String(metrics.total), icon: '📅' },
@@ -50,6 +52,8 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      <PublicLinkCard slug={business.slug} />
+
       {/* KPI cards */}
       {metrics && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

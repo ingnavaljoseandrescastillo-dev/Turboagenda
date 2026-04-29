@@ -7,10 +7,9 @@ import { EmployeeSelector } from '@/components/booking/EmployeeSelector'
 import { DateTimePicker } from '@/components/booking/DateTimePicker'
 import { BookingForm } from '@/components/booking/BookingForm'
 import { Button } from '@/components/ui/Button'
-import { Particles } from '@/components/ui/Particles'
 import type { Business, BusinessSettings, Employee, Service } from '@/types'
 
-const STEPS = ['Servico', 'Colaborador', 'Data & Hora', 'Dados']
+const STEPS = ['Servico', 'Profissional', 'Data e hora', 'Dados']
 
 interface BookClientProps {
   slug: string
@@ -63,15 +62,19 @@ export function BookClient({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 relative">
-      <div
-        className="pointer-events-none fixed inset-0"
-        style={{ background: 'radial-gradient(ellipse at center, #052e1640 0%, #09090b 70%)' }}
-      >
-        <Particles count={14} />
+    <div className="min-h-screen bg-zinc-950">
+      <div className="border-b border-zinc-800 bg-zinc-900">
+        <div className="mx-auto max-w-3xl px-4 py-6">
+          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">Reserva online</p>
+          <h1 className="mt-2 text-2xl font-black text-white">{business.name}</h1>
+          <p className="mt-1 text-sm text-zinc-400">
+            Elige el servicio, profesional y horario. Confirmas tus datos al final.
+          </p>
+        </div>
       </div>
-      <div className="max-w-xl mx-auto px-4 py-8">
-        <div className="mb-8">
+
+      <div className="mx-auto max-w-3xl px-4 py-8">
+        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
           <button
             onClick={() => (step > 0 ? setStep(step - 1) : router.push(`/b/${slug}`))}
             className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-4"
@@ -97,26 +100,34 @@ export function BookClient({
           </p>
         </div>
 
-        <div className="space-y-6">
+        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/20 md:p-6">
           {step === 0 && (
-            <ServiceSelector
-              services={services}
-              selected={selectedService}
-              onSelect={(id) => {
-                setSelectedService(id)
-                setStep(1)
-              }}
-            />
+            services.length === 0 ? (
+              <p className="text-sm text-zinc-500">Este negocio aun no tiene servicios activos.</p>
+            ) : (
+              <ServiceSelector
+                services={services}
+                selected={selectedService}
+                onSelect={(id) => {
+                  setSelectedService(id)
+                  setStep(1)
+                }}
+              />
+            )
           )}
           {step === 1 && (
-            <EmployeeSelector
-              employees={employees}
-              selected={selectedEmployee}
-              onSelect={(id) => {
-                setSelectedEmployee(id)
-                setStep(2)
-              }}
-            />
+            employees.length === 0 ? (
+              <p className="text-sm text-zinc-500">Este negocio aun no tiene profesionales activos.</p>
+            ) : (
+              <EmployeeSelector
+                employees={employees}
+                selected={selectedEmployee}
+                onSelect={(id) => {
+                  setSelectedEmployee(id)
+                  setStep(2)
+                }}
+              />
+            )
           )}
           {step === 2 && selectedService && selectedEmployee && (
             <DateTimePicker
@@ -139,7 +150,7 @@ export function BookClient({
           )}
 
           {step < 3 && (
-            <Button disabled={!canAdvance()} onClick={() => setStep(step + 1)} className="w-full">
+            <Button disabled={!canAdvance()} onClick={() => setStep(step + 1)} className="mt-6 w-full">
               Continuar
             </Button>
           )}
