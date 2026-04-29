@@ -17,6 +17,9 @@ export default function SettingsPage() {
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [publicOrigin] = useState(() =>
+    typeof window === 'undefined' ? 'https://turboagenda.pt' : window.location.origin
+  )
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -160,7 +163,7 @@ export default function SettingsPage() {
           <Input
             label="Slug (URL publica)"
             value={form.slug}
-            helper={`turboagenda.com/b/${form.slug}`}
+            helper={`${publicOrigin || 'https://turboagenda.pt'}/b/${form.slug}`}
             onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
           />
           <Input
