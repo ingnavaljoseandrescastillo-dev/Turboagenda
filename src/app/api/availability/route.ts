@@ -27,6 +27,15 @@ export async function GET(request: NextRequest) {
     const { business_id, service_id, employee_id, date } = parsed.data
 
     const supabase = await createClient()
+    const { data: business, error: businessError } = await supabase
+      .from('businesses')
+      .select('is_paused')
+      .eq('id', business_id)
+      .maybeSingle()
+
+    if (businessError) return handleError(businessError.message, 500)
+    if (business?.is_paused) return formatResponse({ slots: [] })
+
     const { data: settings, error: settingsError } = await supabase
       .from('business_settings')
       .select('max_booking_days')

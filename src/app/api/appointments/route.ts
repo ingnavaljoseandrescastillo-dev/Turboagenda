@@ -48,6 +48,15 @@ export async function POST(request: NextRequest) {
     const { createClient } = await import('@/lib/supabase/server')
     const db = await createClient()
 
+    const { data: business, error: businessError } = await db
+      .from('businesses')
+      .select('is_paused')
+      .eq('id', parsed.data.business_id)
+      .maybeSingle()
+
+    if (businessError) return handleError(businessError.message, 500)
+    if (business?.is_paused) return handleError('Este negocio no esta aceptando reservas ahora mismo', 422)
+
     const { data: settings, error: settingsError } = await db
       .from('business_settings')
       .select('max_booking_days')
