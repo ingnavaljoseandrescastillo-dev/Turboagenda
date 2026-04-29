@@ -7,6 +7,8 @@ import { slugify } from '@/lib/utils'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const requestedNext = searchParams.get('next')
+  const nextPath = requestedNext?.startsWith('/') ? requestedNext : '/dashboard'
 
   if (code) {
     const cookieStore = await cookies()
@@ -32,7 +34,7 @@ export async function GET(request: Request) {
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (user) {
+      if (user && nextPath !== '/reset-password') {
         const { data: existing, error: existingError } = await supabase
           .from('businesses')
           .select('id')
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
         }
       }
 
-      return NextResponse.redirect(`${origin}/dashboard`)
+      return NextResponse.redirect(`${origin}${nextPath}`)
     }
   }
 

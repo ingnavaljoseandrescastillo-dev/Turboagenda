@@ -5,6 +5,20 @@ export const LoginSchema = z.object({
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
 })
 
+export const ForgotPasswordSchema = z.object({
+  email: z.string().email('Email invalido'),
+})
+
+export const ResetPasswordSchema = z
+  .object({
+    password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+    confirmPassword: z.string().min(6, 'Confirme a nova senha'),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: 'As senhas nao coincidem',
+    path: ['confirmPassword'],
+  })
+
 export const RegisterSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
@@ -67,6 +81,8 @@ export const BusinessCreateSchema = z.object({
 })
 
 export type LoginInput = z.infer<typeof LoginSchema>
+export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
+export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type AppointmentInput = z.infer<typeof AppointmentSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>

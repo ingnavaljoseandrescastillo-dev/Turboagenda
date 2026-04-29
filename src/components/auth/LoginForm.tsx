@@ -53,6 +53,12 @@ export function LoginForm() {
         {...register('password')}
       />
 
+      <div className="-mt-2 text-right">
+        <Link href="/forgot-password" className="text-sm font-medium text-emerald-500 transition-colors hover:text-emerald-400">
+          {l.forgotPassword}
+        </Link>
+      </div>
+
       {serverError && (
         <p className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
           {serverError}
