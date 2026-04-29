@@ -9,11 +9,19 @@ interface DateTimePickerProps {
   businessId: string
   serviceId: string
   employeeId: string
+  maxBookingDays?: number
   onSelect: (datetime: string) => void
   selected: string | null
 }
 
-export function DateTimePicker({ businessId, serviceId, employeeId, onSelect, selected }: DateTimePickerProps) {
+export function DateTimePicker({
+  businessId,
+  serviceId,
+  employeeId,
+  maxBookingDays = 30,
+  onSelect,
+  selected,
+}: DateTimePickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const { slots, loading, fetchSlots } = useAvailability()
 
@@ -26,7 +34,7 @@ export function DateTimePicker({ businessId, serviceId, employeeId, onSelect, se
     })
   }, [selectedDate, businessId, serviceId, employeeId, fetchSlots])
 
-  const days = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i))
+  const days = Array.from({ length: Math.max(1, Math.min(maxBookingDays, 365)) }, (_, i) => addDays(new Date(), i))
 
   function handleSlot(time: string) {
     const datetime = `${format(selectedDate, 'yyyy-MM-dd')}T${time}:00`

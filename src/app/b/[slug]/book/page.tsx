@@ -9,7 +9,7 @@ import { DateTimePicker } from '@/components/booking/DateTimePicker'
 import { BookingForm } from '@/components/booking/BookingForm'
 import { Button } from '@/components/ui/Button'
 import { Particles } from '@/components/ui/Particles'
-import type { Business, Service, Employee } from '@/types'
+import type { Business, BusinessSettings, Service, Employee } from '@/types'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -24,6 +24,7 @@ export default function BookPage({ params }: PageProps) {
 
   const [step, setStep] = useState(0)
   const [business, setBusiness] = useState<Business | null>(null)
+  const [settings, setSettings] = useState<BusinessSettings | null>(null)
   const [services, setServices] = useState<Service[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
@@ -47,13 +48,15 @@ export default function BookPage({ params }: PageProps) {
       if (!biz) { router.push('/'); return }
       setBusiness(biz as Business)
 
-      const [{ data: svcs }, { data: emps }] = await Promise.all([
+      const [{ data: svcs }, { data: emps }, { data: bizSettings }] = await Promise.all([
         supabase.from('services').select('*').eq('business_id', biz.id).eq('is_active', true).order('name'),
         supabase.from('employees').select('*').eq('business_id', biz.id).eq('is_active', true).order('name'),
+        supabase.from('business_settings').select('*').eq('business_id', biz.id).maybeSingle(),
       ])
 
       setServices((svcs ?? []) as Service[])
       setEmployees((emps ?? []) as Employee[])
+      setSettings(bizSettings as BusinessSettings | null)
       setLoading(false)
 
       if (searchParams.get('service')) setStep(1)
@@ -143,6 +146,7 @@ export default function BookPage({ params }: PageProps) {
               businessId={business.id}
               serviceId={selectedService}
               employeeId={selectedEmployee}
+              maxBookingDays={settings?.max_booking_days ?? 30}
               selected={selectedDatetime}
               onSelect={(dt) => setSelectedDatetime(dt)}
             />

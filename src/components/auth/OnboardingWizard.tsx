@@ -21,6 +21,7 @@ export function OnboardingWizard() {
     opening_time: '09:00',
     closing_time: '18:00',
     working_days: [1, 2, 3, 4, 5],
+    max_booking_months: 1,
   })
 
   function toggleDay(day: number) {
@@ -65,17 +66,28 @@ export function OnboardingWizard() {
     setError(null)
     try {
       const supabase = createClient()
-      const { error: settingsError } = await supabase.from('business_settings').upsert({
+      const settingsPayload = {
         business_id: businessId,
         opening_time: form.opening_time,
         closing_time: form.closing_time,
         working_days: form.working_days,
         slot_duration_minutes: 30,
-      })
+        max_booking_days: form.max_booking_months * 30,
+      }
 
-      if (settingsError) {
-        console.error('[Onboarding] settings upsert failed', settingsError)
-        throw new Error('O negocio foi criado, mas nao foi possivel guardar o horario.')
+      const { error: updateError } = await supabase
+        .from('business_settings')
+        .update(settingsPayload)
+        .eq('business_id', businessId)
+
+      if (updateError) {
+        console.error('[Onboarding] settings update failed', updateError)
+        const { error: insertError } = await supabase.from('business_settings').insert(settingsPayload)
+
+        if (insertError) {
+          console.error('[Onboarding] settings insert failed', insertError)
+          throw new Error(insertError.message ?? 'O negocio foi criado, mas nao foi possivel guardar o horario.')
+        }
       }
 
       router.push('/dashboard/settings')
@@ -169,6 +181,15 @@ export function OnboardingWizard() {
               ))}
             </div>
           </div>
+          <Input
+            label="Meses abertos para reserva"
+            type="number"
+            min={1}
+            max={12}
+            helper={`${form.max_booking_months * 30} dias disponiveis para clientes`}
+            value={form.max_booking_months}
+            onChange={(e) => setForm((f) => ({ ...f, max_booking_months: Number(e.target.value) || 1 }))}
+          />
           <Button loading={loading} onClick={finish} className="w-full">
             Concluir configuracao
           </Button>

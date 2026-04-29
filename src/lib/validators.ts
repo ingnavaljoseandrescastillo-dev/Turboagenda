@@ -46,6 +46,14 @@ export const BusinessSettingsSchema = z.object({
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug só pode conter letras minúsculas, números e hífens'),
 })
 
+export const BusinessScheduleSchema = z.object({
+  opening_time: z.string().regex(/^\d{2}:\d{2}$/, 'Hora de abertura invalida'),
+  closing_time: z.string().regex(/^\d{2}:\d{2}$/, 'Hora de fecho invalida'),
+  slot_duration_minutes: z.number().int().min(5).max(240),
+  working_days: z.array(z.number().int().min(0).max(6)).min(1, 'Escolha pelo menos um dia de trabalho'),
+  max_booking_days: z.number().int().min(1).max(365),
+})
+
 export const BusinessCreateSchema = z.object({
   name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
   phone: z.string().optional(),
@@ -64,4 +72,5 @@ export type AppointmentInput = z.infer<typeof AppointmentSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
+export type BusinessScheduleInput = z.infer<typeof BusinessScheduleSchema>
 export type BusinessCreateInput = z.infer<typeof BusinessCreateSchema>

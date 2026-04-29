@@ -2,6 +2,18 @@ import type { NextRequest } from 'next/server'
 import { AppointmentSchema } from '@/lib/validators'
 import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@/lib/api-helpers'
 
+function isWithinBookingWindow(startTime: string, maxBookingDays: number) {
+  const requested = new Date(startTime)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const latest = new Date(today)
+  latest.setDate(latest.getDate() + Math.max(0, maxBookingDays - 1))
+  latest.setHours(23, 59, 59, 999)
+
+  return requested >= today && requested <= latest
+}
+
 export async function GET() {
   try {
     const { user, supabase, unauthorized } = await validateAuth()
@@ -35,6 +47,19 @@ export async function POST(request: NextRequest) {
 
     const { createClient } = await import('@/lib/supabase/server')
     const db = await createClient()
+
+    const { data: settings, error: settingsError } = await db
+      .from('business_settings')
+      .select('max_booking_days')
+      .eq('business_id', parsed.data.business_id)
+      .maybeSingle()
+
+    if (settingsError) return handleError(settingsError.message, 500)
+
+    const maxBookingDays = settings?.max_booking_days ?? 30
+    if (!isWithinBookingWindow(parsed.data.start_time, maxBookingDays)) {
+      return handleError(`Reservas disponiveis apenas nos proximos ${maxBookingDays} dias`, 422)
+    }
 
     const { data, error } = await db.rpc('create_public_appointment', {
       p_business_id: parsed.data.business_id,
