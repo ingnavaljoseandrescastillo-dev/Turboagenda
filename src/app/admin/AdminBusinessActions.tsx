@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
@@ -12,6 +13,7 @@ interface AdminBusinessActionsProps {
   plan: Plan
   status: Status
   priceCents: number
+  trialEndsAt?: string | null
 }
 
 export function AdminBusinessActions({
@@ -20,6 +22,7 @@ export function AdminBusinessActions({
   plan,
   status,
   priceCents,
+  trialEndsAt,
 }: AdminBusinessActionsProps) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -42,6 +45,13 @@ export function AdminBusinessActions({
     } finally {
       setSaving(false)
     }
+  }
+
+  function extendTrial(days: number) {
+    const base = trialEndsAt ? new Date(trialEndsAt) : new Date()
+    const start = Number.isNaN(base.getTime()) || base < new Date() ? new Date() : base
+    start.setDate(start.getDate() + days)
+    patch({ status: 'trial', trial_ends_at: start.toISOString() })
   }
 
   return (
@@ -94,6 +104,30 @@ export function AdminBusinessActions({
         >
           {isPaused ? 'Reactivar' : 'Pausar'}
         </button>
+      </div>
+      <div className="grid grid-cols-3 gap-2">
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => extendTrial(7)}
+          className="rounded-lg border border-zinc-700 px-2 py-2 text-xs font-semibold text-zinc-200 hover:border-zinc-500 disabled:opacity-60"
+        >
+          +7d trial
+        </button>
+        <button
+          type="button"
+          disabled={saving}
+          onClick={() => extendTrial(30)}
+          className="rounded-lg border border-zinc-700 px-2 py-2 text-xs font-semibold text-zinc-200 hover:border-zinc-500 disabled:opacity-60"
+        >
+          +30d
+        </button>
+        <Link
+          href={`/admin/businesses/${businessId}`}
+          className="rounded-lg border border-zinc-700 px-2 py-2 text-center text-xs font-semibold text-emerald-300 hover:border-emerald-500"
+        >
+          Ficha
+        </Link>
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>

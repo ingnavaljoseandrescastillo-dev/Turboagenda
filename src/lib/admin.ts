@@ -55,5 +55,5 @@ async function checkPlatformAdmin(supabase: AdminSupabaseClient, userId: string)
     return false
   }
 
-return Boolean(rowAdmin)
+  return Boolean(rowAdmin)
 }

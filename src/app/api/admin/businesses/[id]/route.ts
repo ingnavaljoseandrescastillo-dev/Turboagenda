@@ -18,8 +18,8 @@ type Ctx = { params: Promise<{ id: string }> }
 
 export async function PATCH(request: NextRequest, { params }: Ctx) {
   try {
-    const { supabase, isAdmin } = await validatePlatformAdmin()
-    if (!isAdmin) return handleError('Admin nao autorizado', 403)
+    const { supabase, user, isAdmin } = await validatePlatformAdmin()
+    if (!isAdmin || !user) return handleError('Admin nao autorizado', 403)
 
     const { id } = await params
     const body = await request.json()
@@ -36,6 +36,12 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
       price_cents,
       notes,
     } = parsed.data
+
+    const { data: beforeBusiness } = await supabase
+      .from('businesses')
+      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,notes,manual_override)')
+      .eq('id', id)
+      .maybeSingle()
 
     if (typeof is_paused === 'boolean' || pause_reason !== undefined) {
       const { error: businessError } = await supabase
@@ -68,6 +74,25 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
         .eq('business_id', id)
 
       if (subscriptionError) return handleError(subscriptionError.message, 422)
+    }
+
+    const { data: afterBusiness } = await supabase
+      .from('businesses')
+      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,notes,manual_override)')
+      .eq('id', id)
+      .maybeSingle()
+
+    const { error: auditError } = await supabase.from('admin_audit_log').insert({
+      business_id: id,
+      admin_user_id: user.id,
+      admin_email: user.email,
+      action: 'admin_business_updated',
+      before_state: beforeBusiness ?? null,
+      after_state: afterBusiness ?? parsed.data,
+    })
+
+    if (auditError) {
+      console.error('[admin audit] insert failed', auditError)
     }
 
     return formatResponse({ updated: true })
