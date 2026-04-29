@@ -65,17 +65,27 @@ export function OnboardingWizard() {
     setError(null)
     try {
       const supabase = createClient()
-      const { error: settingsError } = await supabase.from('business_settings').upsert({
+      const settingsPayload = {
         business_id: businessId,
         opening_time: form.opening_time,
         closing_time: form.closing_time,
         working_days: form.working_days,
         slot_duration_minutes: 30,
-      })
+      }
 
-      if (settingsError) {
-        console.error('[Onboarding] settings upsert failed', settingsError)
-        throw new Error('O negocio foi criado, mas nao foi possivel guardar o horario.')
+      const { error: updateError } = await supabase
+        .from('business_settings')
+        .update(settingsPayload)
+        .eq('business_id', businessId)
+
+      if (updateError) {
+        console.error('[Onboarding] settings update failed', updateError)
+        const { error: insertError } = await supabase.from('business_settings').insert(settingsPayload)
+
+        if (insertError) {
+          console.error('[Onboarding] settings insert failed', insertError)
+          throw new Error(insertError.message ?? 'O negocio foi criado, mas nao foi possivel guardar o horario.')
+        }
       }
 
       router.push('/dashboard/settings')
