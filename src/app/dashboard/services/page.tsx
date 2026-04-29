@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ServiceSchema } from '@/lib/validators'
@@ -47,6 +48,7 @@ function ServiceForm({
 }
 
 export default function ServicesPage() {
+  const router = useRouter()
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -57,11 +59,25 @@ export default function ServicesPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const res = await fetch('/api/services')
-    const json = await res.json()
-    setServices(json.data ?? [])
-    setLoading(false)
-  }, [])
+    setError(null)
+    try {
+      const res = await fetch('/api/services')
+      const json = await res.json()
+      if (res.status === 404) {
+        router.replace('/dashboard/onboarding')
+        return
+      }
+      if (!res.ok) {
+        console.error('[Services] load failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel carregar os servicos.')
+      }
+      setServices(json.data ?? [])
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar os servicos.')
+    } finally {
+      setLoading(false)
+    }
+  }, [router])
 
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
@@ -76,7 +92,11 @@ export default function ServicesPage() {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Services] create failed', j.error)
+        throw new Error(j.error)
+      }
       setShowCreate(false)
       await load()
     } catch (err) {
@@ -93,7 +113,11 @@ export default function ServicesPage() {
         method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
-      if (!res.ok) { const j = await res.json(); throw new Error(j.error) }
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Services] update failed', j.error)
+        throw new Error(j.error)
+      }
       setEditing(null)
       await load()
     } catch (err) {
@@ -105,9 +129,16 @@ export default function ServicesPage() {
     if (!deleting) return
     setSaving(true)
     try {
-      await fetch(`/api/services/${deleting.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/services/${deleting.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const j = await res.json()
+        console.error('[Services] delete failed', j.error)
+        throw new Error(j.error)
+      }
       setDeleting(null)
       await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro')
     } finally { setSaving(false) }
   }
 

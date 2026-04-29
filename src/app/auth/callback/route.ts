@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { ensureBusinessBootstrapRows } from '@/lib/api-helpers'
 import { slugify } from '@/lib/utils'
 
 export async function GET(request: Request) {
@@ -18,9 +19,7 @@ export async function GET(request: Request) {
             return cookieStore.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options))
           },
         },
       }
@@ -29,26 +28,44 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      const { data: { user } } = await supabase.auth.getUser()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
       if (user) {
-        const { data: existing } = await supabase
+        const { data: existing, error: existingError } = await supabase
           .from('businesses')
           .select('id')
           .eq('owner_id', user.id)
           .maybeSingle()
 
-        if (!existing) {
-          const meta = user.user_metadata as { businessName?: string; phone?: string }
-          const businessName = meta.businessName ?? 'Meu Negócio'
-          const slug = slugify(businessName) + '-' + Math.random().toString(36).slice(2, 6)
+        if (existingError) {
+          console.error('[auth/callback] existing business lookup failed', existingError)
+        }
 
-          await supabase.from('businesses').insert({
-            name: businessName,
-            slug,
-            phone: meta.phone ?? '',
-            owner_id: user.id,
-          })
+        if (existing) {
+          await ensureBusinessBootstrapRows(supabase, user.id, existing.id)
+        } else {
+          const meta = user.user_metadata as { businessName?: string; phone?: string }
+          const businessName = meta.businessName ?? 'Meu Negocio'
+          const slug = `${slugify(businessName)}-${Math.random().toString(36).slice(2, 6)}`
+
+          const { data: business, error: businessError } = await supabase
+            .from('businesses')
+            .insert({
+              name: businessName,
+              slug,
+              phone: meta.phone ?? '',
+              owner_id: user.id,
+            })
+            .select('id')
+            .single()
+
+          if (businessError) {
+            console.error('[auth/callback] business insert failed', businessError)
+          } else if (business) {
+            await ensureBusinessBootstrapRows(supabase, user.id, business.id)
+          }
         }
       }
 

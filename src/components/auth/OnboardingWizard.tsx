@@ -6,17 +6,17 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
-interface Props {
-  businessId: string
-}
+const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 
-const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-
-export function OnboardingWizard({ businessId }: Props) {
+export function OnboardingWizard() {
   const router = useRouter()
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [businessId, setBusinessId] = useState<string | null>(null)
   const [form, setForm] = useState({
+    name: '',
+    phone: '',
     address: '',
     opening_time: '09:00',
     closing_time: '18:00',
@@ -32,21 +32,59 @@ export function OnboardingWizard({ businessId }: Props) {
     }))
   }
 
-  async function finish() {
+  async function createBusiness() {
     setLoading(true)
-    const supabase = createClient()
-    await supabase.from('business_settings').upsert({
-      business_id: businessId,
-      opening_time: form.opening_time,
-      closing_time: form.closing_time,
-      working_days: form.working_days,
-      slot_duration_minutes: 30,
-    })
-    if (form.address) {
-      await supabase.from('businesses').update({ address: form.address }).eq('id', businessId)
+    setError(null)
+    try {
+      const res = await fetch('/api/businesses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone || undefined,
+          address: form.address || undefined,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[Onboarding] create business failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel criar o negocio.')
+      }
+      setBusinessId(json.data.id)
+      setStep(2)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel criar o negocio.')
+    } finally {
+      setLoading(false)
     }
-    router.push('/dashboard')
-    router.refresh()
+  }
+
+  async function finish() {
+    if (!businessId) return
+    setLoading(true)
+    setError(null)
+    try {
+      const supabase = createClient()
+      const { error: settingsError } = await supabase.from('business_settings').upsert({
+        business_id: businessId,
+        opening_time: form.opening_time,
+        closing_time: form.closing_time,
+        working_days: form.working_days,
+        slot_duration_minutes: 30,
+      })
+
+      if (settingsError) {
+        console.error('[Onboarding] settings upsert failed', settingsError)
+        throw new Error('O negocio foi criado, mas nao foi possivel guardar o horario.')
+      }
+
+      router.push('/dashboard/settings')
+      router.refresh()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel concluir o onboarding.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -55,29 +93,49 @@ export function OnboardingWizard({ businessId }: Props) {
         {[1, 2].map((s) => (
           <div
             key={s}
-            className={`h-1.5 flex-1 rounded-full transition-colors ${s <= step ? 'bg-emerald-500' : 'bg-zinc-800'}`}
+            className={`h-1.5 flex-1 rounded-full transition-colors ${
+              s <= step ? 'bg-emerald-500' : 'bg-zinc-800'
+            }`}
           />
         ))}
       </div>
 
+      {error && (
+        <p className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
+          {error}
+        </p>
+      )}
+
       {step === 1 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zinc-100">Onde fica o seu negócio?</h3>
+          <div>
+            <h2 className="text-xl font-semibold text-zinc-100">Criar negocio</h2>
+            <p className="text-sm text-zinc-500 mt-1">Este negocio ficara ligado a sua conta.</p>
+          </div>
           <Input
-            label="Morada (opcional)"
-            placeholder="Rua das Flores, 123, Lisboa"
+            label="Nome do negocio"
+            value={form.name}
+            onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+          />
+          <Input
+            label="Telefone"
+            value={form.phone}
+            onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+          <Input
+            label="Morada"
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           />
-          <Button className="w-full" onClick={() => setStep(2)}>
-            Continuar
+          <Button className="w-full" loading={loading} disabled={form.name.trim().length < 2} onClick={createBusiness}>
+            Criar negocio
           </Button>
         </div>
       )}
 
       {step === 2 && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-zinc-100">Horário de funcionamento</h3>
+          <h2 className="text-xl font-semibold text-zinc-100">Horario de funcionamento</h2>
           <div className="grid grid-cols-2 gap-3">
             <Input
               label="Abertura"
@@ -97,7 +155,7 @@ export function OnboardingWizard({ businessId }: Props) {
             <div className="flex gap-2 flex-wrap">
               {DAYS.map((day, i) => (
                 <button
-                  key={i}
+                  key={day}
                   type="button"
                   onClick={() => toggleDay(i)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
@@ -111,14 +169,9 @@ export function OnboardingWizard({ businessId }: Props) {
               ))}
             </div>
           </div>
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={() => setStep(1)} className="flex-1">
-              Voltar
-            </Button>
-            <Button loading={loading} onClick={finish} className="flex-1">
-              Concluir configuração
-            </Button>
-          </div>
+          <Button loading={loading} onClick={finish} className="w-full">
+            Concluir configuracao
+          </Button>
         </div>
       )}
     </div>
