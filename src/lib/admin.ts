@@ -12,12 +12,7 @@ export async function requirePlatformAdmin() {
 
   if (userError || !user) redirect('/login')
 
-  const { data: isAdmin, error } = await supabase.rpc('is_platform_admin')
-
-  if (error) {
-    console.error('[admin] is_platform_admin failed', error)
-    redirect('/dashboard')
-  }
+  const isAdmin = await checkPlatformAdmin(supabase, user.id)
 
   if (!isAdmin) redirect('/dashboard')
 
@@ -35,11 +30,30 @@ export async function validatePlatformAdmin() {
     return { supabase, user: null, isAdmin: false }
   }
 
-  const { data: isAdmin, error } = await supabase.rpc('is_platform_admin')
-  if (error) {
-    console.error('[admin] is_platform_admin failed', error)
-    return { supabase, user, isAdmin: false }
+  const isAdmin = await checkPlatformAdmin(supabase, user.id)
+
+  return { supabase, user, isAdmin }
+}
+
+async function checkPlatformAdmin(supabase: AdminSupabaseClient, userId: string) {
+  const { data: rpcAdmin, error: rpcError } = await supabase.rpc('is_platform_admin')
+
+  if (!rpcError && rpcAdmin) return true
+
+  if (rpcError) {
+    console.error('[admin] is_platform_admin failed', rpcError)
   }
 
-  return { supabase, user, isAdmin: Boolean(isAdmin) }
+  const { data: rowAdmin, error: rowError } = await supabase
+    .from('platform_admins')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle()
+
+  if (rowError) {
+    console.error('[admin] platform_admins fallback failed', rowError)
+    return false
+  }
+
+return Boolean(rowAdmin)
 }
