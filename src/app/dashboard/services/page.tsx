@@ -1,16 +1,17 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { ServiceSchema } from '@/lib/validators'
 import { formatCurrency } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Dialog } from '@/components/ui/Dialog'
+import { useLanguage } from '@/contexts/LanguageContext'
 import type { Service } from '@/types'
-import { z } from 'zod'
 
 type ServiceFormValues = z.infer<typeof ServiceSchema>
 
@@ -23,32 +24,51 @@ function ServiceForm({
   onSubmit: (data: ServiceFormValues) => Promise<void>
   loading: boolean
 }) {
-  const { register, handleSubmit, formState: { errors } } = useForm<ServiceFormValues>({
+  const { t } = useLanguage()
+  const copy = t.dashboard.services
+  const common = t.dashboard.common
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<ServiceFormValues>({
     resolver: zodResolver(ServiceSchema),
     defaultValues: { is_active: true, ...defaultValues },
   })
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Input label="Nome do serviço" error={errors.name?.message} {...register('name')} />
-      <Input label="Descrição (opcional)" error={errors.description?.message} {...register('description')} />
+      <Input label={copy.name} error={errors.name?.message} {...register('name')} />
+      <Input label={copy.description} error={errors.description?.message} {...register('description')} />
       <div className="grid grid-cols-2 gap-3">
-        <Input label="Duração (min)" type="number" error={errors.duration_minutes?.message}
-          {...register('duration_minutes', { valueAsNumber: true })} />
-        <Input label="Preço (€)" type="number" step="0.01" error={errors.price?.message}
-          {...register('price', { valueAsNumber: true })} />
+        <Input
+          label={copy.duration}
+          type="number"
+          error={errors.duration_minutes?.message}
+          {...register('duration_minutes', { valueAsNumber: true })}
+        />
+        <Input
+          label={copy.price}
+          type="number"
+          step="0.01"
+          error={errors.price?.message}
+          {...register('price', { valueAsNumber: true })}
+        />
       </div>
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" className="accent-emerald-500 w-4 h-4" {...register('is_active')} />
-        <span className="text-sm text-zinc-300">Serviço ativo</span>
+        <span className="text-sm text-zinc-300">{copy.activeToggle}</span>
       </label>
-      <Button type="submit" loading={loading} className="w-full">Guardar</Button>
+      <Button type="submit" loading={loading} className="w-full">{common.save}</Button>
     </form>
   )
 }
 
 export default function ServicesPage() {
   const router = useRouter()
+  const { t } = useLanguage()
+  const copy = t.dashboard.services
+  const common = t.dashboard.common
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -69,15 +89,15 @@ export default function ServicesPage() {
       }
       if (!res.ok) {
         console.error('[Services] load failed', json.error)
-        throw new Error(json.error ?? 'Nao foi possivel carregar os servicos.')
+        throw new Error(json.error ?? copy.loadError)
       }
       setServices(json.data ?? [])
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel carregar os servicos.')
+      setError(err instanceof Error ? err.message : copy.loadError)
     } finally {
       setLoading(false)
     }
-  }, [router])
+  }, [copy.loadError, router])
 
   useEffect(() => {
     /* eslint-disable-next-line react-hooks/set-state-in-effect */
@@ -89,7 +109,8 @@ export default function ServicesPage() {
     setError(null)
     try {
       const res = await fetch('/api/services', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
       if (!res.ok) {
@@ -100,8 +121,10 @@ export default function ServicesPage() {
       setShowCreate(false)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
-    } finally { setSaving(false) }
+      setError(err instanceof Error ? err.message : common.error)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleEdit(data: ServiceFormValues) {
@@ -110,7 +133,8 @@ export default function ServicesPage() {
     setError(null)
     try {
       const res = await fetch(`/api/services/${editing.id}`, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       })
       if (!res.ok) {
@@ -121,8 +145,10 @@ export default function ServicesPage() {
       setEditing(null)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
-    } finally { setSaving(false) }
+      setError(err instanceof Error ? err.message : common.error)
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function handleDelete() {
@@ -138,19 +164,21 @@ export default function ServicesPage() {
       setDeleting(null)
       await load()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro')
-    } finally { setSaving(false) }
+      setError(err instanceof Error ? err.message : common.error)
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
     <div className="space-y-5 max-w-3xl">
       <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
-        <span className="text-xl">✨</span>
+        <span className="text-xl">+</span>
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-sm">Plano Plus: serviços ilimitados</div>
-          <div className="text-xs text-zinc-400">{services.length} configurados</div>
+          <div className="font-semibold text-sm">{copy.planLine}</div>
+          <div className="text-xs text-zinc-400">{services.length} {copy.configured}</div>
         </div>
-        <Button size="sm" onClick={() => setShowCreate(true)}>+ Adicionar</Button>
+        <Button size="sm" onClick={() => setShowCreate(true)}>{copy.add}</Button>
       </div>
 
       {error && (
@@ -158,12 +186,12 @@ export default function ServicesPage() {
       )}
 
       {loading ? (
-        <div className="text-zinc-500 text-sm py-8 text-center">A carregar...</div>
+        <div className="text-zinc-500 text-sm py-8 text-center">{common.loading}</div>
       ) : services.length === 0 ? (
         <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-10 text-center">
-          <div className="text-3xl mb-3">🛠️</div>
-          <p className="text-zinc-500 text-sm mb-4">Nenhum serviço criado ainda</p>
-          <Button onClick={() => setShowCreate(true)}>Criar primeiro serviço</Button>
+          <div className="text-3xl mb-3">[]</div>
+          <p className="text-zinc-500 text-sm mb-4">{copy.empty}</p>
+          <Button onClick={() => setShowCreate(true)}>{copy.createFirst}</Button>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
@@ -174,7 +202,7 @@ export default function ServicesPage() {
                   <h4 className="font-semibold text-sm text-zinc-100">{service.name}</h4>
                   {service.description && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{service.description}</p>}
                   <div className="flex gap-3 mt-2 text-xs text-zinc-500">
-                    <span>⏱ {service.duration_minutes} min</span>
+                    <span>{service.duration_minutes} min</span>
                     <span className="text-emerald-400 font-semibold">{formatCurrency(service.price)}</span>
                   </div>
                 </div>
@@ -182,31 +210,33 @@ export default function ServicesPage() {
                   <button
                     onClick={() => setEditing(service)}
                     className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition text-xs"
-                    title="Editar"
-                  >✏️</button>
+                    title={common.edit}
+                  >
+                    Edit
+                  </button>
                   <button
                     onClick={() => setDeleting(service)}
                     className="p-1.5 hover:bg-zinc-800 rounded text-red-400 hover:text-red-300 transition text-xs"
-                    title="Eliminar"
-                  >🗑</button>
+                    title={common.delete}
+                  >
+                    Del
+                  </button>
                 </div>
               </div>
               <div className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg ${service.is_active ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-800 text-zinc-500'}`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${service.is_active ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
-                {service.is_active ? 'Ativo' : 'Inativo'}
+                {service.is_active ? common.active : common.inactive}
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Create dialog */}
-      <Dialog open={showCreate} onClose={() => setShowCreate(false)} title="Novo serviço">
+      <Dialog open={showCreate} onClose={() => setShowCreate(false)} title={copy.newTitle}>
         <ServiceForm onSubmit={handleCreate} loading={saving} />
       </Dialog>
 
-      {/* Edit dialog */}
-      <Dialog open={!!editing} onClose={() => setEditing(null)} title="Editar serviço">
+      <Dialog open={!!editing} onClose={() => setEditing(null)} title={copy.editTitle}>
         {editing && (
           <ServiceForm
             defaultValues={{
@@ -222,17 +252,15 @@ export default function ServicesPage() {
         )}
       </Dialog>
 
-      {/* Delete confirm dialog */}
-      <Dialog open={!!deleting} onClose={() => setDeleting(null)} title="Eliminar serviço">
+      <Dialog open={!!deleting} onClose={() => setDeleting(null)} title={copy.deleteTitle}>
         {deleting && (
           <div className="space-y-4">
             <p className="text-sm text-zinc-300">
-              Tens a certeza que queres eliminar <strong className="text-zinc-100">{deleting.name}</strong>?
-              Esta ação não pode ser desfeita.
+              {copy.deleteConfirm} <strong className="text-zinc-100">{deleting.name}</strong>? {copy.deleteHint}
             </p>
             <div className="flex gap-3">
-              <Button variant="secondary" onClick={() => setDeleting(null)} className="flex-1">Cancelar</Button>
-              <Button variant="danger" loading={saving} onClick={handleDelete} className="flex-1">Eliminar</Button>
+              <Button variant="secondary" onClick={() => setDeleting(null)} className="flex-1">{common.cancel}</Button>
+              <Button variant="danger" loading={saving} onClick={handleDelete} className="flex-1">{common.delete}</Button>
             </div>
           </div>
         )}

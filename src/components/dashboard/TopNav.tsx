@@ -2,14 +2,16 @@
 
 import { usePathname } from 'next/navigation'
 import { getInitials } from '@/lib/utils'
+import { useLanguage } from '@/contexts/LanguageContext'
+import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import type { User } from '@supabase/supabase-js'
 
-const pageTitles: Record<string, string> = {
-  '/dashboard': 'Agenda',
-  '/dashboard/appointments': 'Agendamentos',
-  '/dashboard/services': 'Serviços',
-  '/dashboard/team': 'A minha equipa',
-  '/dashboard/settings': 'Configurações',
+const pageTitleKeys: Record<string, 'calendar' | 'appointments' | 'services' | 'team' | 'settings'> = {
+  '/dashboard': 'calendar',
+  '/dashboard/appointments': 'appointments',
+  '/dashboard/services': 'services',
+  '/dashboard/team': 'team',
+  '/dashboard/settings': 'settings',
 }
 
 interface TopNavProps {
@@ -20,7 +22,10 @@ interface TopNavProps {
 
 export function TopNav({ user, businessName, dateLabel }: TopNavProps) {
   const pathname = usePathname()
-  const title = pageTitles[pathname] ?? 'Dashboard'
+  const { t } = useLanguage()
+  const nav = t.dashboard.nav
+  const titleKey = pageTitleKeys[pathname]
+  const title = titleKey ? nav[titleKey] : nav.fallbackTitle
   const displayName = businessName ?? user?.email ?? ''
 
   return (
@@ -35,6 +40,9 @@ export function TopNav({ user, businessName, dateLabel }: TopNavProps) {
         {dateLabel && <p className="text-xs text-zinc-500 mt-0.5">{dateLabel}</p>}
       </div>
       <div className="flex flex-shrink-0 items-center gap-3">
+        <div className="block">
+          <LanguageSwitcher compact />
+        </div>
         {businessName && (
           <span className="text-sm text-zinc-500 hidden sm:block">{businessName}</span>
         )}

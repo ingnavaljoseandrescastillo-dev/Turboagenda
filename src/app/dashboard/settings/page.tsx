@@ -5,11 +5,15 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab']
 
 export default function SettingsPage() {
   const router = useRouter()
+  const { t } = useLanguage()
+  const copy = t.dashboard.settings
+  const common = t.dashboard.common
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
@@ -48,7 +52,7 @@ export default function SettingsPage() {
         }
         if (!res.ok) {
           console.error('[Settings] business load failed', json.error)
-          throw new Error(json.error ?? 'Nao foi possivel carregar o negocio.')
+          throw new Error(json.error ?? copy.loadError)
         }
 
         const b = json.data.business
@@ -73,14 +77,14 @@ export default function SettingsPage() {
           })
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Nao foi possivel carregar o negocio.')
+        setError(err instanceof Error ? err.message : copy.loadError)
       } finally {
         setLoading(false)
       }
     }
 
     void loadBusiness()
-  }, [router])
+  }, [copy.loadError, router])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -96,12 +100,12 @@ export default function SettingsPage() {
       const json = await res.json()
       if (!res.ok) {
         console.error('[Settings] business save failed', json.error)
-        throw new Error(json.error ?? 'Nao foi possivel guardar as configuracoes.')
+        throw new Error(json.error ?? copy.saveError)
       }
       setSuccess(true)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel guardar as configuracoes.')
+      setError(err instanceof Error ? err.message : copy.saveError)
     } finally {
       setSaving(false)
     }
@@ -144,63 +148,63 @@ export default function SettingsPage() {
       const json = await res.json()
       if (!res.ok) {
         console.error('[Settings] schedule save failed', json.error)
-        throw new Error(json.error ?? 'Nao foi possivel guardar o horario.')
+        throw new Error(json.error ?? copy.scheduleSaveError)
       }
       setScheduleSuccess(true)
       setTimeout(() => setScheduleSuccess(false), 3000)
     } catch (err) {
-      setScheduleError(err instanceof Error ? err.message : 'Nao foi possivel guardar o horario.')
+      setScheduleError(err instanceof Error ? err.message : copy.scheduleSaveError)
     } finally {
       setSavingSchedule(false)
     }
   }
 
-  if (loading) return <div className="text-zinc-500 text-sm">A carregar...</div>
+  if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
 
   return (
     <div className="max-w-4xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-zinc-100">Configuracoes</h2>
-        <p className="text-sm text-zinc-500 mt-1">Perfil do seu negocio</p>
+        <h2 className="text-2xl font-bold text-zinc-100">{copy.title}</h2>
+        <p className="text-sm text-zinc-500 mt-1">{copy.subtitle}</p>
       </div>
 
       <Card>
         <form onSubmit={handleSave} className="space-y-4">
           <Input
-            label="Nome do negocio"
+            label={copy.businessName}
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
           />
           <Input
-            label="Slug (URL publica)"
+            label={copy.publicSlug}
             value={form.slug}
             helper={`https://turboagenda.pt/b/${form.slug}`}
             onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
           />
           <Input
-            label="Telefone"
+            label={copy.phone}
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
           />
           <Input
-            label="Morada"
+            label={copy.address}
             value={form.address}
             onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
           />
           <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-zinc-300">Descricao</label>
+            <label className="text-sm font-medium text-zinc-300">{copy.description}</label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               rows={3}
               className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-              placeholder="Descreva o seu negocio..."
+              placeholder={copy.descriptionPlaceholder}
             />
           </div>
 
           {success && (
             <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-              Configuracoes guardadas com sucesso.
+              {copy.businessSaved}
             </p>
           )}
 
@@ -211,7 +215,7 @@ export default function SettingsPage() {
           )}
 
           <Button type="submit" loading={saving}>
-            Guardar alteracoes
+            {copy.saveBusiness}
           </Button>
         </form>
       </Card>
@@ -219,27 +223,27 @@ export default function SettingsPage() {
       <Card>
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100">Pagina publica</h3>
+            <h3 className="text-lg font-semibold text-zinc-100">{copy.publicPage}</h3>
             <p className="text-sm text-zinc-500 mt-1">
-              Controle as imagens que aparecem no link publico do negocio.
+              {copy.publicPageDesc}
             </p>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
             <div className="space-y-4">
               <Input
-                label="Imagem de capa"
+                label={copy.cover}
                 type="url"
                 placeholder="https://..."
-                helper="Imagem grande no topo da pagina publica."
+                helper={copy.coverHelper}
                 value={form.cover_image_url}
                 onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))}
               />
               <Input
-                label="Logo ou foto do negocio"
+                label={copy.logo}
                 type="url"
                 placeholder="https://..."
-                helper="Aparece como avatar do negocio."
+                helper={copy.logoHelper}
                 value={form.logo_image_url}
                 onChange={(e) => setForm((f) => ({ ...f, logo_image_url: e.target.value }))}
               />
@@ -251,7 +255,7 @@ export default function SettingsPage() {
                 <img src={form.cover_image_url} alt="Preview da capa" className="h-48 w-full object-cover" />
               ) : (
                 <div className="flex h-48 items-center justify-center bg-zinc-900 text-sm text-zinc-600">
-                  Preview da capa
+                  {copy.coverPreview}
                 </div>
               )}
               <div className="flex items-center gap-3 p-4">
@@ -262,15 +266,15 @@ export default function SettingsPage() {
                   ) : null}
                 </div>
                 <div>
-                  <p className="font-semibold text-zinc-100">{form.name || 'Nome do negocio'}</p>
-                  <p className="text-sm text-zinc-500">Preview publico</p>
+                  <p className="font-semibold text-zinc-100">{form.name || copy.businessName}</p>
+                  <p className="text-sm text-zinc-500">{copy.publicPreview}</p>
                 </div>
               </div>
             </div>
           </div>
 
           <div>
-            <p className="mb-3 text-sm font-medium text-zinc-300">Galeria</p>
+            <p className="mb-3 text-sm font-medium text-zinc-300">{copy.gallery}</p>
             <div className="grid gap-3 md:grid-cols-2">
               {form.gallery_images.map((imageUrl, index) => (
                 <div key={index} className="grid gap-2 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
@@ -280,7 +284,7 @@ export default function SettingsPage() {
                       <img src={imageUrl} alt={`Galeria ${index + 1}`} className="h-full w-full object-cover" />
                     ) : (
                       <div className="flex h-full items-center justify-center text-xs text-zinc-600">
-                        Foto {index + 1}
+                        {copy.photo} {index + 1}
                       </div>
                     )}
                   </div>
@@ -298,7 +302,7 @@ export default function SettingsPage() {
 
           {success && (
             <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-              Pagina publica atualizada com sucesso.
+              {copy.imagesSaved}
             </p>
           )}
 
@@ -309,7 +313,7 @@ export default function SettingsPage() {
           )}
 
           <Button type="submit" loading={saving}>
-            Guardar imagens
+            {copy.saveImages}
           </Button>
         </form>
       </Card>
@@ -317,19 +321,19 @@ export default function SettingsPage() {
       <Card>
         <form onSubmit={handleScheduleSave} className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100">Horario e reservas</h3>
-            <p className="text-sm text-zinc-500 mt-1">Controle quando os clientes podem agendar.</p>
+            <h3 className="text-lg font-semibold text-zinc-100">{copy.scheduleTitle}</h3>
+            <p className="text-sm text-zinc-500 mt-1">{copy.scheduleDesc}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Abertura"
+              label={copy.opening}
               type="time"
               value={schedule.opening_time}
               onChange={(e) => setSchedule((s) => ({ ...s, opening_time: e.target.value }))}
             />
             <Input
-              label="Fecho"
+              label={copy.closing}
               type="time"
               value={schedule.closing_time}
               onChange={(e) => setSchedule((s) => ({ ...s, closing_time: e.target.value }))}
@@ -338,7 +342,7 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Duracao do slot (min)"
+              label={copy.slotDuration}
               type="number"
               min={5}
               max={240}
@@ -348,11 +352,11 @@ export default function SettingsPage() {
               }
             />
             <Input
-              label="Meses abertos"
+              label={copy.openMonths}
               type="number"
               min={1}
               max={12}
-              helper={`${schedule.max_booking_months * 30} dias disponiveis para reserva`}
+              helper={copy.bookingDays.replace('{{days}}', String(schedule.max_booking_months * 30))}
               value={schedule.max_booking_months}
               onChange={(e) =>
                 setSchedule((s) => ({ ...s, max_booking_months: Number(e.target.value) || 1 }))
@@ -361,7 +365,7 @@ export default function SettingsPage() {
           </div>
 
           <div>
-            <p className="text-sm font-medium text-zinc-300 mb-2">Dias de trabalho</p>
+            <p className="text-sm font-medium text-zinc-300 mb-2">{copy.workingDays}</p>
             <div className="flex flex-wrap gap-2">
               {DAYS.map((day, index) => (
                 <button
@@ -382,7 +386,7 @@ export default function SettingsPage() {
 
           {scheduleSuccess && (
             <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-              Horario guardado com sucesso.
+              {copy.scheduleSaved}
             </p>
           )}
 
@@ -393,7 +397,7 @@ export default function SettingsPage() {
           )}
 
           <Button type="submit" loading={savingSchedule}>
-            Guardar horario
+            {copy.saveSchedule}
           </Button>
         </form>
       </Card>
