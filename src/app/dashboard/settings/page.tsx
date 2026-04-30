@@ -17,10 +17,13 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
+  const [savingNotifications, setSavingNotifications] = useState(false)
   const [success, setSuccess] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
+  const [notificationSuccess, setNotificationSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -37,6 +40,13 @@ export default function SettingsPage() {
     slot_duration_minutes: 30,
     working_days: [1, 2, 3, 4, 5],
     max_booking_months: 1,
+  })
+  const [notifications, setNotifications] = useState({
+    whatsapp_enabled: false,
+    whatsapp_notify_client_on_booking: true,
+    whatsapp_notify_business_on_booking: true,
+    whatsapp_reminder_24h_enabled: true,
+    whatsapp_birthday_enabled: false,
   })
 
   useEffect(() => {
@@ -74,6 +84,13 @@ export default function SettingsPage() {
             slot_duration_minutes: settings.slot_duration_minutes ?? 30,
             working_days: settings.working_days ?? [1, 2, 3, 4, 5],
             max_booking_months: Math.max(1, Math.ceil((settings.max_booking_days ?? 30) / 30)),
+          })
+          setNotifications({
+            whatsapp_enabled: Boolean(settings.whatsapp_enabled),
+            whatsapp_notify_client_on_booking: settings.whatsapp_notify_client_on_booking ?? true,
+            whatsapp_notify_business_on_booking: settings.whatsapp_notify_business_on_booking ?? true,
+            whatsapp_reminder_24h_enabled: settings.whatsapp_reminder_24h_enabled ?? true,
+            whatsapp_birthday_enabled: settings.whatsapp_birthday_enabled ?? false,
           })
         }
       } catch (err) {
@@ -156,6 +173,31 @@ export default function SettingsPage() {
       setScheduleError(err instanceof Error ? err.message : copy.scheduleSaveError)
     } finally {
       setSavingSchedule(false)
+    }
+  }
+
+  async function handleNotificationSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingNotifications(true)
+    setNotificationSuccess(false)
+    setNotificationError(null)
+    try {
+      const res = await fetch('/api/notification-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(notifications),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[Settings] notification save failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel guardar as notificacoes.')
+      }
+      setNotificationSuccess(true)
+      setTimeout(() => setNotificationSuccess(false), 3000)
+    } catch (err) {
+      setNotificationError(err instanceof Error ? err.message : 'Nao foi possivel guardar as notificacoes.')
+    } finally {
+      setSavingNotifications(false)
     }
   }
 
@@ -401,7 +443,100 @@ export default function SettingsPage() {
           </Button>
         </form>
       </Card>
+
+      <Card>
+        <form onSubmit={handleNotificationSave} className="space-y-4">
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-100">WhatsApp e notificacoes</h3>
+            <p className="text-sm text-zinc-500 mt-1">
+              Ative a criacao de eventos internos. O envio real sera conectado ao provedor no proximo passo.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <ToggleRow
+              label="Ativar WhatsApp"
+              description="Permite registrar mensagens para clientes e negocio."
+              checked={notifications.whatsapp_enabled}
+              onChange={(value) => setNotifications((current) => ({ ...current, whatsapp_enabled: value }))}
+            />
+            <ToggleRow
+              label="Mensagem ao cliente quando cria cita"
+              description="Fila uma mensagem de confirmacao para o telefone do cliente."
+              checked={notifications.whatsapp_notify_client_on_booking}
+              onChange={(value) =>
+                setNotifications((current) => ({ ...current, whatsapp_notify_client_on_booking: value }))
+              }
+            />
+            <ToggleRow
+              label="Mensagem ao negocio quando cria cita"
+              description="Fila um aviso para o telefone cadastrado no negocio."
+              checked={notifications.whatsapp_notify_business_on_booking}
+              onChange={(value) =>
+                setNotifications((current) => ({ ...current, whatsapp_notify_business_on_booking: value }))
+              }
+            />
+            <ToggleRow
+              label="Recordatorio 24 horas antes"
+              description="Fila uma mensagem pedindo confirmacao de asistencia."
+              checked={notifications.whatsapp_reminder_24h_enabled}
+              onChange={(value) =>
+                setNotifications((current) => ({ ...current, whatsapp_reminder_24h_enabled: value }))
+              }
+            />
+            <ToggleRow
+              label="Feliz cumpleanos"
+              description="Preparado para clientes con cita en los ultimos 3 meses y fecha de nacimiento."
+              checked={notifications.whatsapp_birthday_enabled}
+              onChange={(value) => setNotifications((current) => ({ ...current, whatsapp_birthday_enabled: value }))}
+            />
+          </div>
+
+          {notificationSuccess && (
+            <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+              Notificacoes guardadas com sucesso.
+            </p>
+          )}
+
+          {notificationError && (
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {notificationError}
+            </p>
+          )}
+
+          <Button type="submit" loading={savingNotifications}>
+            Guardar notificacoes
+          </Button>
+        </form>
+      </Card>
     </div>
+  )
+}
+
+function ToggleRow({
+  label,
+  description,
+  checked,
+  onChange,
+}: {
+  label: string
+  description: string
+  checked: boolean
+  onChange: (value: boolean) => void
+}) {
+  return (
+    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+      <span>
+        <span className="block text-sm font-semibold text-zinc-100">{label}</span>
+        <span className="mt-1 block text-xs text-zinc-500">{description}</span>
+      </span>
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(event) => onChange(event.target.checked)}
+        className="h-5 w-5 accent-emerald-500"
+      />
+    </label>
   )
 }
 

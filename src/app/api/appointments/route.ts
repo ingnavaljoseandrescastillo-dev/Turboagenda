@@ -77,6 +77,7 @@ export async function POST(request: NextRequest) {
       p_client_name: parsed.data.client_name,
       p_client_email: parsed.data.client_email,
       p_client_phone: parsed.data.client_phone ?? null,
+      p_client_birthdate: parsed.data.client_birthdate || null,
       p_start_time: parsed.data.start_time,
       p_notes: parsed.data.notes ?? null,
     })

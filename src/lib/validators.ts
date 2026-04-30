@@ -33,8 +33,17 @@ export const AppointmentSchema = z.object({
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   client_email: z.string().email('Email inválido'),
   client_phone: z.string().optional(),
+  client_birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de nascimento invalida').optional().or(z.literal('')),
   start_time: z.string().datetime(),
   notes: z.string().optional(),
+})
+
+export const NotificationSettingsSchema = z.object({
+  whatsapp_enabled: z.boolean(),
+  whatsapp_notify_client_on_booking: z.boolean(),
+  whatsapp_notify_business_on_booking: z.boolean(),
+  whatsapp_reminder_24h_enabled: z.boolean(),
+  whatsapp_birthday_enabled: z.boolean(),
 })
 
 export const ServiceSchema = z.object({
@@ -91,6 +100,7 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type AppointmentInput = z.infer<typeof AppointmentSchema>
+export type NotificationSettingsInput = z.infer<typeof NotificationSettingsSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
