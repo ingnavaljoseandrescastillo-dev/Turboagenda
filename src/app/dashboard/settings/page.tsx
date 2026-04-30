@@ -23,6 +23,9 @@ export default function SettingsPage() {
     phone: '',
     address: '',
     slug: '',
+    cover_image_url: '',
+    logo_image_url: '',
+    gallery_images: ['', '', '', ''],
   })
   const [schedule, setSchedule] = useState({
     opening_time: '09:00',
@@ -56,6 +59,9 @@ export default function SettingsPage() {
           phone: b.phone ?? '',
           address: b.address ?? '',
           slug: b.slug ?? '',
+          cover_image_url: b.cover_image_url ?? '',
+          logo_image_url: b.logo_image_url ?? '',
+          gallery_images: normalizeGalleryImages(b.gallery_images),
         })
         if (settings) {
           setSchedule({
@@ -101,6 +107,14 @@ export default function SettingsPage() {
     }
   }
 
+  function updateGalleryImage(index: number, value: string) {
+    setForm((current) => {
+      const next = [...current.gallery_images]
+      next[index] = value
+      return { ...current, gallery_images: next }
+    })
+  }
+
   function toggleWorkingDay(day: number) {
     setSchedule((current) => ({
       ...current,
@@ -144,7 +158,7 @@ export default function SettingsPage() {
   if (loading) return <div className="text-zinc-500 text-sm">A carregar...</div>
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="max-w-4xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold text-zinc-100">Configuracoes</h2>
         <p className="text-sm text-zinc-500 mt-1">Perfil do seu negocio</p>
@@ -198,6 +212,104 @@ export default function SettingsPage() {
 
           <Button type="submit" loading={saving}>
             Guardar alteracoes
+          </Button>
+        </form>
+      </Card>
+
+      <Card>
+        <form onSubmit={handleSave} className="space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-100">Pagina publica</h3>
+            <p className="text-sm text-zinc-500 mt-1">
+              Controle as imagens que aparecem no link publico do negocio.
+            </p>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+            <div className="space-y-4">
+              <Input
+                label="Imagem de capa"
+                type="url"
+                placeholder="https://..."
+                helper="Imagem grande no topo da pagina publica."
+                value={form.cover_image_url}
+                onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))}
+              />
+              <Input
+                label="Logo ou foto do negocio"
+                type="url"
+                placeholder="https://..."
+                helper="Aparece como avatar do negocio."
+                value={form.logo_image_url}
+                onChange={(e) => setForm((f) => ({ ...f, logo_image_url: e.target.value }))}
+              />
+            </div>
+
+            <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
+              {form.cover_image_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={form.cover_image_url} alt="Preview da capa" className="h-48 w-full object-cover" />
+              ) : (
+                <div className="flex h-48 items-center justify-center bg-zinc-900 text-sm text-zinc-600">
+                  Preview da capa
+                </div>
+              )}
+              <div className="flex items-center gap-3 p-4">
+                <div className="h-14 w-14 overflow-hidden rounded-xl border border-zinc-800 bg-zinc-900">
+                  {form.logo_image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={form.logo_image_url} alt="Preview do logo" className="h-full w-full object-cover" />
+                  ) : null}
+                </div>
+                <div>
+                  <p className="font-semibold text-zinc-100">{form.name || 'Nome do negocio'}</p>
+                  <p className="text-sm text-zinc-500">Preview publico</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p className="mb-3 text-sm font-medium text-zinc-300">Galeria</p>
+            <div className="grid gap-3 md:grid-cols-2">
+              {form.gallery_images.map((imageUrl, index) => (
+                <div key={index} className="grid gap-2 rounded-xl border border-zinc-800 bg-zinc-950 p-3">
+                  <div className="aspect-video overflow-hidden rounded-lg bg-zinc-900">
+                    {imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imageUrl} alt={`Galeria ${index + 1}`} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-xs text-zinc-600">
+                        Foto {index + 1}
+                      </div>
+                    )}
+                  </div>
+                  <Input
+                    aria-label={`URL da foto ${index + 1}`}
+                    type="url"
+                    placeholder="https://..."
+                    value={imageUrl}
+                    onChange={(e) => updateGalleryImage(index, e.target.value)}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {success && (
+            <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+              Pagina publica atualizada com sucesso.
+            </p>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <Button type="submit" loading={saving}>
+            Guardar imagens
           </Button>
         </form>
       </Card>
@@ -287,4 +399,9 @@ export default function SettingsPage() {
       </Card>
     </div>
   )
+}
+
+function normalizeGalleryImages(value: unknown) {
+  const images = Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
+  return [...images.slice(0, 4), '', '', '', ''].slice(0, 4)
 }

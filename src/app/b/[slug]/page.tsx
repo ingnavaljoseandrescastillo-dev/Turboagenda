@@ -18,8 +18,19 @@ export async function generateMetadata({ params }: PageProps) {
   return { title: `${data.name} - TurboAgenda`, description: data.description ?? undefined }
 }
 
-function GalleryPreview({ businessName }: { businessName: string }) {
+function imageBackground(url?: string | null) {
+  return url
+    ? {
+        backgroundImage: `linear-gradient(180deg, rgba(9,9,11,0.08), rgba(9,9,11,0.68)), url("${url}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : undefined
+}
+
+function GalleryPreview({ businessName, images }: { businessName: string; images?: string[] | null }) {
   const items = ['Ambiente', 'Trabalhos', 'Detalhes', 'Resultado']
+  const galleryImages = images?.filter(Boolean).slice(0, 4) ?? []
 
   return (
     <section className="space-y-4">
@@ -37,12 +48,14 @@ function GalleryPreview({ businessName }: { businessName: string }) {
           >
             <div
               className="flex h-full flex-col justify-end p-4"
-              style={{
-                background:
-                  index % 2 === 0
-                    ? 'linear-gradient(145deg, #064e3b 0%, #18181b 58%, #020617 100%)'
-                    : 'linear-gradient(145deg, #0f766e 0%, #27272a 55%, #020617 100%)',
-              }}
+              style={
+                imageBackground(galleryImages[index]) ?? {
+                  background:
+                    index % 2 === 0
+                      ? 'linear-gradient(145deg, #064e3b 0%, #18181b 58%, #020617 100%)'
+                      : 'linear-gradient(145deg, #0f766e 0%, #27272a 55%, #020617 100%)',
+                }
+              }
             >
               <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">{businessName}</p>
               <p className="mt-1 text-sm font-bold text-white">{item}</p>
@@ -67,8 +80,11 @@ function TeamPreview({ employees }: { employees: Employee[] }) {
         {employees.map((employee) => (
           <div key={employee.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 text-lg font-black text-emerald-300">
-                {employee.name.charAt(0).toUpperCase()}
+              <div
+                className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 bg-cover bg-center text-lg font-black text-emerald-300"
+                style={imageBackground(employee.avatar_url)}
+              >
+                {!employee.avatar_url && employee.name.charAt(0).toUpperCase()}
               </div>
               <div>
                 <p className="font-semibold text-zinc-100">{employee.name}</p>
@@ -154,14 +170,21 @@ export default async function BusinessPublicPage({ params }: PageProps) {
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div className="aspect-[3/4] rounded-3xl bg-gradient-to-br from-emerald-500 to-zinc-900 p-5">
+              <div
+                className="aspect-[3/4] overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-zinc-900 p-5"
+                style={imageBackground(biz.cover_image_url)}
+              >
                 <div className="flex h-full flex-col justify-end">
-                  <p className="text-sm font-semibold text-emerald-950">Proximo horario</p>
-                  <p className="mt-1 text-2xl font-black text-white">Online</p>
+                  <p className="text-sm font-semibold text-emerald-100">Reserve online</p>
+                  <p className="mt-1 text-2xl font-black text-white">{biz.name}</p>
                 </div>
               </div>
               <div className="mt-10 aspect-[3/4] rounded-3xl bg-gradient-to-br from-zinc-800 to-emerald-950 p-5">
                 <div className="flex h-full flex-col justify-end">
+                  <div
+                    className="mb-4 h-16 w-16 rounded-2xl border border-white/10 bg-emerald-500/20 bg-cover bg-center"
+                    style={imageBackground(biz.logo_image_url)}
+                  />
                   <p className="text-sm font-semibold text-emerald-200">Servicos ativos</p>
                   <p className="mt-1 text-2xl font-black text-white">{svcs.length}</p>
                 </div>
@@ -175,7 +198,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
             <ServiceGrid services={svcs} slug={slug} />
           </section>
           <TeamPreview employees={emps} />
-          <GalleryPreview businessName={biz.name} />
+          <GalleryPreview businessName={biz.name} images={biz.gallery_images} />
           <ReviewsList reviews={revs} />
         </div>
       </main>

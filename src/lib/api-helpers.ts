@@ -10,6 +10,9 @@ export type CurrentBusiness = {
   description?: string | null
   phone?: string | null
   address?: string | null
+  cover_image_url?: string | null
+  logo_image_url?: string | null
+  gallery_images?: string[] | null
   owner_id?: string
 }
 
@@ -42,7 +45,7 @@ export async function validateAuth() {
 export async function getBusinessForUser(supabase: SupabaseServerClient, userId: string) {
   const { data: ownedBusiness, error: ownerError } = await supabase
     .from('businesses')
-    .select('id, slug, name, description, phone, address, owner_id')
+    .select('*')
     .eq('owner_id', userId)
     .order('created_at', { ascending: true })
     .limit(1)
@@ -59,7 +62,7 @@ export async function getBusinessForUser(supabase: SupabaseServerClient, userId:
 
   const { data: ownerData, error: relationError } = await supabase
     .from('business_owners')
-    .select('business_id, businesses(id, slug, name, description, phone, address, owner_id)')
+    .select('business_id, businesses(*)')
     .eq('user_id', userId)
     .order('created_at', { ascending: true })
     .limit(1)

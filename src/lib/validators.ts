@@ -57,6 +57,9 @@ export const BusinessSettingsSchema = z.object({
   description: z.string().optional(),
   phone: z.string().optional(),
   address: z.string().optional(),
+  cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
+  logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
+  gallery_images: z.array(z.string().url('URL invalida').or(z.literal(''))).max(12).optional(),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug só pode conter letras minúsculas, números e hífens'),
 })
 
@@ -73,6 +76,9 @@ export const BusinessCreateSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
   description: z.string().optional(),
+  cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
+  logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
+  gallery_images: z.array(z.string().url('URL invalida').or(z.literal(''))).max(12).optional(),
   slug: z
     .string()
     .min(2)
