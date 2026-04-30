@@ -5,6 +5,7 @@ import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@
 const EmployeeSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   role: z.string().min(1, 'Função obrigatória'),
+  avatar_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   is_active: z.boolean().default(true),
 })
 
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('employees')
-      .insert({ ...parsed.data, business_id: business.id })
+      .insert({ ...parsed.data, avatar_url: parsed.data.avatar_url || null, business_id: business.id })
       .select()
       .single()
 

@@ -5,6 +5,7 @@ import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@
 const EmployeePatchSchema = z.object({
   name: z.string().min(2).optional(),
   role: z.string().min(1).optional(),
+  avatar_url: z.string().url('URL invalida').or(z.literal('')).nullable().optional(),
   is_active: z.boolean().optional(),
 })
 
@@ -23,9 +24,14 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     const parsed = EmployeePatchSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
 
+    const payload = {
+      ...parsed.data,
+      ...(parsed.data.avatar_url !== undefined ? { avatar_url: parsed.data.avatar_url || null } : {}),
+    }
+
     const { data, error } = await supabase
       .from('employees')
-      .update(parsed.data)
+      .update(payload)
       .eq('id', id)
       .eq('business_id', business.id)
       .select()

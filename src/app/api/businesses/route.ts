@@ -57,11 +57,12 @@ export async function POST(request: NextRequest) {
       .from('businesses')
       .insert({
         ...rest,
+        gallery_images: rest.gallery_images?.filter(Boolean) ?? [],
         name,
         slug: slug ?? uniqueSlug(name),
         owner_id: user.id,
       })
-      .select('id, slug, name, description, phone, address, owner_id')
+      .select('*')
       .single()
 
     if (error) return handleError(error.message, 422)
@@ -89,12 +90,19 @@ export async function PATCH(request: NextRequest) {
       return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
     }
 
+    const payload = {
+      ...parsed.data,
+      cover_image_url: parsed.data.cover_image_url || null,
+      logo_image_url: parsed.data.logo_image_url || null,
+      gallery_images: parsed.data.gallery_images?.filter(Boolean) ?? [],
+    }
+
     const { data, error } = await supabase
       .from('businesses')
-      .update(parsed.data)
+      .update(payload)
       .eq('id', business.id)
       .eq('owner_id', user.id)
-      .select('id, slug, name, description, phone, address, owner_id')
+      .select('*')
       .single()
 
     if (error) return handleError(error.message, 422)

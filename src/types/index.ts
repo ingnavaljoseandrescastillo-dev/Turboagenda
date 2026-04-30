@@ -5,6 +5,9 @@ export interface Business {
   description?: string
   phone?: string
   address?: string
+  cover_image_url?: string
+  logo_image_url?: string
+  gallery_images?: string[]
   owner_id: string
   created_at: string
 }

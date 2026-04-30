@@ -14,6 +14,7 @@ import type { Employee } from '@/types'
 const EmployeeSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   role: z.string().min(1, 'Função obrigatória'),
+  avatar_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   is_active: z.boolean(),
 })
 type EmployeeInput = z.infer<typeof EmployeeSchema>
@@ -43,6 +44,14 @@ function EmployeeForm({
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <Input label="Nome completo" error={errors.name?.message} {...register('name')} />
       <Input label="Função / Cargo" placeholder="Ex: Barbeiro, Cabeleireira..." error={errors.role?.message} {...register('role')} />
+      <Input
+        label="Foto publica"
+        type="url"
+        placeholder="https://..."
+        helper="Opcional. Aparece na pagina publica do negocio."
+        error={errors.avatar_url?.message}
+        {...register('avatar_url')}
+      />
       <label className="flex items-center gap-2 cursor-pointer">
         <input type="checkbox" className="accent-emerald-500 w-4 h-4" {...register('is_active')} />
         <span className="text-sm text-zinc-300">Colaborador ativo</span>
@@ -183,9 +192,14 @@ export default function TeamPage() {
             return (
               <div key={emp.id} className="p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-emerald-500/30 transition">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg"
-                    style={{ background: color + '30', color }}>
-                    {getInitials(emp.name)}
+                  <div
+                    className="w-12 h-12 rounded-full flex items-center justify-center bg-cover bg-center font-bold text-lg"
+                    style={{
+                      background: emp.avatar_url ? `center / cover url("${emp.avatar_url}")` : color + '30',
+                      color,
+                    }}
+                  >
+                    {!emp.avatar_url && getInitials(emp.name)}
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => setEditing(emp)} className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition text-xs" title="Editar">✏️</button>
@@ -213,7 +227,12 @@ export default function TeamPage() {
       <Dialog open={!!editing} onClose={() => setEditing(null)} title="Editar colaborador">
         {editing && (
           <EmployeeForm
-            defaultValues={{ name: editing.name, role: editing.role, is_active: editing.is_active }}
+            defaultValues={{
+              name: editing.name,
+              role: editing.role,
+              avatar_url: editing.avatar_url ?? '',
+              is_active: editing.is_active,
+            }}
             onSubmit={handleEdit}
             loading={saving}
           />
