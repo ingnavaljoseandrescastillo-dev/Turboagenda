@@ -6,7 +6,7 @@ import { validatePlatformAdmin } from '@/lib/admin'
 const AdminBusinessPatchSchema = z.object({
   is_paused: z.boolean().optional(),
   pause_reason: z.string().nullable().optional(),
-  plan: z.enum(['trial', 'basic', 'plus', 'pro']).optional(),
+  plan: z.enum(['trial', 'basic', 'plus']).optional(),
   status: z.enum(['trial', 'active', 'cancelled', 'past_due']).optional(),
   trial_ends_at: z.string().datetime().nullable().optional(),
   current_period_end: z.string().datetime().nullable().optional(),

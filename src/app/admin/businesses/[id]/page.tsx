@@ -27,7 +27,7 @@ type BusinessDetail = {
     | null
   subscriptions:
     | {
-        plan: 'trial' | 'basic' | 'plus' | 'pro'
+        plan: 'trial' | 'basic' | 'plus'
         status: 'trial' | 'active' | 'cancelled' | 'past_due'
         trial_ends_at: string | null
         current_period_end: string | null

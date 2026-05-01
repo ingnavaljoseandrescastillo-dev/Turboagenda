@@ -141,7 +141,7 @@ export default function HomePage() {
             </button>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {/* BASIC */}
             <div className="p-7 bg-zinc-900/50 backdrop-blur border border-zinc-800 rounded-2xl">
               <div className="text-sm font-medium text-zinc-400 mb-2">{p.basic.name}</div>
@@ -189,30 +189,6 @@ export default function HomePage() {
               </ul>
             </div>
 
-            {/* PRO */}
-            <div className="relative p-7 bg-zinc-900/30 backdrop-blur border border-zinc-800 rounded-2xl opacity-80">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-zinc-700 text-zinc-300 text-[10px] font-bold px-3 py-1 rounded-full tracking-wider flex items-center gap-1">
-                {p.comingSoon}
-              </div>
-              <div className="text-sm font-medium text-amber-400 mb-2 flex items-center gap-1.5">{p.pro.name} 👑</div>
-              <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-4xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                  {billing === 'monthly' ? '39,99€' : `${(39.99 * YEARLY).toFixed(2).replace('.', ',')}€`}
-                </span>
-                <span className="text-zinc-500 text-xs">{p.month}</span>
-              </div>
-              {billing === 'yearly' ? <div className="text-[10px] text-amber-400 mb-5">{p.pro.yearlyNote}</div> : <div className="h-4 mb-5" />}
-              <button disabled className="w-full py-2.5 bg-zinc-800 text-zinc-500 rounded-xl font-semibold mb-6 cursor-not-allowed text-sm flex items-center justify-center gap-2">
-                {p.lockedBtn}
-              </button>
-              <ul className="space-y-2.5 text-xs">
-                {p.pro.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-zinc-300">
-                    <span className="text-amber-400 flex-shrink-0 mt-0.5">✓</span>{f}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
         </section>
 

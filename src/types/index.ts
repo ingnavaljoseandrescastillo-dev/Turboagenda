@@ -90,7 +90,7 @@ export interface Review {
 export interface Subscription {
   id: string
   business_id: string
-  plan: 'basic' | 'plus' | 'pro'
+  plan: 'trial' | 'basic' | 'plus'
   status: 'trial' | 'active' | 'cancelled' | 'past_due'
   trial_ends_at?: string
   current_period_end?: string
