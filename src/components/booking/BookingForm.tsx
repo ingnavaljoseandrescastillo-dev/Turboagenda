@@ -12,6 +12,7 @@ const ClientSchema = z.object({
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   client_email: z.string().email('Email inválido'),
   client_phone: z.string().optional(),
+  client_birthdate: z.string().optional(),
 })
 
 type ClientInput = z.infer<typeof ClientSchema>
@@ -85,6 +86,13 @@ export function BookingForm({ businessId, serviceId, employeeId, startTime, onSu
           placeholder="+351 912 345 678"
           error={errors.client_phone?.message}
           {...register('client_phone')}
+        />
+        <Input
+          label="Data de nascimento (opcional)"
+          type="date"
+          helper="Usada apenas para mensagens de aniversario do negocio."
+          error={errors.client_birthdate?.message}
+          {...register('client_birthdate')}
         />
 
         {serverError && (
