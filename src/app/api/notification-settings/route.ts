@@ -17,6 +17,8 @@ export async function GET() {
     if (!business) return handleError('Nenhum negocio encontrado. Crie o negocio inicial no onboarding.', 404)
 
     await ensureBusinessBootstrapRows(supabase, user.id, business.id)
+    const plan = await getSubscriptionPlan(supabase, business.id)
+    const whatsappAvailable = plan === 'plus'
 
     const { data, error } = await supabase
       .from('business_settings')
@@ -27,7 +29,12 @@ export async function GET() {
       .maybeSingle()
 
     if (error) return handleError(error.message, 422)
-    return formatResponse(data)
+    return formatResponse({
+      ...data,
+      whatsapp_enabled: whatsappAvailable ? Boolean(data?.whatsapp_enabled) : false,
+      whatsapp_available: whatsappAvailable,
+      plan,
+    })
   } catch (err) {
     return handleError(err)
   }
@@ -44,10 +51,18 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const parsed = NotificationSettingsSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
+    const plan = await getSubscriptionPlan(supabase, business.id)
+    const whatsappAvailable = plan === 'plus'
+    if (!whatsappAvailable && parsed.data.whatsapp_enabled) {
+      return handleError('WhatsApp esta disponible solo en el Plan Plus. El Plan Basic mantiene recordatorios por email.', 403)
+    }
 
     const { data, error } = await supabase
       .from('business_settings')
-      .update(parsed.data)
+      .update({
+        ...parsed.data,
+        whatsapp_enabled: whatsappAvailable ? parsed.data.whatsapp_enabled : false,
+      })
       .eq('business_id', business.id)
       .select(
         'whatsapp_enabled, whatsapp_notify_client_on_booking, whatsapp_notify_business_on_booking, whatsapp_reminder_24h_enabled, whatsapp_birthday_enabled'
@@ -55,8 +70,27 @@ export async function PATCH(request: NextRequest) {
       .single()
 
     if (error) return handleError(error.message, 422)
-    return formatResponse(data)
+    return formatResponse({
+      ...data,
+      whatsapp_enabled: whatsappAvailable ? Boolean(data?.whatsapp_enabled) : false,
+      whatsapp_available: whatsappAvailable,
+      plan,
+    })
   } catch (err) {
     return handleError(err)
   }
+}
+
+async function getSubscriptionPlan(
+  supabase: Awaited<ReturnType<typeof validateAuth>>['supabase'],
+  businessId: string
+) {
+  const { data, error } = await supabase
+    .from('subscriptions')
+    .select('plan')
+    .eq('business_id', businessId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data?.plan ?? 'trial'
 }

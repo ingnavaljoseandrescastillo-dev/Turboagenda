@@ -14,7 +14,7 @@ type BusinessRow = {
   pause_reason?: string | null
   subscriptions:
     | {
-        plan: 'trial' | 'basic' | 'plus' | 'pro'
+        plan: 'trial' | 'basic' | 'plus'
         status: 'trial' | 'active' | 'cancelled' | 'past_due'
         trial_ends_at: string | null
         current_period_end: string | null
@@ -177,7 +177,6 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                 <option value="trial">Trial</option>
                 <option value="basic">Basic</option>
                 <option value="plus">Plus</option>
-                <option value="pro">Pro</option>
               </select>
               <button
                 type="submit"

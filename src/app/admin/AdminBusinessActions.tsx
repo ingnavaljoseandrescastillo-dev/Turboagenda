@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 
-type Plan = 'trial' | 'basic' | 'plus' | 'pro'
+type Plan = 'trial' | 'basic' | 'plus'
 type Status = 'trial' | 'active' | 'cancelled' | 'past_due'
 
 interface AdminBusinessActionsProps {
@@ -67,7 +67,6 @@ export function AdminBusinessActions({
           <option value="trial">trial</option>
           <option value="basic">basic</option>
           <option value="plus">plus</option>
-          <option value="pro">pro</option>
         </select>
         <select
           aria-label="Estado"

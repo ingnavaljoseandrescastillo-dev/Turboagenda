@@ -24,6 +24,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
   const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [subscriptionPlan, setSubscriptionPlan] = useState('trial')
   const [form, setForm] = useState({
     name: '',
     description: '',
@@ -67,6 +68,9 @@ export default function SettingsPage() {
 
         const b = json.data.business
         const settings = json.data.settings
+        const plan = json.data.subscription?.plan ?? 'trial'
+        const whatsappAvailable = plan === 'plus'
+        setSubscriptionPlan(plan)
         setForm({
           name: b.name ?? '',
           description: b.description ?? '',
@@ -86,7 +90,7 @@ export default function SettingsPage() {
             max_booking_months: Math.max(1, Math.ceil((settings.max_booking_days ?? 30) / 30)),
           })
           setNotifications({
-            whatsapp_enabled: Boolean(settings.whatsapp_enabled),
+            whatsapp_enabled: whatsappAvailable ? Boolean(settings.whatsapp_enabled) : false,
             whatsapp_notify_client_on_booking: settings.whatsapp_notify_client_on_booking ?? true,
             whatsapp_notify_business_on_booking: settings.whatsapp_notify_business_on_booking ?? true,
             whatsapp_reminder_24h_enabled: settings.whatsapp_reminder_24h_enabled ?? true,
@@ -185,7 +189,10 @@ export default function SettingsPage() {
       const res = await fetch('/api/notification-settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(notifications),
+        body: JSON.stringify({
+          ...notifications,
+          whatsapp_enabled: subscriptionPlan === 'plus' ? notifications.whatsapp_enabled : false,
+        }),
       })
       const json = await res.json()
       if (!res.ok) {
@@ -202,6 +209,7 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
+  const whatsappAvailable = subscriptionPlan === 'plus'
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -449,21 +457,28 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-semibold text-zinc-100">WhatsApp e notificacoes</h3>
             <p className="text-sm text-zinc-500 mt-1">
-              Ative a criacao de eventos internos. O envio real sera conectado ao provedor no proximo passo.
+              Basic mantiene recordatorios por email. WhatsApp queda reservado para el Plan Plus.
             </p>
           </div>
+          {!whatsappAvailable && (
+            <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
+              Tu plan actual es {subscriptionPlan}. Cambia a Plus para activar mensajes automaticos por WhatsApp.
+            </p>
+          )}
 
           <div className="space-y-3">
             <ToggleRow
               label="Ativar WhatsApp"
               description="Permite registrar mensagens para clientes e negocio."
               checked={notifications.whatsapp_enabled}
+              disabled={!whatsappAvailable}
               onChange={(value) => setNotifications((current) => ({ ...current, whatsapp_enabled: value }))}
             />
             <ToggleRow
               label="Mensagem ao cliente quando cria cita"
               description="Fila uma mensagem de confirmacao para o telefone do cliente."
               checked={notifications.whatsapp_notify_client_on_booking}
+              disabled={!whatsappAvailable}
               onChange={(value) =>
                 setNotifications((current) => ({ ...current, whatsapp_notify_client_on_booking: value }))
               }
@@ -472,6 +487,7 @@ export default function SettingsPage() {
               label="Mensagem ao negocio quando cria cita"
               description="Fila um aviso para o telefone cadastrado no negocio."
               checked={notifications.whatsapp_notify_business_on_booking}
+              disabled={!whatsappAvailable}
               onChange={(value) =>
                 setNotifications((current) => ({ ...current, whatsapp_notify_business_on_booking: value }))
               }
@@ -480,6 +496,7 @@ export default function SettingsPage() {
               label="Recordatorio 24 horas antes"
               description="Fila uma mensagem pedindo confirmacao de asistencia."
               checked={notifications.whatsapp_reminder_24h_enabled}
+              disabled={!whatsappAvailable}
               onChange={(value) =>
                 setNotifications((current) => ({ ...current, whatsapp_reminder_24h_enabled: value }))
               }
@@ -488,6 +505,7 @@ export default function SettingsPage() {
               label="Feliz cumpleanos"
               description="Preparado para clientes con cita en los ultimos 3 meses y fecha de nacimiento."
               checked={notifications.whatsapp_birthday_enabled}
+              disabled={!whatsappAvailable}
               onChange={(value) => setNotifications((current) => ({ ...current, whatsapp_birthday_enabled: value }))}
             />
           </div>
@@ -517,15 +535,17 @@ function ToggleRow({
   label,
   description,
   checked,
+  disabled = false,
   onChange,
 }: {
   label: string
   description: string
   checked: boolean
+  disabled?: boolean
   onChange: (value: boolean) => void
 }) {
   return (
-    <label className="flex cursor-pointer items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+    <label className={`flex items-center justify-between gap-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4 ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'}`}>
       <span>
         <span className="block text-sm font-semibold text-zinc-100">{label}</span>
         <span className="mt-1 block text-xs text-zinc-500">{description}</span>
@@ -533,6 +553,7 @@ function ToggleRow({
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
         className="h-5 w-5 accent-emerald-500"
       />
