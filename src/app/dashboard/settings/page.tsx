@@ -18,6 +18,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
   const [notificationSuccess, setNotificationSuccess] = useState(false)
@@ -138,6 +139,44 @@ export default function SettingsPage() {
       next[index] = value
       return { ...current, gallery_images: next }
     })
+  }
+
+  async function handleImageUpload(
+    event: React.ChangeEvent<HTMLInputElement>,
+    kind: 'cover' | 'logo' | 'gallery',
+    index?: number
+  ) {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+
+    const uploadKey = kind === 'gallery' ? `gallery-${index}` : kind
+    setUploadingImage(uploadKey)
+    setError(null)
+    try {
+      const payload = new FormData()
+      payload.append('kind', kind)
+      payload.append('file', file)
+
+      const res = await fetch('/api/public-images', {
+        method: 'POST',
+        body: payload,
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[Settings] image upload failed', json.error)
+        throw new Error(json.error ?? 'No fue posible subir la imagen.')
+      }
+
+      const url = json.data.url as string
+      if (kind === 'cover') setForm((current) => ({ ...current, cover_image_url: url }))
+      if (kind === 'logo') setForm((current) => ({ ...current, logo_image_url: url }))
+      if (kind === 'gallery' && typeof index === 'number') updateGalleryImage(index, url)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No fue posible subir la imagen.')
+    } finally {
+      setUploadingImage(null)
+    }
   }
 
   function toggleWorkingDay(day: number) {
@@ -289,6 +328,11 @@ export default function SettingsPage() {
                 value={form.cover_image_url}
                 onChange={(e) => setForm((f) => ({ ...f, cover_image_url: e.target.value }))}
               />
+              <ImageUploadButton
+                label={uploadingImage === 'cover' ? 'Subiendo portada...' : 'Subir portada'}
+                disabled={Boolean(uploadingImage)}
+                onChange={(event) => handleImageUpload(event, 'cover')}
+              />
               <Input
                 label={copy.logo}
                 type="url"
@@ -296,6 +340,11 @@ export default function SettingsPage() {
                 helper={copy.logoHelper}
                 value={form.logo_image_url}
                 onChange={(e) => setForm((f) => ({ ...f, logo_image_url: e.target.value }))}
+              />
+              <ImageUploadButton
+                label={uploadingImage === 'logo' ? 'Subiendo logo...' : 'Subir logo'}
+                disabled={Boolean(uploadingImage)}
+                onChange={(event) => handleImageUpload(event, 'logo')}
               />
             </div>
 
@@ -344,6 +393,11 @@ export default function SettingsPage() {
                     placeholder="https://..."
                     value={imageUrl}
                     onChange={(e) => updateGalleryImage(index, e.target.value)}
+                  />
+                  <ImageUploadButton
+                    label={uploadingImage === `gallery-${index}` ? 'Subiendo foto...' : `Subir foto ${index + 1}`}
+                    disabled={Boolean(uploadingImage)}
+                    onChange={(event) => handleImageUpload(event, 'gallery', index)}
                   />
                 </div>
               ))}
@@ -528,6 +582,27 @@ export default function SettingsPage() {
         </form>
       </Card>
     </div>
+  )
+}
+
+function ImageUploadButton({
+  label,
+  disabled,
+  onChange,
+}: {
+  label: string
+  disabled: boolean
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <label
+      className={`inline-flex w-fit items-center justify-center rounded-lg border border-zinc-700 px-3 py-2 text-xs font-semibold text-zinc-200 transition ${
+        disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:border-emerald-500 hover:text-emerald-300'
+      }`}
+    >
+      {label}
+      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={disabled} onChange={onChange} className="sr-only" />
+    </label>
   )
 }
 
