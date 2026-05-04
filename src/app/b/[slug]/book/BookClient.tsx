@@ -108,6 +108,7 @@ export function BookClient({
               <ServiceSelector
                 services={services}
                 selected={selectedService}
+                primaryColor={theme.primary}
                 onSelect={(id) => {
                   setSelectedService(id)
                   setStep(1)
@@ -122,6 +123,7 @@ export function BookClient({
               <EmployeeSelector
                 employees={employees}
                 selected={selectedEmployee}
+                primaryColor={theme.primary}
                 onSelect={(id) => {
                   setSelectedEmployee(id)
                   setStep(2)
@@ -136,6 +138,8 @@ export function BookClient({
               employeeId={selectedEmployee}
               maxBookingDays={settings?.max_booking_days ?? 30}
               selected={selectedDatetime}
+              primaryColor={theme.primary}
+              onPrimaryColor={theme.onPrimary}
               onSelect={(dt) => setSelectedDatetime(dt)}
             />
           )}
@@ -145,12 +149,19 @@ export function BookClient({
               serviceId={selectedService}
               employeeId={selectedEmployee}
               startTime={selectedDatetime}
+              primaryColor={theme.primary}
+              onPrimaryColor={theme.onPrimary}
               onSuccess={() => setCompleted(true)}
             />
           )}
 
           {step < 3 && (
-            <Button disabled={!canAdvance()} onClick={() => setStep(step + 1)} className="mt-6 w-full">
+            <Button
+              disabled={!canAdvance()}
+              onClick={() => setStep(step + 1)}
+              className="mt-6 w-full hover:opacity-90"
+              style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
+            >
               Continuar
             </Button>
           )}
@@ -162,11 +173,13 @@ export function BookClient({
 
 function publicTheme(business: Business) {
   const background = business.theme_background_color || '#09090b'
+  const primary = business.theme_primary_color || '#10b981'
   return {
-    primary: business.theme_primary_color || '#10b981',
+    primary,
     background,
     text: business.theme_text_color || '#f4f4f5',
     backgroundImage: business.theme_background_image_url || null,
+    onPrimary: readableTextColor(primary),
   }
 }
 
@@ -180,4 +193,12 @@ function pageBackground(theme: ReturnType<typeof publicTheme>) {
         backgroundAttachment: 'fixed',
       }
     : { backgroundColor: theme.background }
+}
+
+function readableTextColor(hex: string) {
+  const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.slice(1) : '10b981'
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
 }

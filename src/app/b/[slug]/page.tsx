@@ -59,7 +59,15 @@ function readableTextColor(hex: string) {
   return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
 }
 
-function GalleryPreview({ businessName, images }: { businessName: string; images?: string[] | null }) {
+function GalleryPreview({
+  businessName,
+  images,
+  primaryColor,
+}: {
+  businessName: string
+  images?: string[] | null
+  primaryColor: string
+}) {
   const items = ['Ambiente', 'Trabalhos', 'Detalhes', 'Resultado']
   const galleryImages = images?.filter(Boolean).slice(0, 4) ?? []
 
@@ -75,7 +83,8 @@ function GalleryPreview({ businessName, images }: { businessName: string; images
         {items.map((item, index) => (
           <div
             key={item}
-            className="aspect-[4/5] overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900"
+            className="aspect-[4/5] overflow-hidden rounded-2xl border bg-zinc-900"
+            style={{ borderColor: `${primaryColor}38` }}
           >
             <div
               className="flex h-full flex-col justify-end p-4"
@@ -83,12 +92,12 @@ function GalleryPreview({ businessName, images }: { businessName: string; images
                 imageBackground(galleryImages[index]) ?? {
                   background:
                     index % 2 === 0
-                      ? 'linear-gradient(145deg, #064e3b 0%, #18181b 58%, #020617 100%)'
-                      : 'linear-gradient(145deg, #0f766e 0%, #27272a 55%, #020617 100%)',
+                      ? `linear-gradient(145deg, ${primaryColor}55 0%, #18181b 58%, #020617 100%)`
+                      : `linear-gradient(145deg, ${primaryColor}38 0%, #27272a 55%, #020617 100%)`,
                 }
               }
             >
-              <p className="text-xs font-semibold uppercase tracking-wide text-emerald-200">{businessName}</p>
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: primaryColor }}>{businessName}</p>
               <p className="mt-1 text-sm font-bold text-white">{item}</p>
             </div>
           </div>
@@ -98,7 +107,7 @@ function GalleryPreview({ businessName, images }: { businessName: string; images
   )
 }
 
-function TeamPreview({ employees }: { employees: Employee[] }) {
+function TeamPreview({ employees, primaryColor }: { employees: Employee[]; primaryColor: string }) {
   if (employees.length === 0) return null
 
   return (
@@ -109,11 +118,15 @@ function TeamPreview({ employees }: { employees: Employee[] }) {
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {employees.map((employee) => (
-          <div key={employee.id} className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+          <div
+            key={employee.id}
+            className="rounded-2xl border bg-zinc-900/70 p-4"
+            style={{ borderColor: `${primaryColor}38` }}
+          >
             <div className="flex items-center gap-3">
               <div
-                className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500/15 bg-cover bg-center text-lg font-black text-emerald-300"
-                style={imageBackground(employee.avatar_url)}
+                className="flex h-12 w-12 items-center justify-center rounded-xl bg-cover bg-center text-lg font-black"
+                style={imageBackground(employee.avatar_url) ?? { backgroundColor: `${primaryColor}24`, color: primaryColor }}
               >
                 {!employee.avatar_url && employee.name.charAt(0).toUpperCase()}
               </div>
@@ -162,7 +175,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
     <div className="min-h-screen text-zinc-100" style={{ ...pageBackground(theme), color: theme.text }}>
       <header className="border-b border-white/10 bg-black/25 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
-          <Logo size="sm" />
+          <Logo size="sm" accentColor={theme.primary} textColor={theme.text} />
           <Link
             href={`/b/${slug}/book`}
             className="rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
@@ -211,15 +224,18 @@ export default async function BusinessPublicPage({ params }: PageProps) {
                 style={imageBackground(biz.cover_image_url) ?? { backgroundColor: theme.primary }}
               >
                 <div className="flex h-full flex-col justify-end">
-                  <p className="text-sm font-semibold text-emerald-100">Reserve online</p>
+                  <p className="text-sm font-semibold" style={{ color: theme.onPrimary }}>Reserve online</p>
                   <p className="mt-1 text-2xl font-black text-white">{biz.name}</p>
                 </div>
               </div>
               <div className="mt-10 aspect-[3/4] rounded-3xl bg-black/25 p-5 ring-1 ring-white/10">
                 <div className="flex h-full flex-col justify-end">
                   <div
-                    className="mb-4 h-16 w-16 rounded-2xl border border-white/10 bg-emerald-500/20 bg-cover bg-center"
-                    style={imageBackground(biz.logo_image_url)}
+                    className="mb-4 h-16 w-16 rounded-2xl border bg-cover bg-center"
+                    style={{
+                      ...(imageBackground(biz.logo_image_url) ?? { backgroundColor: `${theme.primary}24` }),
+                      borderColor: `${theme.primary}55`,
+                    }}
                   />
                   <p className="text-sm font-semibold" style={{ color: theme.primary }}>Servicos ativos</p>
                   <p className="mt-1 text-2xl font-black text-white">{svcs.length}</p>
@@ -231,11 +247,11 @@ export default async function BusinessPublicPage({ params }: PageProps) {
 
         <div className="mx-auto max-w-5xl space-y-12 px-5 py-10 pb-20">
           <section id="servicos">
-            <ServiceGrid services={svcs} slug={slug} />
+            <ServiceGrid services={svcs} slug={slug} primaryColor={theme.primary} />
           </section>
-          <TeamPreview employees={emps} />
-          <GalleryPreview businessName={biz.name} images={biz.gallery_images} />
-          <ReviewsList reviews={revs} />
+          <TeamPreview employees={emps} primaryColor={theme.primary} />
+          <GalleryPreview businessName={biz.name} images={biz.gallery_images} primaryColor={theme.primary} />
+          <ReviewsList reviews={revs} primaryColor={theme.primary} />
         </div>
       </main>
     </div>
