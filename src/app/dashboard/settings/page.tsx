@@ -30,6 +30,7 @@ export default function SettingsPage() {
     name: '',
     description: '',
     phone: '',
+    notification_email: '',
     address: '',
     slug: '',
     cover_image_url: '',
@@ -80,6 +81,7 @@ export default function SettingsPage() {
           name: b.name ?? '',
           description: b.description ?? '',
           phone: b.phone ?? '',
+          notification_email: b.notification_email ?? '',
           address: b.address ?? '',
           slug: b.slug ?? '',
           cover_image_url: b.cover_image_url ?? '',
@@ -283,6 +285,13 @@ export default function SettingsPage() {
             label={copy.phone}
             value={form.phone}
             onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+          />
+          <Input
+            label="Email para notificacoes"
+            type="email"
+            helper="Recebera avisos internos quando clientes criarem reservas."
+            value={form.notification_email}
+            onChange={(e) => setForm((f) => ({ ...f, notification_email: e.target.value }))}
           />
           <Input
             label={copy.address}

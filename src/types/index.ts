@@ -4,6 +4,7 @@ export interface Business {
   name: string
   description?: string
   phone?: string
+  notification_email?: string
   address?: string
   cover_image_url?: string
   logo_image_url?: string
