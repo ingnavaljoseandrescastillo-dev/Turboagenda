@@ -5,39 +5,44 @@ import type { Service } from '@/types'
 interface ServiceGridProps {
   services: Service[]
   slug: string
+  primaryColor?: string
 }
 
-export function ServiceGrid({ services, slug }: ServiceGridProps) {
+export function ServiceGrid({ services, slug, primaryColor = '#10b981' }: ServiceGridProps) {
   if (services.length === 0) return null
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-zinc-100 mb-4" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Serviços</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <h2 className="mb-4 text-lg font-bold text-zinc-100" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+        Servicos
+      </h2>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {services.map((service) => (
           <div
             key={service.id}
-            className="group p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-emerald-500/40 transition-all"
+            className="group rounded-2xl border bg-zinc-900/50 p-5 transition-all hover:brightness-110"
+            style={{ borderColor: `${primaryColor}40` }}
           >
-            <div className="flex items-start justify-between mb-3">
+            <div className="mb-3 flex items-start justify-between">
               <div>
-                <h3 className="font-semibold text-sm text-zinc-100 group-hover:text-emerald-400 transition-colors">
+                <h3 className="text-sm font-semibold text-zinc-100 transition-opacity group-hover:opacity-90">
                   {service.name}
                 </h3>
                 {service.description && (
-                  <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{service.description}</p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-zinc-500">{service.description}</p>
                 )}
-                <div className="flex gap-3 mt-2 text-xs text-zinc-500">
-                  <span>⏱ {service.duration_minutes} min</span>
+                <div className="mt-2 flex gap-3 text-xs text-zinc-500">
+                  <span>{service.duration_minutes} min</span>
                 </div>
               </div>
-              <div className="text-right flex-shrink-0 ml-3">
-                <p className="text-lg font-bold text-emerald-400" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
+              <div className="ml-3 flex-shrink-0 text-right">
+                <p className="text-lg font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: primaryColor }}>
                   {formatCurrency(service.price)}
                 </p>
                 <Link
                   href={`/b/${slug}/book?service=${service.id}`}
-                  className="mt-2 inline-block rounded-lg bg-emerald-500/10 hover:bg-emerald-500 text-emerald-400 hover:text-zinc-950 px-3 py-1.5 text-xs font-semibold transition-all"
+                  className="mt-2 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-90"
+                  style={{ backgroundColor: `${primaryColor}24`, color: primaryColor }}
                 >
                   Marcar
                 </Link>

@@ -22,10 +22,20 @@ interface BookingFormProps {
   serviceId: string
   employeeId: string
   startTime: string
+  primaryColor?: string
+  onPrimaryColor?: string
   onSuccess: () => void
 }
 
-export function BookingForm({ businessId, serviceId, employeeId, startTime, onSuccess }: BookingFormProps) {
+export function BookingForm({
+  businessId,
+  serviceId,
+  employeeId,
+  startTime,
+  primaryColor = '#10b981',
+  onPrimaryColor = '#09090b',
+  onSuccess,
+}: BookingFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
 
   const {
@@ -60,8 +70,8 @@ export function BookingForm({ businessId, serviceId, employeeId, startTime, onSu
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-zinc-100">Os seus dados</h3>
 
-      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-        <p className="text-sm text-emerald-400 font-medium">
+      <div className="rounded-xl border p-3" style={{ borderColor: `${primaryColor}33`, backgroundColor: `${primaryColor}0d` }}>
+        <p className="text-sm font-medium" style={{ color: primaryColor }}>
           Agendamento para {formatDateTime(startTime)}
         </p>
       </div>
@@ -101,7 +111,12 @@ export function BookingForm({ businessId, serviceId, employeeId, startTime, onSu
           </p>
         )}
 
-        <Button type="submit" loading={isSubmitting} className="w-full">
+        <Button
+          type="submit"
+          loading={isSubmitting}
+          className="w-full hover:opacity-90"
+          style={{ backgroundColor: primaryColor, color: onPrimaryColor }}
+        >
           Confirmar agendamento
         </Button>
       </form>

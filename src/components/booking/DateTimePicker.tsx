@@ -22,6 +22,8 @@ interface DateTimePickerProps {
   serviceId: string
   employeeId: string
   maxBookingDays?: number
+  primaryColor?: string
+  onPrimaryColor?: string
   onSelect: (datetime: string) => void
   selected: string | null
 }
@@ -31,6 +33,8 @@ export function DateTimePicker({
   serviceId,
   employeeId,
   maxBookingDays = 30,
+  primaryColor = '#10b981',
+  onPrimaryColor = '#09090b',
   onSelect,
   selected,
 }: DateTimePickerProps) {
@@ -117,11 +121,12 @@ export function DateTimePicker({
                 type="button"
                 disabled={unavailable}
                 onClick={() => setSelectedDate(day)}
-                className={`aspect-square rounded-xl border text-sm font-semibold transition-all ${
-                  isSelected
-                    ? 'border-emerald-400 bg-emerald-500 text-zinc-950'
-                    : 'border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-emerald-500/60'
-                } disabled:opacity-35 disabled:cursor-not-allowed`}
+                className="aspect-square rounded-xl border text-sm font-semibold transition-all hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-35"
+                style={{
+                  borderColor: isSelected ? primaryColor : '#27272a',
+                  backgroundColor: isSelected ? primaryColor : 'rgba(9,9,11,0.7)',
+                  color: isSelected ? onPrimaryColor : '#d4d4d8',
+                }}
               >
                 {format(day, 'd')}
               </button>
@@ -153,11 +158,12 @@ export function DateTimePicker({
                   key={time}
                   type="button"
                   onClick={() => onSelect(datetime)}
-                  className={`rounded-lg border px-2 py-2 text-sm font-medium transition-all ${
-                    selected === datetime
-                      ? 'border-emerald-500 bg-emerald-500 text-zinc-950'
-                      : 'border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-emerald-500/50'
-                  }`}
+                  className="rounded-lg border px-2 py-2 text-sm font-medium transition-all hover:brightness-110"
+                  style={{
+                    borderColor: selected === datetime ? primaryColor : '#27272a',
+                    backgroundColor: selected === datetime ? primaryColor : '#18181b',
+                    color: selected === datetime ? onPrimaryColor : '#d4d4d8',
+                  }}
                 >
                   {time}
                 </button>
