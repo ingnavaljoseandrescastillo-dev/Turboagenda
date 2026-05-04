@@ -35,6 +35,10 @@ export default function SettingsPage() {
     cover_image_url: '',
     logo_image_url: '',
     gallery_images: ['', '', '', ''],
+    theme_primary_color: '#10b981',
+    theme_background_color: '#09090b',
+    theme_text_color: '#f4f4f5',
+    theme_background_image_url: '',
   })
   const [schedule, setSchedule] = useState({
     opening_time: '09:00',
@@ -81,6 +85,10 @@ export default function SettingsPage() {
           cover_image_url: b.cover_image_url ?? '',
           logo_image_url: b.logo_image_url ?? '',
           gallery_images: normalizeGalleryImages(b.gallery_images),
+          theme_primary_color: b.theme_primary_color ?? '#10b981',
+          theme_background_color: b.theme_background_color ?? '#09090b',
+          theme_text_color: b.theme_text_color ?? '#f4f4f5',
+          theme_background_image_url: b.theme_background_image_url ?? '',
         })
         if (settings) {
           setSchedule({
@@ -143,7 +151,7 @@ export default function SettingsPage() {
 
   async function handleImageUpload(
     event: React.ChangeEvent<HTMLInputElement>,
-    kind: 'cover' | 'logo' | 'gallery',
+    kind: 'cover' | 'logo' | 'gallery' | 'background',
     index?: number
   ) {
     const file = event.target.files?.[0]
@@ -171,6 +179,7 @@ export default function SettingsPage() {
       const url = json.data.url as string
       if (kind === 'cover') setForm((current) => ({ ...current, cover_image_url: url }))
       if (kind === 'logo') setForm((current) => ({ ...current, logo_image_url: url }))
+      if (kind === 'background') setForm((current) => ({ ...current, theme_background_image_url: url }))
       if (kind === 'gallery' && typeof index === 'number') updateGalleryImage(index, url)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No fue posible subir la imagen.')
@@ -404,6 +413,76 @@ export default function SettingsPage() {
             </div>
           </div>
 
+          <div className="space-y-4 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <div>
+              <h4 className="font-semibold text-zinc-100">Apariencia publica</h4>
+              <p className="mt-1 text-sm text-zinc-500">
+                Personaliza colores y fondo del link publico sin romper la experiencia de reserva.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <ColorField
+                label="Color principal"
+                value={form.theme_primary_color}
+                onChange={(value) => setForm((f) => ({ ...f, theme_primary_color: value }))}
+              />
+              <ColorField
+                label="Color de fondo"
+                value={form.theme_background_color}
+                onChange={(value) => setForm((f) => ({ ...f, theme_background_color: value }))}
+              />
+              <ColorField
+                label="Color de texto"
+                value={form.theme_text_color}
+                onChange={(value) => setForm((f) => ({ ...f, theme_text_color: value }))}
+              />
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">
+              <div className="space-y-3">
+                <Input
+                  label="Imagen de fondo"
+                  type="url"
+                  placeholder="https://..."
+                  helper="Opcional. Se usa como fondo suave en la pagina publica."
+                  value={form.theme_background_image_url}
+                  onChange={(e) => setForm((f) => ({ ...f, theme_background_image_url: e.target.value }))}
+                />
+                <ImageUploadButton
+                  label={uploadingImage === 'background' ? 'Subiendo fondo...' : 'Subir fondo'}
+                  disabled={Boolean(uploadingImage)}
+                  onChange={(event) => handleImageUpload(event, 'background')}
+                />
+              </div>
+
+              <div
+                className="overflow-hidden rounded-xl border border-zinc-800 p-4"
+                style={{
+                  color: form.theme_text_color,
+                  backgroundColor: form.theme_background_color,
+                  backgroundImage: form.theme_background_image_url
+                    ? `linear-gradient(135deg, ${form.theme_background_color}ee, ${form.theme_background_color}bb), url("${form.theme_background_image_url}")`
+                    : undefined,
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                }}
+              >
+                <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: form.theme_primary_color }}>
+                  Preview
+                </p>
+                <h5 className="mt-2 text-xl font-black">{form.name || copy.businessName}</h5>
+                <p className="mt-2 text-sm opacity-75">Asi se sentira el perfil publico para tus clientes.</p>
+                <div
+                  className="mt-4 inline-flex rounded-lg px-3 py-2 text-xs font-bold"
+                  style={{ backgroundColor: form.theme_primary_color, color: readableTextColor(form.theme_primary_color) }}
+                >
+                  Reservar ahora
+                </div>
+              </div>
+            </div>
+          </div>
+
           {success && (
             <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
               {copy.imagesSaved}
@@ -604,6 +683,45 @@ function ImageUploadButton({
       <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={disabled} onChange={onChange} className="sr-only" />
     </label>
   )
+}
+
+function ColorField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+}) {
+  const colorValue = /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#10b981'
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-zinc-300">{label}</span>
+      <span className="grid grid-cols-[44px_1fr] gap-2">
+        <input
+          type="color"
+          value={colorValue}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-10 w-11 cursor-pointer rounded-lg border border-zinc-700 bg-zinc-900 p-1"
+        />
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          pattern="^#[0-9a-fA-F]{6}$"
+          className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500"
+        />
+      </span>
+    </label>
+  )
+}
+
+function readableTextColor(hex: string) {
+  const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.slice(1) : '10b981'
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
 }
 
 function ToggleRow({

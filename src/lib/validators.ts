@@ -1,5 +1,7 @@
 import { z } from 'zod'
 
+const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color invalido')
+
 export const LoginSchema = z.object({
   email: z.string().email('Email inválido'),
   password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
@@ -69,6 +71,10 @@ export const BusinessSettingsSchema = z.object({
   cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   gallery_images: z.array(z.string().url('URL invalida').or(z.literal(''))).max(12).optional(),
+  theme_primary_color: HexColorSchema.optional(),
+  theme_background_color: HexColorSchema.optional(),
+  theme_text_color: HexColorSchema.optional(),
+  theme_background_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   slug: z.string().min(2).regex(/^[a-z0-9-]+$/, 'Slug só pode conter letras minúsculas, números e hífens'),
 })
 
@@ -88,6 +94,10 @@ export const BusinessCreateSchema = z.object({
   cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   gallery_images: z.array(z.string().url('URL invalida').or(z.literal(''))).max(12).optional(),
+  theme_primary_color: HexColorSchema.optional(),
+  theme_background_color: HexColorSchema.optional(),
+  theme_text_color: HexColorSchema.optional(),
+  theme_background_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   slug: z
     .string()
     .min(2)

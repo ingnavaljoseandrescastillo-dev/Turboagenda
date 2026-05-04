@@ -94,6 +94,7 @@ export async function PATCH(request: NextRequest) {
       ...parsed.data,
       cover_image_url: parsed.data.cover_image_url || null,
       logo_image_url: parsed.data.logo_image_url || null,
+      theme_background_image_url: parsed.data.theme_background_image_url || null,
       gallery_images: parsed.data.gallery_images?.filter(Boolean) ?? [],
     }
 

@@ -8,6 +8,10 @@ export interface Business {
   cover_image_url?: string
   logo_image_url?: string
   gallery_images?: string[]
+  theme_primary_color?: string
+  theme_background_color?: string
+  theme_text_color?: string
+  theme_background_image_url?: string
   owner_id: string
   created_at: string
 }
