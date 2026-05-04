@@ -29,6 +29,7 @@ export function BookClient({
   initialService,
 }: BookClientProps) {
   const router = useRouter()
+  const theme = publicTheme(business)
   const [step, setStep] = useState(initialService ? 1 : 0)
   const [completed, setCompleted] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(initialService)
@@ -37,10 +38,10 @@ export function BookClient({
 
   if (completed) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center px-4">
+      <div className="flex min-h-screen items-center justify-center px-4" style={{ ...pageBackground(theme), color: theme.text }}>
         <div className="text-center space-y-4 max-w-md">
-          <div className="h-16 w-16 rounded-full bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto">
-            <svg className="h-8 w-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-white/15 bg-white/10">
+            <svg className="h-8 w-8" style={{ color: theme.primary }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
@@ -62,10 +63,10 @@ export function BookClient({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950">
-      <div className="border-b border-zinc-800 bg-zinc-900">
+    <div className="min-h-screen" style={{ ...pageBackground(theme), color: theme.text }}>
+      <div className="border-b border-white/10 bg-black/25 backdrop-blur">
         <div className="mx-auto max-w-3xl px-4 py-6">
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">Reserva online</p>
+          <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.primary }}>Reserva online</p>
           <h1 className="mt-2 text-2xl font-black text-white">{business.name}</h1>
           <p className="mt-1 text-sm text-zinc-400">
             Elige el servicio, profesional y horario. Confirmas tus datos al final.
@@ -74,7 +75,7 @@ export function BookClient({
       </div>
 
       <div className="mx-auto max-w-3xl px-4 py-8">
-        <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
+        <div className="mb-6 rounded-2xl border border-white/10 bg-black/25 p-4 backdrop-blur">
           <button
             onClick={() => (step > 0 ? setStep(step - 1) : router.push(`/b/${slug}`))}
             className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors mb-4"
@@ -89,9 +90,8 @@ export function BookClient({
             {STEPS.map((_, i) => (
               <div
                 key={i}
-                className={`h-1.5 flex-1 rounded-full transition-colors ${
-                  i <= step ? 'bg-emerald-500' : 'bg-zinc-800'
-                }`}
+                className="h-1.5 flex-1 rounded-full transition-colors"
+                style={{ backgroundColor: i <= step ? theme.primary : 'rgba(63,63,70,0.85)' }}
               />
             ))}
           </div>
@@ -100,7 +100,7 @@ export function BookClient({
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-zinc-950 p-4 shadow-2xl shadow-black/20 md:p-6">
+        <div className="rounded-2xl border border-white/10 bg-black/35 p-4 shadow-2xl shadow-black/20 backdrop-blur md:p-6">
           {step === 0 && (
             services.length === 0 ? (
               <p className="text-sm text-zinc-500">Este negocio aun no tiene servicios activos.</p>
@@ -158,4 +158,26 @@ export function BookClient({
       </div>
     </div>
   )
+}
+
+function publicTheme(business: Business) {
+  const background = business.theme_background_color || '#09090b'
+  return {
+    primary: business.theme_primary_color || '#10b981',
+    background,
+    text: business.theme_text_color || '#f4f4f5',
+    backgroundImage: business.theme_background_image_url || null,
+  }
+}
+
+function pageBackground(theme: ReturnType<typeof publicTheme>) {
+  return theme.backgroundImage
+    ? {
+        backgroundColor: theme.background,
+        backgroundImage: `linear-gradient(180deg, ${theme.background}f2, ${theme.background}dd), url("${theme.backgroundImage}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : { backgroundColor: theme.background }
 }

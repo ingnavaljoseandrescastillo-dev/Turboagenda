@@ -28,6 +28,37 @@ function imageBackground(url?: string | null) {
     : undefined
 }
 
+function publicTheme(business: Business) {
+  const background = business.theme_background_color || '#09090b'
+  return {
+    primary: business.theme_primary_color || '#10b981',
+    background,
+    text: business.theme_text_color || '#f4f4f5',
+    backgroundImage: business.theme_background_image_url || null,
+    onPrimary: readableTextColor(business.theme_primary_color || '#10b981'),
+  }
+}
+
+function pageBackground(theme: ReturnType<typeof publicTheme>) {
+  return theme.backgroundImage
+    ? {
+        backgroundColor: theme.background,
+        backgroundImage: `linear-gradient(180deg, ${theme.background}f2, ${theme.background}dd), url("${theme.backgroundImage}")`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+      }
+    : { backgroundColor: theme.background }
+}
+
+function readableTextColor(hex: string) {
+  const normalized = /^#[0-9a-fA-F]{6}$/.test(hex) ? hex.slice(1) : '10b981'
+  const r = parseInt(normalized.slice(0, 2), 16)
+  const g = parseInt(normalized.slice(2, 4), 16)
+  const b = parseInt(normalized.slice(4, 6), 16)
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
+}
+
 function GalleryPreview({ businessName, images }: { businessName: string; images?: string[] | null }) {
   const items = ['Ambiente', 'Trabalhos', 'Detalhes', 'Resultado']
   const galleryImages = images?.filter(Boolean).slice(0, 4) ?? []
@@ -125,15 +156,17 @@ export default async function BusinessPublicPage({ params }: PageProps) {
   const avgRating = revs.length
     ? (revs.reduce((acc, r) => acc + r.rating, 0) / revs.length).toFixed(1)
     : null
+  const theme = publicTheme(biz)
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100">
-      <header className="border-b border-zinc-800 bg-zinc-950">
+    <div className="min-h-screen text-zinc-100" style={{ ...pageBackground(theme), color: theme.text }}>
+      <header className="border-b border-white/10 bg-black/25 backdrop-blur">
         <div className="mx-auto flex max-w-5xl items-center justify-between px-5 py-4">
           <Logo size="sm" />
           <Link
             href={`/b/${slug}/book`}
-            className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-zinc-950 hover:bg-emerald-400"
+            className="rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+            style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
           >
             Reservar
           </Link>
@@ -141,10 +174,12 @@ export default async function BusinessPublicPage({ params }: PageProps) {
       </header>
 
       <main>
-        <section className="border-b border-zinc-800 bg-zinc-900">
+        <section className="border-b border-white/10 bg-black/20 backdrop-blur">
           <div className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[1.15fr_0.85fr] md:items-center">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-wide text-emerald-300">Agenda online</p>
+              <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.primary }}>
+                Agenda online
+              </p>
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">{biz.name}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-300">
                 {biz.description || 'Reserve online em poucos passos. Escolha o servico, o profissional e o horario disponivel.'}
@@ -157,7 +192,8 @@ export default async function BusinessPublicPage({ params }: PageProps) {
               <div className="mt-7 flex flex-wrap gap-3">
                 <Link
                   href={`/b/${slug}/book`}
-                  className="rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-zinc-950 hover:bg-emerald-400"
+                  className="rounded-xl px-5 py-3 text-sm font-bold transition-opacity hover:opacity-90"
+                  style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
                 >
                   Reservar agora
                 </Link>
@@ -171,21 +207,21 @@ export default async function BusinessPublicPage({ params }: PageProps) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div
-                className="aspect-[3/4] overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-zinc-900 p-5"
-                style={imageBackground(biz.cover_image_url)}
+                className="aspect-[3/4] overflow-hidden rounded-3xl p-5"
+                style={imageBackground(biz.cover_image_url) ?? { backgroundColor: theme.primary }}
               >
                 <div className="flex h-full flex-col justify-end">
                   <p className="text-sm font-semibold text-emerald-100">Reserve online</p>
                   <p className="mt-1 text-2xl font-black text-white">{biz.name}</p>
                 </div>
               </div>
-              <div className="mt-10 aspect-[3/4] rounded-3xl bg-gradient-to-br from-zinc-800 to-emerald-950 p-5">
+              <div className="mt-10 aspect-[3/4] rounded-3xl bg-black/25 p-5 ring-1 ring-white/10">
                 <div className="flex h-full flex-col justify-end">
                   <div
                     className="mb-4 h-16 w-16 rounded-2xl border border-white/10 bg-emerald-500/20 bg-cover bg-center"
                     style={imageBackground(biz.logo_image_url)}
                   />
-                  <p className="text-sm font-semibold text-emerald-200">Servicos ativos</p>
+                  <p className="text-sm font-semibold" style={{ color: theme.primary }}>Servicos ativos</p>
                   <p className="mt-1 text-2xl font-black text-white">{svcs.length}</p>
                 </div>
               </div>

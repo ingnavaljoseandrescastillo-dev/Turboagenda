@@ -10,7 +10,7 @@ import {
 const BUCKET = 'business-images'
 const MAX_FILE_SIZE = 5 * 1024 * 1024
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
-const ALLOWED_KINDS = new Set(['cover', 'logo', 'gallery'])
+const ALLOWED_KINDS = new Set(['cover', 'logo', 'gallery', 'background'])
 
 export async function POST(request: NextRequest) {
   try {
