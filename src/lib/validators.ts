@@ -67,6 +67,7 @@ export const BusinessSettingsSchema = z.object({
   name: z.string().min(2),
   description: z.string().optional(),
   phone: z.string().optional(),
+  notification_email: z.string().email('Email invalido').or(z.literal('')).optional(),
   address: z.string().optional(),
   cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
@@ -89,6 +90,7 @@ export const BusinessScheduleSchema = z.object({
 export const BusinessCreateSchema = z.object({
   name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
   phone: z.string().optional(),
+  notification_email: z.string().email('Email invalido').or(z.literal('')).optional(),
   address: z.string().optional(),
   description: z.string().optional(),
   cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),

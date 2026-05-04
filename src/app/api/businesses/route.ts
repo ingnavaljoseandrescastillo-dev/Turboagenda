@@ -92,6 +92,7 @@ export async function PATCH(request: NextRequest) {
 
     const payload = {
       ...parsed.data,
+      notification_email: parsed.data.notification_email || null,
       cover_image_url: parsed.data.cover_image_url || null,
       logo_image_url: parsed.data.logo_image_url || null,
       theme_background_image_url: parsed.data.theme_background_image_url || null,

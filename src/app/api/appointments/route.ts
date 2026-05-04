@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { AppointmentSchema } from '@/lib/validators'
 import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@/lib/api-helpers'
+import { sendAppointmentCreatedEmails } from '@/lib/appointment-emails'
 
 function isWithinBookingWindow(startTime: string, maxBookingDays: number) {
   const requested = new Date(startTime)
@@ -83,6 +84,8 @@ export async function POST(request: NextRequest) {
     })
 
     if (error) return handleError(error.message, 422)
+
+    if (typeof data === 'string') await sendAppointmentCreatedEmails(data)
 
     return formatResponse(data, 201)
   } catch (err) {
