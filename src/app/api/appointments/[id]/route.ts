@@ -1,6 +1,7 @@
 import type { NextRequest } from 'next/server'
 import { z } from 'zod'
 import { formatResponse, getBusinessForUser, handleError, validateAuth } from '@/lib/api-helpers'
+import { sendAppointmentCancelledEmail } from '@/lib/appointment-emails'
 
 const AppointmentPatchSchema = z.object({
   status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
@@ -28,6 +29,18 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     const parsed = AppointmentPatchSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
 
+    const shouldNotifyCancellation = parsed.data.status === 'cancelled'
+    const { data: existing, error: existingError } = shouldNotifyCancellation
+      ? await supabase
+          .from('appointments')
+          .select('status')
+          .eq('id', id)
+          .eq('business_id', business.id)
+          .maybeSingle()
+      : { data: null, error: null }
+
+    if (existingError) return handleError(existingError.message, 422)
+
     const { data, error } = await supabase
       .from('appointments')
       .update(parsed.data)
@@ -37,6 +50,11 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
       .single()
 
     if (error) return handleError(error.message, 422)
+
+    if (shouldNotifyCancellation && existing?.status !== 'cancelled') {
+      await sendAppointmentCancelledEmail(id)
+    }
+
     return formatResponse(data)
   } catch (err) {
     return handleError(err)
