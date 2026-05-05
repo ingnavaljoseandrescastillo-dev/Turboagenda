@@ -41,6 +41,10 @@ export const AppointmentSchema = z.object({
 })
 
 export const NotificationSettingsSchema = z.object({
+  email_notify_client_on_booking: z.boolean(),
+  email_notify_business_on_booking: z.boolean(),
+  email_reminder_24h_enabled: z.boolean(),
+  email_notify_client_on_cancellation: z.boolean(),
   whatsapp_enabled: z.boolean(),
   whatsapp_notify_client_on_booking: z.boolean(),
   whatsapp_notify_business_on_booking: z.boolean(),

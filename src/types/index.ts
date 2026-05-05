@@ -25,6 +25,15 @@ export interface BusinessSettings {
   slot_duration_minutes: number
   working_days: number[]
   max_booking_days: number
+  email_notify_client_on_booking?: boolean
+  email_notify_business_on_booking?: boolean
+  email_reminder_24h_enabled?: boolean
+  email_notify_client_on_cancellation?: boolean
+  whatsapp_enabled?: boolean
+  whatsapp_notify_client_on_booking?: boolean
+  whatsapp_notify_business_on_booking?: boolean
+  whatsapp_reminder_24h_enabled?: boolean
+  whatsapp_birthday_enabled?: boolean
 }
 
 export interface BusinessOwner {

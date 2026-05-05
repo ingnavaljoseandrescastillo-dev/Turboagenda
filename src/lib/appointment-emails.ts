@@ -24,21 +24,34 @@ type AppointmentEmailData = {
   employees: {
     name: string
   } | null
+  business_settings: {
+    email_notify_client_on_booking: boolean | null
+    email_notify_business_on_booking: boolean | null
+    email_reminder_24h_enabled: boolean | null
+    email_notify_client_on_cancellation: boolean | null
+  } | null
 }
 
+type AppointmentEmailKind = 'created' | 'cancelled'
+
 export async function sendAppointmentCreatedEmails(appointmentId: string) {
+  await sendAppointmentEmails(appointmentId, 'created')
+}
+
+export async function sendAppointmentCancelledEmail(appointmentId: string) {
+  await sendAppointmentEmails(appointmentId, 'cancelled')
+}
+
+async function sendAppointmentEmails(appointmentId: string, kind: AppointmentEmailKind) {
   try {
-    const supabase = await createClient()
-    const { data, error } = await supabase.rpc('get_appointment_email_payload', {
-      p_appointment_id: appointmentId,
-    })
+    const appointment = await loadAppointmentEmailData(appointmentId)
+    if (!appointment?.businesses) return
 
-    if (error) throw error
-    if (!data) return
-
-    const appointment = data as unknown as AppointmentEmailData
     const business = appointment.businesses
-    if (!business) return
+    const settings = appointment.business_settings
+    const clientBookingEnabled = settings?.email_notify_client_on_booking ?? true
+    const businessBookingEnabled = settings?.email_notify_business_on_booking ?? true
+    const cancellationEnabled = settings?.email_notify_client_on_cancellation ?? true
 
     const resend = getResend()
     const from = getEmailFrom()
@@ -46,41 +59,67 @@ export async function sendAppointmentCreatedEmails(appointmentId: string) {
     const when = formatDateTime(appointment.start_time)
     const serviceName = appointment.services?.name ?? 'Servico'
     const employeeName = appointment.employees?.name ?? 'Profissional'
+    const sends = []
 
-    const sends = [
-      resend.emails.send({
-        from,
-        to: appointment.client_email,
-        subject: `Reserva recebida em ${business.name}`,
-        html: appointmentClientHtml({
-          businessName: business.name,
-          clientName: appointment.client_name,
-          serviceName,
-          employeeName,
-          when,
-          appointmentUrl,
-        }),
-      }),
-    ]
+    if (kind === 'created') {
+      if (clientBookingEnabled) {
+        sends.push(
+          resend.emails.send({
+            from,
+            to: appointment.client_email,
+            subject: `Reserva recebida em ${business.name}`,
+            html: appointmentClientHtml({
+              businessName: business.name,
+              clientName: appointment.client_name,
+              serviceName,
+              employeeName,
+              when,
+              appointmentUrl,
+            }),
+          })
+        )
+      }
 
-    if (business.notification_email) {
+      if (businessBookingEnabled && business.notification_email) {
+        sends.push(
+          resend.emails.send({
+            from,
+            to: business.notification_email,
+            subject: `Nova reserva: ${appointment.client_name}`,
+            html: appointmentBusinessHtml({
+              businessName: business.name,
+              clientName: appointment.client_name,
+              clientEmail: appointment.client_email,
+              clientPhone: appointment.client_phone,
+              serviceName,
+              employeeName,
+              when,
+            }),
+          })
+        )
+      }
+    }
+
+    if (kind === 'cancelled' && cancellationEnabled) {
       sends.push(
         resend.emails.send({
           from,
-          to: business.notification_email,
-          subject: `Nova reserva: ${appointment.client_name}`,
-          html: appointmentBusinessHtml({
+          to: appointment.client_email,
+          subject: `Reserva cancelada em ${business.name}`,
+          html: appointmentCancelledHtml({
             businessName: business.name,
+            businessPhone: business.phone,
             clientName: appointment.client_name,
-            clientEmail: appointment.client_email,
-            clientPhone: appointment.client_phone,
             serviceName,
             employeeName,
             when,
+            appointmentUrl,
           }),
         })
       )
     }
+
+    if (sends.length === 0) return
 
     const results = await Promise.allSettled(sends)
     for (const result of results) {
@@ -93,6 +132,16 @@ export async function sendAppointmentCreatedEmails(appointmentId: string) {
   } catch (err) {
     console.error('[appointment email] unexpected failure', err)
   }
+}
+
+async function loadAppointmentEmailData(appointmentId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase.rpc('get_appointment_email_payload', {
+    p_appointment_id: appointmentId,
+  })
+
+  if (error) throw error
+  return data as unknown as AppointmentEmailData | null
 }
 
 function appointmentClientHtml({
@@ -156,6 +205,39 @@ function appointmentBusinessHtml({
         <p><strong>Data e hora:</strong> ${escapeHtml(when)}</p>
       </div>
       <p>Entre no dashboard para acompanhar a agenda.</p>
+    `
+  )
+}
+
+function appointmentCancelledHtml({
+  businessName,
+  businessPhone,
+  clientName,
+  serviceName,
+  employeeName,
+  when,
+  appointmentUrl,
+}: {
+  businessName: string
+  businessPhone: string | null
+  clientName: string
+  serviceName: string
+  employeeName: string
+  when: string
+  appointmentUrl: string
+}) {
+  return emailShell(
+    `Reserva cancelada em ${escapeHtml(businessName)}`,
+    `
+      <p>Ola ${escapeHtml(clientName)},</p>
+      <p>O negocio <strong>${escapeHtml(businessName)}</strong> cancelou a sua reserva.</p>
+      <div class="box">
+        <p><strong>Servico:</strong> ${escapeHtml(serviceName)}</p>
+        <p><strong>Profissional:</strong> ${escapeHtml(employeeName)}</p>
+        <p><strong>Data e hora:</strong> ${escapeHtml(when)}</p>
+      </div>
+      <p>Para remarcar ou tirar duvidas, contacte o negocio${businessPhone ? ` pelo telefone ${escapeHtml(businessPhone)}` : ''}.</p>
+      <p><a href="${escapeAttribute(appointmentUrl)}">Ver pagina do negocio</a></p>
     `
   )
 }

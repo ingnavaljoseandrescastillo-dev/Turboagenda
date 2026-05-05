@@ -49,6 +49,10 @@ export default function SettingsPage() {
     max_booking_months: 1,
   })
   const [notifications, setNotifications] = useState({
+    email_notify_client_on_booking: true,
+    email_notify_business_on_booking: true,
+    email_reminder_24h_enabled: true,
+    email_notify_client_on_cancellation: true,
     whatsapp_enabled: false,
     whatsapp_notify_client_on_booking: true,
     whatsapp_notify_business_on_booking: true,
@@ -101,6 +105,10 @@ export default function SettingsPage() {
             max_booking_months: Math.max(1, Math.ceil((settings.max_booking_days ?? 30) / 30)),
           })
           setNotifications({
+            email_notify_client_on_booking: settings.email_notify_client_on_booking ?? true,
+            email_notify_business_on_booking: settings.email_notify_business_on_booking ?? true,
+            email_reminder_24h_enabled: settings.email_reminder_24h_enabled ?? true,
+            email_notify_client_on_cancellation: settings.email_notify_client_on_cancellation ?? true,
             whatsapp_enabled: whatsappAvailable ? Boolean(settings.whatsapp_enabled) : false,
             whatsapp_notify_client_on_booking: settings.whatsapp_notify_client_on_booking ?? true,
             whatsapp_notify_business_on_booking: settings.whatsapp_notify_business_on_booking ?? true,
@@ -597,18 +605,56 @@ export default function SettingsPage() {
       <Card>
         <form onSubmit={handleNotificationSave} className="space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100">WhatsApp e notificacoes</h3>
+            <h3 className="text-lg font-semibold text-zinc-100">Emails e notificacoes</h3>
             <p className="text-sm text-zinc-500 mt-1">
-              Basic mantiene recordatorios por email. WhatsApp queda reservado para el Plan Plus.
+              El negocio decide que avisos automaticos quiere enviar a clientes y equipo.
             </p>
           </div>
+
+          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-100">Email</h4>
+              <p className="mt-1 text-xs text-zinc-500">
+                Disponible para Basic y Plus. Usa el email interno configurado arriba para avisos al negocio.
+              </p>
+            </div>
+            <ToggleRow
+              label="Confirmacion al cliente al crear cita"
+              description="Envia un email al cliente cuando la reserva queda registrada."
+              checked={notifications.email_notify_client_on_booking}
+              onChange={(value) => setNotifications((current) => ({ ...current, email_notify_client_on_booking: value }))}
+            />
+            <ToggleRow
+              label="Aviso al negocio al crear cita"
+              description="Envia un email interno al negocio cuando entra una nueva reserva."
+              checked={notifications.email_notify_business_on_booking}
+              onChange={(value) => setNotifications((current) => ({ ...current, email_notify_business_on_booking: value }))}
+            />
+            <ToggleRow
+              label="Recordatorio al cliente 24 horas antes"
+              description="Activa el futuro recordatorio por email antes de la cita."
+              checked={notifications.email_reminder_24h_enabled}
+              onChange={(value) => setNotifications((current) => ({ ...current, email_reminder_24h_enabled: value }))}
+            />
+            <ToggleRow
+              label="Aviso al cliente si el negocio cancela"
+              description="Envia un email al cliente cuando el negocio marca la cita como cancelada."
+              checked={notifications.email_notify_client_on_cancellation}
+              onChange={(value) => setNotifications((current) => ({ ...current, email_notify_client_on_cancellation: value }))}
+            />
+          </div>
+
           {!whatsappAvailable && (
             <p className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
               Tu plan actual es {subscriptionPlan}. Cambia a Plus para activar mensajes automaticos por WhatsApp.
             </p>
           )}
 
-          <div className="space-y-3">
+          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-100">WhatsApp</h4>
+              <p className="mt-1 text-xs text-zinc-500">Reservado para Plan Plus.</p>
+            </div>
             <ToggleRow
               label="Ativar WhatsApp"
               description="Permite registrar mensagens para clientes e negocio."
