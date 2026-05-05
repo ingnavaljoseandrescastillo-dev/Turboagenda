@@ -36,6 +36,12 @@ export interface BusinessSettings {
   whatsapp_birthday_enabled?: boolean
 }
 
+export interface BusinessDayOverride {
+  date: string
+  is_closed: boolean
+  note?: string | null
+}
+
 export interface BusinessOwner {
   id: string
   user_id: string
