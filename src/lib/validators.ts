@@ -52,6 +52,16 @@ export const NotificationSettingsSchema = z.object({
   whatsapp_birthday_enabled: z.boolean(),
 })
 
+export const ManualReminderSchema = z.object({
+  appointment_id: z.string().uuid('Cita invalida'),
+  channels: z
+    .array(z.enum(['email', 'whatsapp']))
+    .min(1, 'Escolha pelo menos um canal')
+    .max(2),
+  message: z.string().min(5, 'Mensagem muito curta').max(2000, 'Mensagem muito longa'),
+  subject: z.string().min(2).max(140).optional(),
+})
+
 export const ServiceSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   description: z.string().optional(),
@@ -117,6 +127,7 @@ export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type AppointmentInput = z.infer<typeof AppointmentSchema>
 export type NotificationSettingsInput = z.infer<typeof NotificationSettingsSchema>
+export type ManualReminderInput = z.infer<typeof ManualReminderSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>

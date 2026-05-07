@@ -9,6 +9,11 @@ const MonthQuerySchema = z.object({
   }, 'Mes invalido'),
 })
 
+const TimeSchema = z.string().regex(/^\d{2}:\d{2}$/, 'Horario invalido').refine((value) => {
+  const [hours, minutes] = value.split(':').map(Number)
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+}, 'Horario invalido')
+
 const DayOverrideSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data invalida').refine((value) => {
     const [year, month, day] = value.split('-').map(Number)
@@ -20,8 +25,16 @@ const DayOverrideSchema = z.object({
     )
   }, 'Data invalida'),
   is_closed: z.boolean(),
+  opening_time: TimeSchema.nullable().optional(),
+  closing_time: TimeSchema.nullable().optional(),
+  slot_duration_minutes: z.number().int().min(5).max(240).nullable().optional(),
   note: z.string().optional(),
-})
+}).refine((value) => {
+  if (value.is_closed) return true
+  if (!value.opening_time && !value.closing_time) return true
+  if (!value.opening_time || !value.closing_time) return false
+  return value.opening_time < value.closing_time
+}, 'El horario especial debe tener apertura y cierre validos')
 
 export async function GET(request: NextRequest) {
   try {
@@ -43,7 +56,7 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from('business_day_overrides')
-      .select('date, is_closed, note')
+      .select('date, is_closed, opening_time, closing_time, slot_duration_minutes, note')
       .eq('business_id', business.id)
       .gte('date', start)
       .lte('date', end)
@@ -68,7 +81,9 @@ export async function PATCH(request: NextRequest) {
     const parsed = DayOverrideSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
 
-    if (!parsed.data.is_closed) {
+    const hasSpecialSchedule = Boolean(parsed.data.opening_time && parsed.data.closing_time)
+
+    if (!parsed.data.is_closed && !hasSpecialSchedule) {
       const { error } = await supabase
         .from('business_day_overrides')
         .delete()
@@ -76,7 +91,13 @@ export async function PATCH(request: NextRequest) {
         .eq('date', parsed.data.date)
 
       if (error) return handleError(error.message, 422)
-      return formatResponse({ date: parsed.data.date, is_closed: false })
+      return formatResponse({
+        date: parsed.data.date,
+        is_closed: false,
+        opening_time: null,
+        closing_time: null,
+        slot_duration_minutes: null,
+      })
     }
 
     const { data, error } = await supabase
@@ -85,12 +106,15 @@ export async function PATCH(request: NextRequest) {
         {
           business_id: business.id,
           date: parsed.data.date,
-          is_closed: true,
+          is_closed: parsed.data.is_closed,
+          opening_time: parsed.data.is_closed ? null : (parsed.data.opening_time ?? null),
+          closing_time: parsed.data.is_closed ? null : (parsed.data.closing_time ?? null),
+          slot_duration_minutes: parsed.data.is_closed ? null : (parsed.data.slot_duration_minutes ?? null),
           note: parsed.data.note ?? null,
         },
         { onConflict: 'business_id,date' }
       )
-      .select('date, is_closed, note')
+      .select('date, is_closed, opening_time, closing_time, slot_duration_minutes, note')
       .single()
 
     if (error) return handleError(error.message, 422)

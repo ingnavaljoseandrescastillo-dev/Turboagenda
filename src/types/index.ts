@@ -39,6 +39,9 @@ export interface BusinessSettings {
 export interface BusinessDayOverride {
   date: string
   is_closed: boolean
+  opening_time?: string | null
+  closing_time?: string | null
+  slot_duration_minutes?: number | null
   note?: string | null
 }
 
@@ -76,6 +79,8 @@ export interface Client {
   name: string
   email: string
   phone?: string
+  birthdate?: string
+  last_appointment_at?: string
   created_at: string
 }
 
@@ -114,6 +119,30 @@ export interface Subscription {
   status: 'trial' | 'active' | 'cancelled' | 'past_due'
   trial_ends_at?: string
   current_period_end?: string
+  created_at: string
+}
+
+export interface NotificationEvent {
+  id: string
+  business_id: string
+  appointment_id?: string | null
+  client_id?: string | null
+  channel: 'whatsapp' | 'email' | 'system'
+  event_type:
+    | 'appointment_created_client'
+    | 'appointment_created_business'
+    | 'appointment_reminder_24h'
+    | 'birthday_greeting'
+    | 'manual_reminder'
+  recipient_type: 'client' | 'business'
+  recipient_name?: string | null
+  recipient_phone?: string | null
+  recipient_email?: string | null
+  status: 'queued' | 'skipped' | 'sent' | 'failed'
+  scheduled_for: string
+  payload: Record<string, unknown>
+  error?: string | null
+  sent_at?: string | null
   created_at: string
 }
 
