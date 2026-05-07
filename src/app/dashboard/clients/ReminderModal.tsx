@@ -41,7 +41,7 @@ export function ReminderModal({
   if (!client) return null
 
   return (
-    <Dialog open={open} onClose={onClose} title="Enviar recordatorio" className="max-w-2xl">
+    <Dialog open={open} onClose={onClose} title="Invitar a volver a reservar" className="max-w-2xl">
       {open && (
         <ReminderForm
           key={`${client.id}-${defaultAppointment?.id ?? 'empty'}`}
@@ -114,13 +114,13 @@ function ReminderForm({
       const json = await res.json()
       if (!res.ok) {
         console.error('[Clients] manual reminder failed', json.error ?? json.data)
-        throw new Error(json.error ?? json.data?.message ?? 'Nao foi possivel enviar o recordatorio.')
+        throw new Error(json.error ?? json.data?.message ?? 'Nao foi possivel enviar a invitacion.')
       }
-      setSuccess(json.data?.message ?? 'Recordatorio enviado.')
+      setSuccess(json.data?.message ?? 'Invitacion enviada.')
       setConfirming(false)
       onSent?.()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar o recordatorio.')
+      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar a invitacion.')
     } finally {
       setSaving(false)
     }
@@ -132,7 +132,7 @@ function ReminderForm({
     <div className="space-y-4">
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="space-y-1.5 text-sm">
-            <span className="font-medium text-zinc-300">Cita</span>
+            <span className="font-medium text-zinc-300">Ultima cita usada como referencia</span>
             <select
               value={currentAppointmentId}
               onChange={(event) => {
@@ -237,5 +237,5 @@ function buildDefaultMessage(
   publicUrl: string
 ) {
   const when = appointment ? formatDateTime(appointment.start_time) : 'la fecha acordada'
-  return `Hola ${clientName}, te recordamos que tu cita esta programada para ${when}. Puedes confirmar en: ${publicUrl}`
+  return `Hola ${clientName}, esperamos que hayas disfrutado tu ultima visita. Cuando quieras volver, puedes reservar nuevamente aqui: ${publicUrl}\n\nReferencia interna: ultima cita ${when}.`
 }

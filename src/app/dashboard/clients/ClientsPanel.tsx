@@ -56,7 +56,7 @@ export function ClientsPanel({ clients, communication, publicUrl }: ClientsPanel
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-zinc-100">Clientes</h1>
-          <p className="text-sm text-zinc-500">Historial, busqueda y recordatorios manuales.</p>
+          <p className="text-sm text-zinc-500">Historial, busqueda e invitaciones para volver a reservar.</p>
         </div>
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 px-4 py-3 text-sm text-zinc-300">
           <span className="font-semibold text-zinc-100">{clients.length}</span> clientes registrados
@@ -136,7 +136,7 @@ export function ClientsPanel({ clients, communication, publicUrl }: ClientsPanel
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="secondary" onClick={() => setSelectedClient(client)}>
-                  Recordatorio
+                  Invitar a volver
                 </Button>
                 <Link
                   href={`/dashboard/clients/${client.id}`}

@@ -27,7 +27,7 @@ export function ClientDetailView({ client, communication, publicUrl }: ClientDet
           <p className="text-sm text-zinc-500">{client.email} {client.phone ? `- ${client.phone}` : ''}</p>
         </div>
         <Button onClick={() => setShowReminder(true)} disabled={client.appointments.length === 0}>
-          Enviar recordatorio
+          Invitar a volver
         </Button>
       </div>
 
@@ -74,12 +74,12 @@ export function ClientDetailView({ client, communication, publicUrl }: ClientDet
 
       <section className="rounded-2xl border border-zinc-800 bg-zinc-900/50">
         <div className="border-b border-zinc-800 px-4 py-4">
-          <h2 className="font-semibold text-zinc-100">Recordatorios enviados</h2>
-          <p className="text-sm text-zinc-500">Canal, contenido y estado de cada intento.</p>
+          <h2 className="font-semibold text-zinc-100">Mensajes enviados</h2>
+          <p className="text-sm text-zinc-500">Canal, contenido y estado de cada recordatorio o invitacion.</p>
         </div>
         <div className="divide-y divide-zinc-800">
           {client.reminders.length === 0 ? (
-            <div className="px-4 py-10 text-center text-sm text-zinc-500">Aun no hay recordatorios para este cliente.</div>
+            <div className="px-4 py-10 text-center text-sm text-zinc-500">Aun no hay mensajes para este cliente.</div>
           ) : (
             client.reminders.map((reminder) => (
               <div key={reminder.id} className="grid gap-2 px-4 py-4 md:grid-cols-[0.8fr_0.7fr_1.8fr_0.6fr]">

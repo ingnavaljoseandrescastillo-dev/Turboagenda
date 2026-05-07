@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
             recipientPhone: client.phone ?? reminderAppointment.client_phone,
             businessName: business.name,
             publicUrl,
-            subject: parsed.data.subject ?? `Recordatorio de cita - ${business.name}`,
+            subject: parsed.data.subject ?? `Volver a reservar - ${business.name}`,
             message: parsed.data.message,
           })
         )
@@ -114,8 +114,8 @@ export async function POST(request: NextRequest, { params }: Ctx) {
       {
         results,
         message: failed.length
-          ? 'Alguns recordatorios nao foram enviados. Veja o historico.'
-          : 'Recordatorio enviado/registrado com sucesso.',
+          ? 'Algumas invitaciones nao foram enviadas. Veja o historico.'
+          : 'Invitacion enviada/registrada com sucesso.',
       },
       failed.length === results.length ? 422 : 201
     )
@@ -262,7 +262,7 @@ async function insertReminderEvent({
       appointment_id: appointmentId,
       client_id: clientId,
       channel,
-      event_type: 'manual_reminder',
+      event_type: 'rebooking_reminder',
       recipient_type: 'client',
       recipient_name: recipientName,
       recipient_phone: recipientPhone,
@@ -325,9 +325,9 @@ function manualReminderHtml({
             <p>${escapedMessage}</p>
             <div class="box">
               <p><strong>Negocio:</strong> ${escapeHtml(businessName)}</p>
-              <p><strong>Servicio:</strong> ${escapeHtml(serviceName)}</p>
+              <p><strong>Ultima visita:</strong> ${escapeHtml(when)}</p>
+              <p><strong>Servicio anterior:</strong> ${escapeHtml(serviceName)}</p>
               <p><strong>Profesional:</strong> ${escapeHtml(employeeName)}</p>
-              <p><strong>Fecha y hora:</strong> ${escapeHtml(when)}</p>
             </div>
             <p><a href="${escapeHtml(publicUrl)}">Ver pagina del negocio</a></p>
           </div>
