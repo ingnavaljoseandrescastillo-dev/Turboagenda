@@ -42,9 +42,10 @@ interface AgendaManagerProps {
 export function AgendaManager({ appointments, settings, closedDays }: AgendaManagerProps) {
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [visibleMonth, setVisibleMonth] = useState(() => startOfMonth(new Date()))
-  const [closedDates, setClosedDates] = useState(() => new Set(closedDays.filter((d) => d.is_closed).map((d) => d.date)))
+  const [dayOverrides, setDayOverrides] = useState(() => new Map(closedDays.map((day) => [day.date, day])))
   const [savingDay, setSavingDay] = useState(false)
   const [dayError, setDayError] = useState<string | null>(null)
+  const [daySuccess, setDaySuccess] = useState<string | null>(null)
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
@@ -55,9 +56,27 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     working_days: settings?.working_days ?? [1, 2, 3, 4, 5],
     max_booking_months: Math.max(1, Math.ceil((settings?.max_booking_days ?? 30) / 30)),
   })
+  const [daySchedule, setDaySchedule] = useState(() => createDaySchedule(null, schedule))
 
   const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
-  const selectedIsClosed = closedDates.has(selectedDateKey)
+  const selectedOverride = dayOverrides.get(selectedDateKey)
+  const selectedIsClosed = Boolean(selectedOverride?.is_closed)
+  const selectedHasSpecialSchedule = Boolean(
+    selectedOverride && !selectedOverride.is_closed && selectedOverride.opening_time && selectedOverride.closing_time
+  )
+  const closedDates = useMemo(
+    () => new Set([...dayOverrides.values()].filter((day) => day.is_closed).map((day) => day.date)),
+    [dayOverrides]
+  )
+  const specialScheduleDates = useMemo(
+    () =>
+      new Set(
+        [...dayOverrides.values()]
+          .filter((day) => !day.is_closed && day.opening_time && day.closing_time)
+          .map((day) => day.date)
+      ),
+    [dayOverrides]
+  )
   const selectedAppointments = useMemo(
     () => appointments.filter((appointment) => isSameDay(parseISO(appointment.start_time), selectedDate)),
     [appointments, selectedDate]
@@ -81,11 +100,10 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
 
         if (!active) return
 
-        setClosedDates((current) => {
-          const next = new Set(current)
+        setDayOverrides((current) => {
+          const next = new Map(current)
           for (const item of (json.data ?? []) as BusinessDayOverride[]) {
-            if (item.is_closed) next.add(item.date)
-            else next.delete(item.date)
+            next.set(item.date, item)
           }
           return next
         })
@@ -108,6 +126,14 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         ? current.working_days.filter((d) => d !== day)
         : [...current.working_days, day].sort(),
     }))
+  }
+
+  function selectDate(date: Date) {
+    const key = format(date, 'yyyy-MM-dd')
+    setSelectedDate(date)
+    setDaySchedule(createDaySchedule(dayOverrides.get(key) ?? null, schedule))
+    setDayError(null)
+    setDaySuccess(null)
   }
 
   async function handleScheduleSave(e: FormEvent) {
@@ -133,6 +159,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         throw new Error(json.error ?? 'Nao foi possivel guardar o horario.')
       }
       setScheduleSuccess(true)
+      if (!selectedOverride) setDaySchedule(createDaySchedule(null, schedule))
       setTimeout(() => setScheduleSuccess(false), 3000)
     } catch (err) {
       setScheduleError(err instanceof Error ? err.message : 'Nao foi possivel guardar o horario.')
@@ -144,6 +171,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
   async function toggleSelectedDay() {
     setSavingDay(true)
     setDayError(null)
+    setDaySuccess(null)
     try {
       const nextClosed = !selectedIsClosed
       const res = await fetch('/api/business-day-overrides', {
@@ -157,14 +185,82 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         throw new Error(json.error ?? 'Nao foi possivel atualizar o dia.')
       }
 
-      setClosedDates((current) => {
-        const next = new Set(current)
-        if (nextClosed) next.add(selectedDateKey)
+      setDayOverrides((current) => {
+        const next = new Map(current)
+        if (nextClosed) next.set(selectedDateKey, json.data as BusinessDayOverride)
         else next.delete(selectedDateKey)
         return next
       })
+      if (!nextClosed) setDaySchedule(createDaySchedule(null, schedule))
+      setDaySuccess(nextClosed ? 'Dia desativado para reservas.' : 'Dia ativado con horario general.')
     } catch (err) {
       setDayError(err instanceof Error ? err.message : 'Nao foi possivel atualizar o dia.')
+    } finally {
+      setSavingDay(false)
+    }
+  }
+
+  async function handleDayScheduleSave(e: FormEvent) {
+    e.preventDefault()
+    setSavingDay(true)
+    setDayError(null)
+    setDaySuccess(null)
+    try {
+      const res = await fetch('/api/business-day-overrides', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: selectedDateKey,
+          is_closed: false,
+          opening_time: daySchedule.opening_time,
+          closing_time: daySchedule.closing_time,
+          slot_duration_minutes: daySchedule.slot_duration_minutes,
+        }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[AgendaManager] special schedule failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel guardar o horario especial.')
+      }
+
+      setDayOverrides((current) => {
+        const next = new Map(current)
+        next.set(selectedDateKey, json.data as BusinessDayOverride)
+        return next
+      })
+      setDaySuccess('Horario especial guardado para este dia.')
+    } catch (err) {
+      setDayError(err instanceof Error ? err.message : 'Nao foi possivel guardar o horario especial.')
+    } finally {
+      setSavingDay(false)
+    }
+  }
+
+  async function clearSelectedDaySchedule() {
+    setSavingDay(true)
+    setDayError(null)
+    setDaySuccess(null)
+    try {
+      const res = await fetch('/api/business-day-overrides', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: selectedDateKey, is_closed: false }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[AgendaManager] clear day schedule failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel remover o horario especial.')
+      }
+
+      setDayOverrides((current) => {
+        const next = new Map(current)
+        next.delete(selectedDateKey)
+        return next
+      })
+      setDaySchedule(createDaySchedule(null, schedule))
+      setDaySuccess('Este dia voltou a usar o horario general.')
+    } catch (err) {
+      setDayError(err instanceof Error ? err.message : 'Nao foi possivel remover o horario especial.')
     } finally {
       setSavingDay(false)
     }
@@ -260,10 +356,11 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         <AgendaCalendar
           appointments={monthAppointments}
           closedDates={closedDates}
+          specialScheduleDates={specialScheduleDates}
           selectedDate={selectedDate}
           visibleMonth={visibleMonth}
           onMonthChange={setVisibleMonth}
-          onSelectDate={setSelectedDate}
+          onSelectDate={selectDate}
         />
       </div>
 
@@ -276,6 +373,11 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
               </h3>
               <p className="mt-1 text-sm text-zinc-500">
                 {selectedAppointments.length} citas para este dia.
+              </p>
+              <p className="mt-1 text-xs text-zinc-600">
+                {selectedHasSpecialSchedule
+                  ? `Horario especial: ${String(selectedOverride?.opening_time).slice(0, 5)} - ${String(selectedOverride?.closing_time).slice(0, 5)}`
+                  : `Horario general: ${schedule.opening_time} - ${schedule.closing_time}`}
               </p>
             </div>
             <Button
@@ -291,6 +393,69 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
           {selectedIsClosed && (
             <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-300">
               Este dia esta cerrado para nuevas reservas publicas.
+            </p>
+          )}
+
+          <form onSubmit={handleDayScheduleSave} className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-950 p-4">
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-100">Horario especial del dia</h4>
+              <p className="mt-1 text-xs text-zinc-500">
+                Ajusta solo esta fecha sin cambiar el horario general del negocio.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                label="Abertura"
+                type="time"
+                disabled={selectedIsClosed}
+                value={daySchedule.opening_time}
+                onChange={(e) => setDaySchedule((current) => ({ ...current, opening_time: e.target.value }))}
+              />
+              <Input
+                label="Fecho"
+                type="time"
+                disabled={selectedIsClosed}
+                value={daySchedule.closing_time}
+                onChange={(e) => setDaySchedule((current) => ({ ...current, closing_time: e.target.value }))}
+              />
+            </div>
+
+            <Input
+              label="Duracao do slot (min)"
+              type="number"
+              min={5}
+              max={240}
+              disabled={selectedIsClosed}
+              value={daySchedule.slot_duration_minutes}
+              onChange={(e) =>
+                setDaySchedule((current) => ({ ...current, slot_duration_minutes: Number(e.target.value) || 30 }))
+              }
+            />
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" loading={savingDay} disabled={selectedIsClosed}>
+                Guardar horario especial
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                loading={savingDay}
+                disabled={!selectedHasSpecialSchedule}
+                onClick={clearSelectedDaySchedule}
+              >
+                Usar horario general
+              </Button>
+            </div>
+
+            {selectedIsClosed && (
+              <p className="text-xs text-zinc-500">Activa el dia antes de guardar un horario especial.</p>
+            )}
+          </form>
+
+          {daySuccess && (
+            <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+              {daySuccess}
             </p>
           )}
 
@@ -320,6 +485,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
 function AgendaCalendar({
   appointments,
   closedDates,
+  specialScheduleDates,
   selectedDate,
   visibleMonth,
   onMonthChange,
@@ -327,6 +493,7 @@ function AgendaCalendar({
 }: {
   appointments: Appointment[]
   closedDates: Set<string>
+  specialScheduleDates: Set<string>
   selectedDate: Date
   visibleMonth: Date
   onMonthChange: (date: Date) => void
@@ -389,6 +556,7 @@ function AgendaCalendar({
             const inMonth = isSameMonth(day, visibleMonth)
             const selected = isSameDay(day, selectedDate)
             const closed = closedDates.has(key)
+            const special = specialScheduleDates.has(key)
             return (
               <button
                 key={key}
@@ -416,6 +584,11 @@ function AgendaCalendar({
                       Off
                     </span>
                   )}
+                  {special && (
+                    <span className="rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-semibold text-amber-300">
+                      Hora
+                    </span>
+                  )}
                 </span>
               </button>
             )
@@ -424,4 +597,16 @@ function AgendaCalendar({
       </div>
     </Card>
   )
+}
+
+function createDaySchedule(override: BusinessDayOverride | null, schedule: {
+  opening_time: string
+  closing_time: string
+  slot_duration_minutes: number
+}) {
+  return {
+    opening_time: String(override?.opening_time ?? schedule.opening_time).slice(0, 5),
+    closing_time: String(override?.closing_time ?? schedule.closing_time).slice(0, 5),
+    slot_duration_minutes: override?.slot_duration_minutes ?? schedule.slot_duration_minutes,
+  }
 }

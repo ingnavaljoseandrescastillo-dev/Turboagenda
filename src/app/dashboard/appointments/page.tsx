@@ -36,7 +36,7 @@ export default async function AppointmentsPage() {
 
   const { data: closedDays } = await supabase
     .from('business_day_overrides')
-    .select('date, is_closed, note')
+    .select('date, is_closed, opening_time, closing_time, slot_duration_minutes, note')
     .eq('business_id', business.id)
     .gte('date', `${currentMonth}-01`)
     .lte('date', `${currentMonth}-${String(monthEnd.getDate()).padStart(2, '0')}`)

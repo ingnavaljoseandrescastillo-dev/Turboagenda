@@ -39,6 +39,9 @@ export interface BusinessSettings {
 export interface BusinessDayOverride {
   date: string
   is_closed: boolean
+  opening_time?: string | null
+  closing_time?: string | null
+  slot_duration_minutes?: number | null
   note?: string | null
 }
 

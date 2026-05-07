@@ -11,11 +11,40 @@ create table if not exists public.business_day_overrides (
   business_id uuid not null references public.businesses(id) on delete cascade,
   date date not null,
   is_closed boolean not null default true,
+  opening_time time,
+  closing_time time,
+  slot_duration_minutes int,
   note text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (business_id, date)
 );
+
+alter table public.business_day_overrides
+  add column if not exists opening_time time,
+  add column if not exists closing_time time,
+  add column if not exists slot_duration_minutes int;
+
+alter table public.business_day_overrides
+  drop constraint if exists business_day_overrides_special_hours_check,
+  drop constraint if exists business_day_overrides_slot_duration_check;
+
+alter table public.business_day_overrides
+  add constraint business_day_overrides_special_hours_check
+  check (
+    is_closed = true
+    or (
+      opening_time is null
+      and closing_time is null
+    )
+    or (
+      opening_time is not null
+      and closing_time is not null
+      and opening_time < closing_time
+    )
+  ),
+  add constraint business_day_overrides_slot_duration_check
+  check (slot_duration_minutes is null or slot_duration_minutes between 5 and 240);
 
 alter table public.business_day_overrides enable row level security;
 
@@ -75,6 +104,8 @@ declare
   v_end_time      time;
   v_slots         text[] := '{}';
   v_conflict      boolean;
+  v_override      public.business_day_overrides%rowtype;
+  v_has_special   boolean := false;
 begin
   select
     coalesce(bs.opening_time, '09:00'::time),
@@ -92,18 +123,26 @@ begin
     v_working_days := '{1,2,3,4,5}'::int[];
   end if;
 
-  if exists (
-    select 1
-    from public.business_day_overrides bdo
-    where bdo.business_id = p_business_id
-      and bdo.date = p_date
-      and bdo.is_closed = true
-  ) then
-    return v_slots;
+  select * into v_override
+  from public.business_day_overrides bdo
+  where bdo.business_id = p_business_id
+    and bdo.date = p_date;
+
+  if found then
+    if v_override.is_closed then
+      return v_slots;
+    end if;
+
+    if v_override.opening_time is not null and v_override.closing_time is not null then
+      v_opening := v_override.opening_time;
+      v_closing := v_override.closing_time;
+      v_slot_min := coalesce(v_override.slot_duration_minutes, v_slot_min);
+      v_has_special := true;
+    end if;
   end if;
 
   v_dow := extract(dow from p_date)::int;
-  if not (v_dow = any(v_working_days)) then
+  if not v_has_special and not (v_dow = any(v_working_days)) then
     return v_slots;
   end if;
 
@@ -167,14 +206,30 @@ declare
   v_client_id uuid;
   v_conflict boolean;
   v_max_days int;
+  v_opening time;
+  v_closing time;
+  v_slot_min int;
+  v_working_days int[];
+  v_dow int;
+  v_override public.business_day_overrides%rowtype;
+  v_has_special boolean := false;
 begin
-  select coalesce(max_booking_days, 30)
-  into v_max_days
+  select
+    coalesce(max_booking_days, 30),
+    coalesce(opening_time, '09:00'::time),
+    coalesce(closing_time, '18:00'::time),
+    coalesce(slot_duration_minutes, 30),
+    coalesce(working_days, '{1,2,3,4,5}'::int[])
+  into v_max_days, v_opening, v_closing, v_slot_min, v_working_days
   from public.business_settings
   where business_id = p_business_id;
 
   if not found then
     v_max_days := 30;
+    v_opening := '09:00'::time;
+    v_closing := '18:00'::time;
+    v_slot_min := 30;
+    v_working_days := '{1,2,3,4,5}'::int[];
   end if;
 
   if p_start_time < date_trunc('day', now()) then
@@ -185,14 +240,22 @@ begin
     raise exception 'Reservas disponiveis apenas nos proximos % dias', v_max_days;
   end if;
 
-  if exists (
-    select 1
-    from public.business_day_overrides bdo
-    where bdo.business_id = p_business_id
-      and bdo.date = p_start_time::date
-      and bdo.is_closed = true
-  ) then
-    raise exception 'Este dia no esta disponible para reservas';
+  select * into v_override
+  from public.business_day_overrides bdo
+  where bdo.business_id = p_business_id
+    and bdo.date = p_start_time::date;
+
+  if found then
+    if v_override.is_closed then
+      raise exception 'Este dia no esta disponible para reservas';
+    end if;
+
+    if v_override.opening_time is not null and v_override.closing_time is not null then
+      v_opening := v_override.opening_time;
+      v_closing := v_override.closing_time;
+      v_slot_min := coalesce(v_override.slot_duration_minutes, v_slot_min);
+      v_has_special := true;
+    end if;
   end if;
 
   select duration_minutes into v_duration
@@ -213,6 +276,15 @@ begin
   end if;
 
   v_end_time := p_start_time + (v_duration || ' minutes')::interval;
+
+  v_dow := extract(dow from p_start_time)::int;
+  if not v_has_special and not (v_dow = any(v_working_days)) then
+    raise exception 'Este dia no esta disponible para reservas';
+  end if;
+
+  if p_start_time::time < v_opening or v_end_time::time > v_closing then
+    raise exception 'Horario nao disponivel';
+  end if;
 
   select exists (
     select 1 from public.appointments
