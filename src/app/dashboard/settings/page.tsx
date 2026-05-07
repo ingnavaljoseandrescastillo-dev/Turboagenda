@@ -41,11 +41,19 @@ export default function SettingsPage() {
     email_notify_business_on_booking: true,
     email_reminder_24h_enabled: true,
     email_notify_client_on_cancellation: true,
+    email_rebooking_reminder_enabled: false,
+    email_rebooking_reminder_delay_days: 21,
+    email_rebooking_reminder_message:
+      'Hola {{client_name}}, esperamos que hayas disfrutado tu visita en {{business_name}}. Cuando quieras volver, puedes reservar aqui: {{public_url}}',
     whatsapp_enabled: false,
     whatsapp_notify_client_on_booking: true,
     whatsapp_notify_business_on_booking: true,
     whatsapp_reminder_24h_enabled: true,
     whatsapp_birthday_enabled: false,
+    whatsapp_rebooking_reminder_enabled: false,
+    whatsapp_rebooking_reminder_delay_days: 21,
+    whatsapp_rebooking_reminder_message:
+      'Hola {{client_name}}, esperamos que hayas disfrutado tu visita en {{business_name}}. Puedes volver a reservar aqui: {{public_url}}',
   })
 
   useEffect(() => {
@@ -90,11 +98,23 @@ export default function SettingsPage() {
             email_notify_business_on_booking: settings.email_notify_business_on_booking ?? true,
             email_reminder_24h_enabled: settings.email_reminder_24h_enabled ?? true,
             email_notify_client_on_cancellation: settings.email_notify_client_on_cancellation ?? true,
+            email_rebooking_reminder_enabled: settings.email_rebooking_reminder_enabled ?? false,
+            email_rebooking_reminder_delay_days: settings.email_rebooking_reminder_delay_days ?? 21,
+            email_rebooking_reminder_message:
+              settings.email_rebooking_reminder_message ??
+              'Hola {{client_name}}, esperamos que hayas disfrutado tu visita en {{business_name}}. Cuando quieras volver, puedes reservar aqui: {{public_url}}',
             whatsapp_enabled: whatsappAvailable ? Boolean(settings.whatsapp_enabled) : false,
             whatsapp_notify_client_on_booking: settings.whatsapp_notify_client_on_booking ?? true,
             whatsapp_notify_business_on_booking: settings.whatsapp_notify_business_on_booking ?? true,
             whatsapp_reminder_24h_enabled: settings.whatsapp_reminder_24h_enabled ?? true,
             whatsapp_birthday_enabled: settings.whatsapp_birthday_enabled ?? false,
+            whatsapp_rebooking_reminder_enabled: whatsappAvailable
+              ? settings.whatsapp_rebooking_reminder_enabled ?? false
+              : false,
+            whatsapp_rebooking_reminder_delay_days: settings.whatsapp_rebooking_reminder_delay_days ?? 21,
+            whatsapp_rebooking_reminder_message:
+              settings.whatsapp_rebooking_reminder_message ??
+              'Hola {{client_name}}, esperamos que hayas disfrutado tu visita en {{business_name}}. Puedes volver a reservar aqui: {{public_url}}',
           })
         }
       } catch (err) {
@@ -493,6 +513,42 @@ export default function SettingsPage() {
               checked={notifications.email_reminder_24h_enabled}
               onChange={(value) => setNotifications((current) => ({ ...current, email_reminder_24h_enabled: value }))}
             />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+              <ToggleRow
+                label="Invitar a volver a reservar"
+                description="Envia automaticamente un llamado al cliente despues de su ultima cita."
+                checked={notifications.email_rebooking_reminder_enabled}
+                onChange={(value) =>
+                  setNotifications((current) => ({ ...current, email_rebooking_reminder_enabled: value }))
+                }
+              />
+              <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+                <Input
+                  label="Enviar despues de"
+                  type="number"
+                  min={1}
+                  max={365}
+                  value={notifications.email_rebooking_reminder_delay_days}
+                  helper="dias desde la ultima cita"
+                  onChange={(event) =>
+                    setNotifications((current) => ({
+                      ...current,
+                      email_rebooking_reminder_delay_days: Number(event.target.value),
+                    }))
+                  }
+                />
+                <TextAreaField
+                  label="Mensaje de re-agendamiento"
+                  value={notifications.email_rebooking_reminder_message}
+                  onChange={(value) =>
+                    setNotifications((current) => ({ ...current, email_rebooking_reminder_message: value }))
+                  }
+                />
+              </div>
+              <p className="mt-3 text-xs text-zinc-500">
+                Variables disponibles: {'{{client_name}}'}, {'{{business_name}}'}, {'{{public_url}}'}.
+              </p>
+            </div>
             <ToggleRow
               label="Aviso al cliente si el negocio cancela"
               description="Envia un email al cliente cuando el negocio marca la cita como cancelada."
@@ -546,6 +602,45 @@ export default function SettingsPage() {
                 setNotifications((current) => ({ ...current, whatsapp_reminder_24h_enabled: value }))
               }
             />
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+              <ToggleRow
+                label="Invitar a volver a reservar por WhatsApp"
+                description="Fila un mensaje post-cita para clientes que no tengan una cita futura."
+                checked={notifications.whatsapp_rebooking_reminder_enabled}
+                disabled={!whatsappAvailable}
+                onChange={(value) =>
+                  setNotifications((current) => ({ ...current, whatsapp_rebooking_reminder_enabled: value }))
+                }
+              />
+              <div className="mt-4 grid gap-4 md:grid-cols-[180px_1fr]">
+                <Input
+                  label="Enviar despues de"
+                  type="number"
+                  min={1}
+                  max={365}
+                  disabled={!whatsappAvailable}
+                  value={notifications.whatsapp_rebooking_reminder_delay_days}
+                  helper="dias desde la ultima cita"
+                  onChange={(event) =>
+                    setNotifications((current) => ({
+                      ...current,
+                      whatsapp_rebooking_reminder_delay_days: Number(event.target.value),
+                    }))
+                  }
+                />
+                <TextAreaField
+                  label="Mensaje WhatsApp"
+                  value={notifications.whatsapp_rebooking_reminder_message}
+                  disabled={!whatsappAvailable}
+                  onChange={(value) =>
+                    setNotifications((current) => ({ ...current, whatsapp_rebooking_reminder_message: value }))
+                  }
+                />
+              </div>
+              <p className="mt-3 text-xs text-zinc-500">
+                Variables disponibles: {'{{client_name}}'}, {'{{business_name}}'}, {'{{public_url}}'}.
+              </p>
+            </div>
             <ToggleRow
               label="Feliz cumpleanos"
               description="Preparado para clientes con cita en los ultimos 3 meses y fecha de nacimiento."
@@ -661,6 +756,31 @@ function ToggleRow({
         disabled={disabled}
         onChange={(event) => onChange(event.target.checked)}
         className="h-5 w-5 accent-emerald-500"
+      />
+    </label>
+  )
+}
+
+function TextAreaField({
+  label,
+  value,
+  disabled = false,
+  onChange,
+}: {
+  label: string
+  value: string
+  disabled?: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-zinc-300">{label}</span>
+      <textarea
+        value={value}
+        disabled={disabled}
+        rows={4}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full resize-none rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 placeholder-zinc-500 outline-none transition-colors focus:ring-2 focus:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
       />
     </label>
   )

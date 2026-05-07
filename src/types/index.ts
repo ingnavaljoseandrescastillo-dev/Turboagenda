@@ -29,11 +29,17 @@ export interface BusinessSettings {
   email_notify_business_on_booking?: boolean
   email_reminder_24h_enabled?: boolean
   email_notify_client_on_cancellation?: boolean
+  email_rebooking_reminder_enabled?: boolean
+  email_rebooking_reminder_delay_days?: number
+  email_rebooking_reminder_message?: string
   whatsapp_enabled?: boolean
   whatsapp_notify_client_on_booking?: boolean
   whatsapp_notify_business_on_booking?: boolean
   whatsapp_reminder_24h_enabled?: boolean
   whatsapp_birthday_enabled?: boolean
+  whatsapp_rebooking_reminder_enabled?: boolean
+  whatsapp_rebooking_reminder_delay_days?: number
+  whatsapp_rebooking_reminder_message?: string
 }
 
 export interface BusinessDayOverride {
@@ -134,6 +140,7 @@ export interface NotificationEvent {
     | 'appointment_reminder_24h'
     | 'birthday_greeting'
     | 'manual_reminder'
+    | 'rebooking_reminder'
   recipient_type: 'client' | 'business'
   recipient_name?: string | null
   recipient_phone?: string | null
