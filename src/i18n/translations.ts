@@ -136,6 +136,7 @@ const pt = {
     nav: {
       calendar: 'Agenda',
       appointments: 'Agendamentos',
+      clients: 'Clientes',
       services: 'Servicos',
       team: 'Equipa',
       settings: 'Configuracoes',
@@ -362,6 +363,7 @@ const en: typeof pt = {
     nav: {
       calendar: 'Calendar',
       appointments: 'Appointments',
+      clients: 'Clients',
       services: 'Services',
       team: 'Team',
       settings: 'Settings',
@@ -588,6 +590,7 @@ const es: typeof pt = {
     nav: {
       calendar: 'Agenda',
       appointments: 'Citas',
+      clients: 'Clientes',
       services: 'Servicios',
       team: 'Equipo',
       settings: 'Configuracion',
