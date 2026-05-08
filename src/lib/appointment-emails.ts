@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { getEmailFrom, getResend } from '@/lib/resend'
-import { formatDateTime } from '@/lib/utils'
+import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
 
 type AppointmentEmailData = {
   id: string
@@ -29,6 +29,7 @@ type AppointmentEmailData = {
     email_notify_business_on_booking: boolean | null
     email_reminder_24h_enabled: boolean | null
     email_notify_client_on_cancellation: boolean | null
+    time_zone: string | null
   } | null
 }
 
@@ -56,7 +57,8 @@ async function sendAppointmentEmails(appointmentId: string, kind: AppointmentEma
     const resend = getResend()
     const from = getEmailFrom()
     const appointmentUrl = `https://turboagenda.pt/b/${business.slug}`
-    const when = formatDateTime(appointment.start_time)
+    const timeZone = normalizeTimeZone(settings?.time_zone)
+    const when = formatDateTime(appointment.start_time, timeZone)
     const serviceName = appointment.services?.name ?? 'Servico'
     const employeeName = appointment.employees?.name ?? 'Profissional'
     const sends = []

@@ -33,6 +33,15 @@ const WORK_DAYS = [
   { label: 'Sab', value: 6 },
 ]
 
+const TIME_ZONES = [
+  { label: 'Portugal continental (Lisboa)', value: 'Europe/Lisbon' },
+  { label: 'Azores', value: 'Atlantic/Azores' },
+  { label: 'Madeira / Canarias', value: 'Atlantic/Madeira' },
+  { label: 'España peninsular', value: 'Europe/Madrid' },
+  { label: 'UTC', value: 'UTC' },
+  { label: 'Venezuela', value: 'America/Caracas' },
+]
+
 interface AgendaManagerProps {
   appointments: Appointment[]
   settings: BusinessSettings | null
@@ -55,6 +64,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     slot_duration_minutes: settings?.slot_duration_minutes ?? 30,
     working_days: settings?.working_days ?? [1, 2, 3, 4, 5],
     max_booking_months: Math.max(1, Math.ceil((settings?.max_booking_days ?? 30) / 30)),
+    time_zone: settings?.time_zone ?? 'Europe/Lisbon',
   })
   const [daySchedule, setDaySchedule] = useState(() => createDaySchedule(null, schedule))
 
@@ -151,6 +161,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
           slot_duration_minutes: schedule.slot_duration_minutes,
           working_days: schedule.working_days,
           max_booking_days: schedule.max_booking_months * 30,
+          time_zone: schedule.time_zone,
         }),
       })
       const json = await res.json()
@@ -302,6 +313,23 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
                   setSchedule((s) => ({ ...s, slot_duration_minutes: Number(e.target.value) || 30 }))
                 }
               />
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-zinc-300">Zona horaria</span>
+                <select
+                  value={schedule.time_zone}
+                  onChange={(event) => setSchedule((s) => ({ ...s, time_zone: event.target.value }))}
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500"
+                >
+                  {TIME_ZONES.map((zone) => (
+                    <option key={zone.value} value={zone.value}>
+                      {zone.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs text-zinc-500">
+                  Los correos y reservas publicas usaran esta zona horaria.
+                </span>
+              </label>
               <Input
                 label="Meses abertos"
                 type="number"

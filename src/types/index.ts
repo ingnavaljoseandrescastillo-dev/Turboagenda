@@ -25,6 +25,7 @@ export interface BusinessSettings {
   slot_duration_minutes: number
   working_days: number[]
   max_booking_days: number
+  time_zone?: string
   email_notify_client_on_booking?: boolean
   email_notify_business_on_booking?: boolean
   email_reminder_24h_enabled?: boolean
