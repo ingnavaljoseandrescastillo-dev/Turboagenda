@@ -217,12 +217,16 @@ export default async function BusinessPublicPage({ params }: PageProps) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div
-                className="aspect-[3/4] overflow-hidden rounded-3xl p-5"
+                className="aspect-[3/4] overflow-hidden rounded-3xl"
                 style={imageBackground(biz.cover_image_url) ?? { backgroundColor: theme.primary }}
               >
-                <div className="flex h-full flex-col justify-end">
-                  <p className="text-sm font-semibold" style={{ color: theme.onPrimary }}>Reserve online</p>
-                  <p className="mt-1 text-2xl font-black text-white">{biz.name}</p>
+                <div className="flex h-full flex-col justify-end bg-gradient-to-t from-black/75 via-black/20 to-transparent p-4 sm:p-5">
+                  <p className="text-xs font-semibold sm:text-sm" style={{ color: theme.onPrimary }}>
+                    Reserve online
+                  </p>
+                  <p className="mt-1 max-w-full break-words text-lg font-black leading-tight text-white sm:text-2xl">
+                    {biz.name}
+                  </p>
                 </div>
               </div>
               <div className="mt-10 aspect-[3/4] rounded-3xl bg-black/25 p-5 ring-1 ring-white/10">
