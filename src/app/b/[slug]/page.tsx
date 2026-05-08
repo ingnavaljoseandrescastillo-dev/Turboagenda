@@ -60,48 +60,45 @@ function readableTextColor(hex: string) {
 }
 
 function GalleryPreview({
-  businessName,
   images,
   primaryColor,
 }: {
-  businessName: string
   images?: string[] | null
   primaryColor: string
 }) {
-  const items = ['Ambiente', 'Trabalhos', 'Detalhes', 'Resultado']
-  const galleryImages = images?.filter(Boolean).slice(0, 4) ?? []
+  const galleryImages = images?.filter(Boolean) ?? []
+
+  if (galleryImages.length === 0) return null
 
   return (
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-lg font-bold text-zinc-100">Galeria</h2>
-          <p className="text-sm text-zinc-500">Espaco para mostrar trabalhos realizados e o ambiente do negocio.</p>
+          <p className="text-sm text-zinc-500">Veja fotos recentes do negocio.</p>
         </div>
+        <p className="text-xs font-semibold text-zinc-500">{galleryImages.length} fotos</p>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {items.map((item, index) => (
-          <div
-            key={item}
-            className="aspect-[4/5] overflow-hidden rounded-2xl border bg-zinc-900"
-            style={{ borderColor: `${primaryColor}38` }}
-          >
+      <div className="-mx-5 overflow-x-auto px-5 pb-2">
+        <div className="flex snap-x snap-mandatory gap-3">
+          {galleryImages.map((image, index) => (
             <div
-              className="flex h-full flex-col justify-end p-4"
-              style={
-                imageBackground(galleryImages[index]) ?? {
-                  background:
-                    index % 2 === 0
-                      ? `linear-gradient(145deg, ${primaryColor}55 0%, #18181b 58%, #020617 100%)`
-                      : `linear-gradient(145deg, ${primaryColor}38 0%, #27272a 55%, #020617 100%)`,
-                }
-              }
+              key={`${image}-${index}`}
+              className="aspect-[4/5] min-w-[76%] snap-start overflow-hidden rounded-2xl border bg-zinc-900 sm:min-w-[42%] lg:min-w-[28%]"
+              style={{ borderColor: `${primaryColor}38` }}
             >
-              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: primaryColor }}>{businessName}</p>
-              <p className="mt-1 text-sm font-bold text-white">{item}</p>
+              <div
+                aria-label={`Foto ${index + 1}`}
+                className="h-full bg-cover bg-center transition-transform duration-500 hover:scale-105"
+                style={
+                  imageBackground(image) ?? {
+                    background: `linear-gradient(145deg, ${primaryColor}38 0%, #27272a 55%, #020617 100%)`,
+                  }
+                }
+              />
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </section>
   )
@@ -250,7 +247,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
             <ServiceGrid services={svcs} slug={slug} primaryColor={theme.primary} />
           </section>
           <TeamPreview employees={emps} primaryColor={theme.primary} />
-          <GalleryPreview businessName={biz.name} images={biz.gallery_images} primaryColor={theme.primary} />
+          <GalleryPreview images={biz.gallery_images} primaryColor={theme.primary} />
           <ReviewsList reviews={revs} primaryColor={theme.primary} />
         </div>
       </main>
