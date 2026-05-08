@@ -16,12 +16,14 @@ import {
 } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { useAvailability } from '@/hooks/useAvailability'
+import { DEFAULT_BUSINESS_TIME_ZONE, zonedDateTimeToUtcIso } from '@/lib/utils'
 
 interface DateTimePickerProps {
   businessId: string
   serviceId: string
   employeeId: string
   maxBookingDays?: number
+  timeZone?: string
   primaryColor?: string
   onPrimaryColor?: string
   onSelect: (datetime: string) => void
@@ -33,6 +35,7 @@ export function DateTimePicker({
   serviceId,
   employeeId,
   maxBookingDays = 30,
+  timeZone = DEFAULT_BUSINESS_TIME_ZONE,
   primaryColor = '#10b981',
   onPrimaryColor = '#09090b',
   onSelect,
@@ -63,7 +66,7 @@ export function DateTimePicker({
   const canGoNext = isBefore(endOfMonth(addMonths(visibleMonth, 1)), maxDate)
 
   function slotToIso(time: string) {
-    return new Date(`${format(selectedDate, 'yyyy-MM-dd')}T${time}:00`).toISOString()
+    return zonedDateTimeToUtcIso(format(selectedDate, 'yyyy-MM-dd'), time, timeZone)
   }
 
   return (

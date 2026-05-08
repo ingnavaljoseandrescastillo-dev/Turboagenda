@@ -30,6 +30,7 @@ export function BookClient({
 }: BookClientProps) {
   const router = useRouter()
   const theme = publicTheme(business)
+  const timeZone = settings?.time_zone ?? 'Europe/Lisbon'
   const [step, setStep] = useState(initialService ? 1 : 0)
   const [completed, setCompleted] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(initialService)
@@ -137,6 +138,7 @@ export function BookClient({
               serviceId={selectedService}
               employeeId={selectedEmployee}
               maxBookingDays={settings?.max_booking_days ?? 30}
+              timeZone={timeZone}
               selected={selectedDatetime}
               primaryColor={theme.primary}
               onPrimaryColor={theme.onPrimary}
@@ -149,6 +151,7 @@ export function BookClient({
               serviceId={selectedService}
               employeeId={selectedEmployee}
               startTime={selectedDatetime}
+              timeZone={timeZone}
               primaryColor={theme.primary}
               onPrimaryColor={theme.onPrimary}
               onSuccess={() => setCompleted(true)}

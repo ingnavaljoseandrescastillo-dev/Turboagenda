@@ -1,6 +1,8 @@
 import { z } from 'zod'
+import { isValidTimeZone } from '@/lib/utils'
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color invalido')
+const TimeZoneSchema = z.string().min(3).max(64).refine(isValidTimeZone, 'Zona horaria invalida')
 
 export const LoginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -105,6 +107,7 @@ export const BusinessScheduleSchema = z.object({
   slot_duration_minutes: z.number().int().min(5).max(240),
   working_days: z.array(z.number().int().min(0).max(6)).min(1, 'Escolha pelo menos um dia de trabalho'),
   max_booking_days: z.number().int().min(1).max(365),
+  time_zone: TimeZoneSchema,
 })
 
 export const BusinessCreateSchema = z.object({

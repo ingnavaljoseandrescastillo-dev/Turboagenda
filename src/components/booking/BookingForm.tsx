@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
-import { formatDateTime } from '@/lib/utils'
+import { DEFAULT_BUSINESS_TIME_ZONE, formatDateTime } from '@/lib/utils'
 
 const ClientSchema = z.object({
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
@@ -22,6 +22,7 @@ interface BookingFormProps {
   serviceId: string
   employeeId: string
   startTime: string
+  timeZone?: string
   primaryColor?: string
   onPrimaryColor?: string
   onSuccess: () => void
@@ -32,6 +33,7 @@ export function BookingForm({
   serviceId,
   employeeId,
   startTime,
+  timeZone = DEFAULT_BUSINESS_TIME_ZONE,
   primaryColor = '#10b981',
   onPrimaryColor = '#09090b',
   onSuccess,
@@ -72,7 +74,7 @@ export function BookingForm({
 
       <div className="rounded-xl border p-3" style={{ borderColor: `${primaryColor}33`, backgroundColor: `${primaryColor}0d` }}>
         <p className="text-sm font-medium" style={{ color: primaryColor }}>
-          Agendamento para {formatDateTime(startTime)}
+          Agendamento para {formatDateTime(startTime, timeZone)}
         </p>
       </div>
 
