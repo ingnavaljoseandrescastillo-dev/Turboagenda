@@ -13,7 +13,10 @@ const LanguageContext = createContext<LanguageContextValue | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => {
-    if (typeof window === 'undefined') return 'pt'
+    if (typeof window === 'undefined') {
+      return 'pt'
+    }
+
     const stored = localStorage.getItem('ta_locale') as Locale | null
     return stored && stored in translations ? stored : 'pt'
   })
