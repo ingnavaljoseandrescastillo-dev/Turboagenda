@@ -9,6 +9,12 @@ import { useLanguage } from '@/contexts/LanguageContext'
 export default function HomePage() {
   const { t } = useLanguage()
   const p = t.pricing
+  const basePlanSalesHref = `https://wa.me/351938037175?text=${encodeURIComponent(
+    'Olá, quero ativar o Plano Base do TurboAgenda para o meu negócio.',
+  )}`
+  const proWaitlistHref = `https://wa.me/351938037175?text=${encodeURIComponent(
+    'Olá, quero entrar na lista de espera do Plano Pro do TurboAgenda.',
+  )}`
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-zinc-950 text-zinc-100">
@@ -148,12 +154,17 @@ export default function HomePage() {
               <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
                 30 dias gratis. Primeiro pagamento com 30% de desconto.
               </div>
-              <Link
-                href="/register"
-                className="mb-6 block w-full rounded-xl bg-zinc-800 py-2.5 text-center text-sm font-semibold transition hover:bg-zinc-700"
+              <a
+                href={basePlanSalesHref}
+                rel="noreferrer"
+                target="_blank"
+                className="mb-2 block w-full rounded-xl bg-zinc-800 py-2.5 text-center text-sm font-semibold transition hover:bg-zinc-700"
               >
-                {p.startFree}
-              </Link>
+                Falar no WhatsApp
+              </a>
+              <p className="mb-6 text-center text-xs leading-5 text-zinc-500">
+                Ativacao manual durante a beta comercial.
+              </p>
               <ul className="space-y-2.5 text-xs">
                 {p.basic.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-zinc-300">
@@ -178,12 +189,17 @@ export default function HomePage() {
                 Estamos a preparar funcionalidades premium para negocios que quieran crescer com mais automatizacao,
                 controlo e operacao.
               </div>
-              <button
-                disabled
-                className="mb-6 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl bg-zinc-800 py-2.5 text-sm font-semibold text-zinc-500"
+              <a
+                href={proWaitlistHref}
+                rel="noreferrer"
+                target="_blank"
+                className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700"
               >
-                {p.lockedBtn}
-              </button>
+                Quero entrar na lista
+              </a>
+              <p className="mb-6 text-center text-xs leading-5 text-zinc-500">
+                Falamos contigo quando abrirmos o plano premium.
+              </p>
               <ul className="space-y-2.5 text-xs">
                 {p.pro.features.map((feature) => (
                   <li key={feature} className="flex items-start gap-2 text-zinc-300">
