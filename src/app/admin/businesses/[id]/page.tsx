@@ -30,7 +30,9 @@ type BusinessDetail = {
         plan: 'trial' | 'basic' | 'plus'
         status: 'trial' | 'active' | 'cancelled' | 'past_due'
         trial_ends_at: string | null
+        current_period_start?: string | null
         current_period_end: string | null
+        last_payment_at?: string | null
         price_cents?: number
         currency?: string
         manual_override?: boolean
@@ -78,6 +80,20 @@ type AdminAuditLog = {
   after_state: Record<string, unknown> | null
 }
 
+type AdminPayment = {
+  id: string
+  admin_email: string | null
+  plan: 'basic' | 'plus'
+  amount_cents: number
+  currency: string
+  paid_at: string
+  period_start: string
+  period_end: string
+  method: string
+  reference: string | null
+  notes: string | null
+}
+
 function normalizeRelation<T>(value: T | T[] | null | undefined) {
   if (Array.isArray(value)) return value[0] ?? null
   return value ?? null
@@ -86,6 +102,19 @@ function normalizeRelation<T>(value: T | T[] | null | undefined) {
 function formatDate(value?: string | null) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'medium' }).format(new Date(value))
+}
+
+function daysUntil(value?: string | null) {
+  if (!value) return null
+  return Math.ceil((new Date(value).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+}
+
+function dueLabel(value?: string | null) {
+  const days = daysUntil(value)
+  if (days === null) return 'Sin fecha'
+  if (days < 0) return `Vencido hace ${Math.abs(days)} dias`
+  if (days === 0) return 'Vence hoy'
+  return `Faltan ${days} dias`
 }
 
 function weekDays(days?: number[]) {
@@ -113,7 +142,7 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
         is_paused,
         pause_reason,
         business_settings(opening_time,closing_time,slot_duration_minutes,working_days,max_booking_days),
-        subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,currency,manual_override,notes),
+        subscriptions(plan,status,trial_ends_at,current_period_start,current_period_end,last_payment_at,price_cents,currency,manual_override,notes),
         services(id,name,duration_minutes,price,is_active),
         employees(id,name,role,is_active),
         appointments(id,client_name,client_email,client_phone,start_time,end_time,status,services(name),employees(name))
@@ -153,6 +182,13 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
     .eq('business_id', id)
     .order('created_at', { ascending: false })
     .limit(20)
+
+  const { data: paymentsData } = await supabase
+    .from('admin_subscription_payments')
+    .select('id,admin_email,plan,amount_cents,currency,paid_at,period_start,period_end,method,reference,notes')
+    .eq('business_id', id)
+    .order('paid_at', { ascending: false })
+    .limit(50)
 
   const subscription = business.subscriptions
   const settings = business.business_settings
@@ -206,8 +242,10 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
               </p>
               <p>Estado: {subscription?.status ?? 'trial'}</p>
               <p>Trial: {formatDate(subscription?.trial_ends_at)}</p>
-              <p>Periodo: {formatDate(subscription?.current_period_end)}</p>
-              <p>MRR: {formatCurrency((subscription?.price_cents ?? 0) / 100)}</p>
+              <p>Periodo actual: {formatDate(subscription?.current_period_start)} - {formatDate(subscription?.current_period_end)}</p>
+              <p>Vencimiento: {dueLabel(subscription?.status === 'trial' ? subscription?.trial_ends_at : subscription?.current_period_end)}</p>
+              <p>Ultimo pago: {formatDate(subscription?.last_payment_at)}</p>
+              <p>MRR: {formatCurrency((subscription?.price_cents ?? 0) / 100, subscription?.currency ?? 'EUR')}</p>
               <p>{business.is_paused ? `Pausado: ${business.pause_reason ?? 'sin motivo'}` : 'Operativo'}</p>
             </div>
             <div className="mt-4">
@@ -222,6 +260,30 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
             </div>
           </div>
         </section>
+
+        <Panel title="Pagos manuales">
+          <div className="space-y-2">
+            {((paymentsData ?? []) as AdminPayment[]).map((payment) => (
+              <div key={payment.id} className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm">
+                <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="font-semibold text-emerald-300">
+                    {formatCurrency(payment.amount_cents / 100, payment.currency)} - {payment.plan}
+                  </span>
+                  <span className="text-xs text-zinc-500">{formatDateTime(payment.paid_at)}</span>
+                </div>
+                <p className="mt-1 text-zinc-500">
+                  Cubre {formatDate(payment.period_start)} - {formatDate(payment.period_end)}
+                </p>
+                <p className="mt-1 text-xs text-zinc-600">
+                  Metodo: {payment.method}
+                  {payment.reference ? ` - Ref: ${payment.reference}` : ''} - {payment.admin_email ?? 'Admin'}
+                </p>
+                {payment.notes && <p className="mt-2 text-xs text-zinc-500">{payment.notes}</p>}
+              </div>
+            ))}
+            {(paymentsData ?? []).length === 0 && <Empty text="Sin pagos registrados." />}
+          </div>
+        </Panel>
 
         <section className="grid gap-4 md:grid-cols-3">
           <Metric label="Servicios" value={business.services.length} />

@@ -9,7 +9,9 @@ const AdminBusinessPatchSchema = z.object({
   plan: z.enum(['trial', 'basic', 'plus']).optional(),
   status: z.enum(['trial', 'active', 'cancelled', 'past_due']).optional(),
   trial_ends_at: z.string().datetime().nullable().optional(),
+  current_period_start: z.string().datetime().nullable().optional(),
   current_period_end: z.string().datetime().nullable().optional(),
+  last_payment_at: z.string().datetime().nullable().optional(),
   price_cents: z.number().int().min(0).optional(),
   notes: z.string().nullable().optional(),
 })
@@ -32,14 +34,16 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
       plan,
       status,
       trial_ends_at,
+      current_period_start,
       current_period_end,
+      last_payment_at,
       price_cents,
       notes,
     } = parsed.data
 
     const { data: beforeBusiness } = await supabase
       .from('businesses')
-      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,notes,manual_override)')
+      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_start,current_period_end,last_payment_at,price_cents,notes,manual_override)')
       .eq('id', id)
       .maybeSingle()
 
@@ -61,7 +65,9 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
       ...(plan ? { plan } : {}),
       ...(status ? { status } : {}),
       ...(trial_ends_at !== undefined ? { trial_ends_at } : {}),
+      ...(current_period_start !== undefined ? { current_period_start } : {}),
       ...(current_period_end !== undefined ? { current_period_end } : {}),
+      ...(last_payment_at !== undefined ? { last_payment_at } : {}),
       ...(price_cents !== undefined ? { price_cents } : {}),
       ...(notes !== undefined ? { notes } : {}),
       manual_override: true,
@@ -78,7 +84,7 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
 
     const { data: afterBusiness } = await supabase
       .from('businesses')
-      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,notes,manual_override)')
+      .select('id, is_paused, paused_at, pause_reason, subscriptions(plan,status,trial_ends_at,current_period_start,current_period_end,last_payment_at,price_cents,notes,manual_override)')
       .eq('id', id)
       .maybeSingle()
 

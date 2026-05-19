@@ -18,6 +18,8 @@ type BusinessRow = {
         status: 'trial' | 'active' | 'cancelled' | 'past_due'
         trial_ends_at: string | null
         current_period_end: string | null
+        current_period_start?: string | null
+        last_payment_at?: string | null
         price_cents?: number
         currency?: string
         manual_override?: boolean
@@ -26,6 +28,15 @@ type BusinessRow = {
   services: { id: string }[]
   employees: { id: string }[]
   appointments: { id: string; start_time: string; status: string }[]
+  admin_subscription_payments?: {
+    id: string
+    amount_cents: number
+    currency: string
+    paid_at: string
+    period_start: string
+    period_end: string
+    plan: 'basic' | 'plus'
+  }[]
 }
 
 type AdminSearchParams = {
@@ -37,6 +48,20 @@ type AdminSearchParams = {
 function formatDate(value?: string | null) {
   if (!value) return '-'
   return new Intl.DateTimeFormat('pt-PT', { dateStyle: 'medium' }).format(new Date(value))
+}
+
+function daysUntil(value?: string | null) {
+  if (!value) return null
+  const diff = new Date(value).getTime() - Date.now()
+  return Math.ceil(diff / (1000 * 60 * 60 * 24))
+}
+
+function formatDueText(value?: string | null) {
+  const days = daysUntil(value)
+  if (days === null) return 'Sin fecha'
+  if (days < 0) return `Vencido hace ${Math.abs(days)} dias`
+  if (days === 0) return 'Vence hoy'
+  return `Faltan ${days} dias`
 }
 
 export default async function AdminPage({ searchParams }: { searchParams?: Promise<AdminSearchParams> }) {
@@ -58,10 +83,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
         created_at,
         is_paused,
         pause_reason,
-        subscriptions(plan,status,trial_ends_at,current_period_end,price_cents,currency,manual_override),
+        subscriptions(plan,status,trial_ends_at,current_period_start,current_period_end,last_payment_at,price_cents,currency,manual_override),
         services(id),
         employees(id),
-        appointments(id,start_time,status)
+        appointments(id,start_time,status),
+        admin_subscription_payments(id,amount_cents,currency,paid_at,period_start,period_end,plan)
       `
     )
     .order('created_at', { ascending: false })
@@ -101,6 +127,19 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   const paused = businesses.filter((business) => business.is_paused).length
   const activeSubscriptions = businesses.filter((business) => business.subscriptions?.status === 'active').length
   const trialSubscriptions = businesses.filter((business) => business.subscriptions?.status === 'trial').length
+  const monthStart = new Date()
+  monthStart.setDate(1)
+  monthStart.setHours(0, 0, 0, 0)
+  const payments = businesses.flatMap((business) => business.admin_subscription_payments ?? [])
+  const monthlyCollectedCents = payments.reduce((sum, payment) => {
+    return new Date(payment.paid_at) >= monthStart ? sum + payment.amount_cents : sum
+  }, 0)
+  const totalCollectedCents = payments.reduce((sum, payment) => sum + payment.amount_cents, 0)
+  const expiringTrials = businesses.filter((business) => {
+    const subscription = business.subscriptions
+    const days = daysUntil(subscription?.trial_ends_at)
+    return subscription?.status === 'trial' && days !== null && days <= 7
+  }).length
   const monthlyRevenueCents = businesses.reduce((sum, business) => {
     const subscription = business.subscriptions
     if (!subscription || subscription.status !== 'active') return sum
@@ -113,8 +152,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
     { label: 'Activos pago', value: activeSubscriptions },
     { label: 'Trials', value: trialSubscriptions },
     { label: 'Pausados', value: paused },
-    { label: 'Citas', value: totalAppointments },
+    { label: 'Trials por vencer', value: expiringTrials },
     { label: 'MRR estimado', value: formatCurrency(monthlyRevenueCents / 100) },
+    { label: 'Cobrado este mes', value: formatCurrency(monthlyCollectedCents / 100) },
+    { label: 'Cobrado total', value: formatCurrency(totalCollectedCents / 100) },
+    { label: 'Citas', value: totalAppointments },
   ]
 
   return (
@@ -134,7 +176,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
           </Link>
         </header>
 
-        <section className="grid grid-cols-2 gap-3 md:grid-cols-6">
+        <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
           {metrics.map((metric) => (
             <div key={metric.label} className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
               <p className="text-xs text-zinc-500">{metric.label}</p>
@@ -191,13 +233,13 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-[1050px] w-full text-left text-sm">
+            <table className="min-w-[1180px] w-full text-left text-sm">
               <thead className="border-b border-zinc-800 text-xs uppercase text-zinc-500">
                 <tr>
                   <th className="px-4 py-3">Negocio</th>
                   <th className="px-4 py-3">Plan</th>
                   <th className="px-4 py-3">Uso</th>
-                  <th className="px-4 py-3">Fechas</th>
+                  <th className="px-4 py-3">Cobros y fechas</th>
                   <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3">Acciones</th>
                 </tr>
@@ -208,6 +250,11 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   const plan = subscription?.plan ?? 'trial'
                   const status = subscription?.status ?? 'trial'
                   const priceCents = subscription?.price_cents ?? 0
+                  const lastPayment = [...(business.admin_subscription_payments ?? [])].sort(
+                    (a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime()
+                  )[0]
+                  const billingDate =
+                    status === 'trial' ? subscription?.trial_ends_at : subscription?.current_period_end
 
                   return (
                     <tr key={business.id} className="align-top">
@@ -244,8 +291,23 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                       </td>
                       <td className="px-4 py-4 text-xs text-zinc-400">
                         <div>Alta: {formatDate(business.created_at)}</div>
-                        <div>Trial: {formatDate(subscription?.trial_ends_at)}</div>
-                        <div>Periodo: {formatDate(subscription?.current_period_end)}</div>
+                        <div className={daysUntil(billingDate) !== null && daysUntil(billingDate)! < 0 ? 'text-red-300' : ''}>
+                          {status === 'trial' ? 'Trial' : 'Pagado'}: {formatDate(billingDate)}
+                        </div>
+                        <div>{formatDueText(billingDate)}</div>
+                        {lastPayment ? (
+                          <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950 p-2">
+                            <div className="font-semibold text-emerald-300">
+                              Ultimo pago: {formatCurrency(lastPayment.amount_cents / 100, lastPayment.currency)}
+                            </div>
+                            <div>{formatDate(lastPayment.paid_at)}</div>
+                            <div>
+                              Cubre: {formatDate(lastPayment.period_start)} - {formatDate(lastPayment.period_end)}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-2 text-zinc-600">Sin pagos registrados</div>
+                        )}
                       </td>
                       <td className="px-4 py-4">
                         {business.is_paused ? (
@@ -271,6 +333,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                           status={status}
                           priceCents={priceCents}
                           trialEndsAt={subscription?.trial_ends_at}
+                          compact
                         />
                       </td>
                     </tr>

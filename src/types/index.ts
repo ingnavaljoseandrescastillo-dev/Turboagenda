@@ -125,7 +125,13 @@ export interface Subscription {
   plan: 'trial' | 'basic' | 'plus'
   status: 'trial' | 'active' | 'cancelled' | 'past_due'
   trial_ends_at?: string
+  current_period_start?: string
   current_period_end?: string
+  last_payment_at?: string
+  price_cents?: number
+  currency?: string
+  manual_override?: boolean
+  notes?: string
   created_at: string
 }
 
