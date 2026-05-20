@@ -171,7 +171,10 @@ export function AdminBusinessActions({
         </Link>
       </div>
       <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-2">
-        <p className="mb-2 text-xs font-semibold text-emerald-200">Registrar pago manual</p>
+        <p className="mb-1 text-xs font-semibold text-emerald-200">Cobro manual</p>
+        <p className="mb-2 text-[11px] text-zinc-500">
+          Guarda el pago en tu contabilidad y deja el plan activo por los meses elegidos.
+        </p>
         <div className={`grid gap-2 ${compact ? 'grid-cols-2' : 'grid-cols-2 md:grid-cols-4'}`}>
           <select
             aria-label="Plan pagado"
@@ -191,9 +194,11 @@ export function AdminBusinessActions({
             aria-label="Importe cobrado"
             type="number"
             min={0}
+            step="0.01"
             value={paymentAmount}
             disabled={saving}
             onChange={(event) => setPaymentAmount(event.target.value)}
+            placeholder="Importe EUR"
             className="rounded-lg border border-zinc-700 bg-zinc-950 px-2 py-2 text-xs text-zinc-100"
           />
           <select
@@ -237,7 +242,7 @@ export function AdminBusinessActions({
             onClick={recordPayment}
             className="rounded-lg bg-emerald-500 px-3 py-2 text-xs font-semibold text-zinc-950 hover:bg-emerald-400 disabled:opacity-60"
           >
-            Registrar y activar
+            Guardar cobro
           </button>
         </div>
       </div>
