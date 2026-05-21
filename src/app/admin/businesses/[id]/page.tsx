@@ -4,6 +4,7 @@ import { requirePlatformAdmin } from '@/lib/admin'
 import { formatCurrency, formatDateTime } from '@/lib/utils'
 import { AdminBusinessActions } from '../../AdminBusinessActions'
 import { AdminNoteComposer } from '../../AdminNoteComposer'
+import { AdminPaymentActions } from './AdminPaymentActions'
 
 type BusinessDetail = {
   id: string
@@ -92,6 +93,9 @@ type AdminPayment = {
   method: string
   reference: string | null
   notes: string | null
+  status: 'paid' | 'voided'
+  voided_at: string | null
+  voided_reason: string | null
 }
 
 function normalizeRelation<T>(value: T | T[] | null | undefined) {
@@ -185,7 +189,7 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
 
   const { data: paymentsData } = await supabase
     .from('admin_subscription_payments')
-    .select('id,admin_email,plan,amount_cents,currency,paid_at,period_start,period_end,method,reference,notes')
+    .select('id,admin_email,plan,amount_cents,currency,paid_at,period_start,period_end,method,reference,notes,status,voided_at,voided_reason')
     .eq('business_id', id)
     .order('paid_at', { ascending: false })
     .limit(50)
@@ -264,12 +268,22 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
         <Panel title="Pagos manuales">
           <div className="space-y-2">
             {((paymentsData ?? []) as AdminPayment[]).map((payment) => (
-              <div key={payment.id} className="rounded-lg border border-zinc-800 bg-zinc-950 p-3 text-sm">
+              <div
+                key={payment.id}
+                className={`rounded-lg border p-3 text-sm ${
+                  payment.status === 'voided'
+                    ? 'border-red-500/20 bg-red-500/5 opacity-80'
+                    : 'border-zinc-800 bg-zinc-950'
+                }`}
+              >
                 <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="font-semibold text-emerald-300">
+                  <span className={payment.status === 'voided' ? 'font-semibold text-red-200 line-through' : 'font-semibold text-emerald-300'}>
                     {formatCurrency(payment.amount_cents / 100, payment.currency)} - {payment.plan}
                   </span>
-                  <span className="text-xs text-zinc-500">{formatDateTime(payment.paid_at)}</span>
+                  <span className="text-xs text-zinc-500">
+                    {formatDateTime(payment.paid_at)}
+                    {payment.status === 'voided' ? ' - Anulado' : ''}
+                  </span>
                 </div>
                 <p className="mt-1 text-zinc-500">
                   Cubre {formatDate(payment.period_start)} - {formatDate(payment.period_end)}
@@ -279,6 +293,19 @@ export default async function AdminBusinessDetailPage({ params }: { params: Prom
                   {payment.reference ? ` - Ref: ${payment.reference}` : ''} - {payment.admin_email ?? 'Admin'}
                 </p>
                 {payment.notes && <p className="mt-2 text-xs text-zinc-500">{payment.notes}</p>}
+                {payment.status === 'voided' && (
+                  <p className="mt-2 text-xs text-red-200">
+                    Anulado {payment.voided_at ? formatDateTime(payment.voided_at) : ''}: {payment.voided_reason ?? 'Sin motivo'}
+                  </p>
+                )}
+                <AdminPaymentActions
+                  businessId={business.id}
+                  paymentId={payment.id}
+                  status={payment.status ?? 'paid'}
+                  method={payment.method}
+                  reference={payment.reference}
+                  notes={payment.notes}
+                />
               </div>
             ))}
             {(paymentsData ?? []).length === 0 && <Empty text="Sin pagos registrados." />}

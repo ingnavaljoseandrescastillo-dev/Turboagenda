@@ -90,8 +90,9 @@ export async function POST(request: NextRequest, { params }: Ctx) {
         method,
         reference: reference || null,
         notes: notes || null,
+        status: 'paid',
       })
-      .select('id,amount_cents,currency,paid_at,period_start,period_end')
+      .select('id,amount_cents,currency,paid_at,period_start,period_end,status')
       .single()
 
     if (paymentError) return handleError(paymentError.message, 422)

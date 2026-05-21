@@ -36,6 +36,7 @@ type BusinessRow = {
     period_start: string
     period_end: string
     plan: 'basic' | 'plus'
+    status?: 'paid' | 'voided'
   }[]
 }
 
@@ -87,7 +88,7 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
         services(id),
         employees(id),
         appointments(id,start_time,status),
-        admin_subscription_payments(id,amount_cents,currency,paid_at,period_start,period_end,plan)
+        admin_subscription_payments(id,amount_cents,currency,paid_at,period_start,period_end,plan,status)
       `
     )
     .order('created_at', { ascending: false })
@@ -130,7 +131,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   const monthStart = new Date()
   monthStart.setDate(1)
   monthStart.setHours(0, 0, 0, 0)
-  const payments = businesses.flatMap((business) => business.admin_subscription_payments ?? [])
+  const payments = businesses
+    .flatMap((business) => business.admin_subscription_payments ?? [])
+    .filter((payment) => (payment.status ?? 'paid') === 'paid')
   const monthlyCollectedCents = payments.reduce((sum, payment) => {
     return new Date(payment.paid_at) >= monthStart ? sum + payment.amount_cents : sum
   }, 0)
@@ -250,9 +253,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                   const plan = subscription?.plan ?? 'trial'
                   const status = subscription?.status ?? 'trial'
                   const priceCents = subscription?.price_cents ?? 0
-                  const lastPayment = [...(business.admin_subscription_payments ?? [])].sort(
-                    (a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime()
-                  )[0]
+                  const lastPayment = [...(business.admin_subscription_payments ?? [])]
+                    .filter((payment) => (payment.status ?? 'paid') === 'paid')
+                    .sort((a, b) => new Date(b.paid_at).getTime() - new Date(a.paid_at).getTime())[0]
                   const billingDate =
                     status === 'trial' ? subscription?.trial_ends_at : subscription?.current_period_end
 
