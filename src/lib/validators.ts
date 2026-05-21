@@ -130,6 +130,19 @@ export const BusinessCreateSchema = z.object({
     .optional(),
 })
 
+export const FinanceEntrySchema = z.object({
+  type: z.enum(['income', 'expense']),
+  category: z.string().trim().min(2, 'Categoria invalida').max(80),
+  description: z.string().trim().min(2, 'Descripcion requerida').max(160),
+  amount_cents: z.number().int().min(0, 'Importe invalido'),
+  currency: z.string().trim().min(3).max(3).default('EUR'),
+  entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha invalida'),
+  payment_method: z.string().trim().min(2).max(60).default('manual'),
+  notes: z.string().trim().max(500).nullable().optional(),
+  appointment_id: z.string().uuid().nullable().optional(),
+  employee_id: z.string().uuid().nullable().optional(),
+})
+
 export type LoginInput = z.infer<typeof LoginSchema>
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
@@ -142,3 +155,4 @@ export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
 export type BusinessScheduleInput = z.infer<typeof BusinessScheduleSchema>
 export type BusinessCreateInput = z.infer<typeof BusinessCreateSchema>
+export type FinanceEntryInput = z.infer<typeof FinanceEntrySchema>
