@@ -160,6 +160,24 @@ export interface NotificationEvent {
   created_at: string
 }
 
+export interface FinanceEntry {
+  id: string
+  business_id: string
+  appointment_id?: string | null
+  employee_id?: string | null
+  created_by?: string | null
+  type: 'income' | 'expense'
+  category: string
+  description: string
+  amount_cents: number
+  currency: string
+  entry_date: string
+  payment_method: string
+  notes?: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface AvailabilitySlot {
   time: string
   available: boolean
