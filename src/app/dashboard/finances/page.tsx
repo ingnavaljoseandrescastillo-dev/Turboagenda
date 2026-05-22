@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getBusinessForUser } from '@/lib/api-helpers'
-import type { FinanceEntry } from '@/types'
+import type { Appointment, FinanceEntry } from '@/types'
 import { FinancePanel } from './FinancePanel'
 
 export const metadata = { title: 'Finanzas - TurboAgenda' }
@@ -29,5 +29,23 @@ export default async function FinancesPage() {
     console.error('[FinancesPage] could not load finance entries', error)
   }
 
-  return <FinancePanel initialEntries={(data ?? []) as FinanceEntry[]} />
+  const { data: appointments, error: appointmentsError } = await supabase
+    .from('appointments')
+    .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
+    .eq('business_id', business.id)
+    .lt('end_time', new Date().toISOString())
+    .neq('status', 'cancelled')
+    .order('start_time', { ascending: false })
+    .limit(180)
+
+  if (appointmentsError) {
+    console.error('[FinancesPage] could not load past appointments', appointmentsError)
+  }
+
+  return (
+    <FinancePanel
+      initialEntries={(data ?? []) as FinanceEntry[]}
+      pastAppointments={(appointments ?? []) as Appointment[]}
+    />
+  )
 }

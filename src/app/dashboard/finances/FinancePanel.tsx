@@ -3,14 +3,15 @@
 import { FormEvent, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { cn, formatCurrency } from '@/lib/utils'
-import type { FinanceEntry } from '@/types'
+import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
+import type { Appointment, FinanceEntry } from '@/types'
 
 type EntryType = 'income' | 'expense'
 type ApiResponse<T> = { data: T | null; error: string | null }
 
 interface FinancePanelProps {
   initialEntries: FinanceEntry[]
+  pastAppointments: Appointment[]
 }
 
 interface EntryForm {
@@ -21,6 +22,17 @@ interface EntryForm {
   currency: string
   entry_date: string
   payment_method: string
+  notes: string
+}
+
+interface CollectionForm {
+  appointment: Appointment
+  entry: FinanceEntry | null
+  grossAmount: string
+  discount: string
+  amount: string
+  entryDate: string
+  paymentMethod: string
   notes: string
 }
 
@@ -42,10 +54,12 @@ const incomeCategories = ['servicio', 'producto', 'propina', 'bono', 'otro']
 const expenseCategories = ['materiales', 'comision', 'alquiler', 'publicidad', 'herramientas', 'impuestos', 'otro']
 const paymentMethods = ['manual', 'efectivo', 'mbway', 'transferencia', 'tarjeta', 'otro']
 
-export function FinancePanel({ initialEntries }: FinancePanelProps) {
+export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelProps) {
   const [entries, setEntries] = useState(initialEntries)
+  const [appointments, setAppointments] = useState(pastAppointments)
   const [form, setForm] = useState<EntryForm>(emptyForm)
   const [editing, setEditing] = useState<FinanceEntry | null>(null)
+  const [collecting, setCollecting] = useState<CollectionForm | null>(null)
   const [month, setMonth] = useState(currentMonth)
   const [typeFilter, setTypeFilter] = useState<'all' | EntryType>('all')
   const [query, setQuery] = useState('')
@@ -93,6 +107,15 @@ export function FinancePanel({ initialEntries }: FinancePanelProps) {
   }, [visibleEntries])
 
   const availableCategories = form.type === 'income' ? incomeCategories : expenseCategories
+  const appointmentIncomeById = useMemo(
+    () =>
+      new Map(
+        entries
+          .filter((entry) => entry.type === 'income' && entry.appointment_id)
+          .map((entry) => [entry.appointment_id as string, entry])
+      ),
+    [entries]
+  )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -157,6 +180,82 @@ export function FinancePanel({ initialEntries }: FinancePanelProps) {
       const message = err instanceof Error ? err.message : 'No fue posible eliminar el movimiento.'
       console.error('[FinancePanel] delete failed', err)
       setError(message)
+    }
+  }
+
+  async function saveAppointmentCharge(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!collecting) return
+    setSaving(true)
+    setError('')
+
+    const grossAmount = parseMoney(collecting.grossAmount)
+    const discount = parseMoney(collecting.discount)
+    const amount = parseMoney(collecting.amount)
+    if (grossAmount === null || discount === null || amount === null || discount > grossAmount) {
+      setError('Revisa el importe original, el descuento y el total cobrado.')
+      setSaving(false)
+      return
+    }
+
+    const payload = {
+      type: 'income' as const,
+      category: 'servicio',
+      description: `${collecting.appointment.service?.name ?? 'Servicio'} - ${collecting.appointment.client_name}`,
+      amount_cents: amount,
+      gross_amount_cents: grossAmount,
+      discount_cents: discount,
+      currency: collecting.entry?.currency ?? 'EUR',
+      entry_date: collecting.entryDate,
+      payment_method: collecting.paymentMethod,
+      notes: collecting.notes || null,
+      appointment_id: collecting.appointment.id,
+      employee_id: collecting.appointment.employee_id,
+    }
+
+    try {
+      const response = await fetch(
+        collecting.entry
+          ? `/api/finances/${collecting.entry.id}`
+          : `/api/finances/appointments/${collecting.appointment.id}/collect`,
+        {
+          method: collecting.entry ? 'PATCH' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            collecting.entry
+              ? payload
+              : {
+                  amount_cents: payload.amount_cents,
+                  gross_amount_cents: payload.gross_amount_cents,
+                  discount_cents: payload.discount_cents,
+                  currency: payload.currency,
+                  entry_date: payload.entry_date,
+                  payment_method: payload.payment_method,
+                  notes: payload.notes,
+                }
+          ),
+        }
+      )
+      const result = (await response.json()) as ApiResponse<FinanceEntry>
+      if (!response.ok || !result.data) throw new Error(result.error ?? 'No fue posible confirmar el cobro.')
+
+      setEntries((current) =>
+        collecting.entry
+          ? current.map((entry) => (entry.id === result.data!.id ? result.data! : entry))
+          : [result.data!, ...current]
+      )
+      setAppointments((current) =>
+        current.map((appointment) =>
+          appointment.id === collecting.appointment.id ? { ...appointment, status: 'completed' } : appointment
+        )
+      )
+      setCollecting(null)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No fue posible confirmar el cobro.'
+      console.error('[FinancePanel] appointment charge failed', err)
+      setError(message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -397,8 +496,169 @@ export function FinancePanel({ initialEntries }: FinancePanelProps) {
           </div>
         </div>
       </div>
+
+      <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+        <div>
+          <h2 className="text-lg font-semibold text-zinc-100">Historial de citas realizadas</h2>
+          <p className="text-sm text-zinc-500">
+            Confirma el cobro real de las citas pasadas antes de sumarlo a tus ingresos.
+          </p>
+        </div>
+
+        {appointments.length === 0 ? (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-8 text-center text-sm text-zinc-500">
+            Aun no hay citas pasadas para registrar.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-zinc-800">
+            {appointments.map((appointment) => {
+              const entry = appointmentIncomeById.get(appointment.id) ?? null
+              return (
+                <div
+                  key={appointment.id}
+                  className="grid gap-3 border-b border-zinc-800 bg-zinc-950/40 px-4 py-4 last:border-b-0 lg:grid-cols-[1.05fr_1fr_0.7fr_auto] lg:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-zinc-100">{appointment.client_name}</p>
+                    <p className="truncate text-sm text-zinc-400">
+                      {appointment.service?.name ?? 'Servicio'} con {appointment.employee?.name ?? 'equipo'}
+                    </p>
+                  </div>
+                  <div className="text-sm text-zinc-300">
+                    <p>{formatDateTime(appointment.start_time)}</p>
+                    <p className="text-xs text-zinc-500">{appointmentStatusLabel(appointment.status)}</p>
+                  </div>
+                  <div>
+                    {entry ? (
+                      <>
+                        <p className="font-bold text-emerald-300">{formatCurrency(entry.amount_cents / 100)}</p>
+                        {entry.discount_cents ? (
+                          <p className="text-xs text-zinc-500">
+                            Descuento {formatCurrency(entry.discount_cents / 100)}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-zinc-500">Cobro confirmado</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold text-zinc-200">
+                          {formatCurrency(servicePriceCents(appointment) / 100)}
+                        </p>
+                        <p className="text-xs text-amber-300">Pendiente de cobro</p>
+                      </>
+                    )}
+                  </div>
+                  <Button type="button" size="sm" variant={entry ? 'secondary' : 'primary'} onClick={() => openCharge(appointment, entry)}>
+                    {entry ? 'Editar cobro' : 'Confirmar cobro'}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {collecting && (
+          <form
+            onSubmit={saveAppointmentCharge}
+            className="grid gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 lg:grid-cols-[1fr_1fr]"
+          >
+            <div className="lg:col-span-2">
+              <h3 className="font-semibold text-zinc-100">
+                {collecting.entry ? 'Editar cobro' : 'Confirmar cobro'}: {collecting.appointment.client_name}
+              </h3>
+              <p className="text-xs text-zinc-500">
+                {collecting.appointment.service?.name ?? 'Servicio'} del {formatDateTime(collecting.appointment.start_time)}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3 lg:col-span-2">
+              <Input
+                label="Precio original"
+                type="number"
+                min="0"
+                step="0.01"
+                value={collecting.grossAmount}
+                onChange={(event) => changeCollectionMoney('grossAmount', event.target.value)}
+              />
+              <Input
+                label="Descuento"
+                type="number"
+                min="0"
+                step="0.01"
+                value={collecting.discount}
+                onChange={(event) => changeCollectionMoney('discount', event.target.value)}
+              />
+              <Input
+                label="Total cobrado"
+                type="number"
+                min="0"
+                step="0.01"
+                value={collecting.amount}
+                onChange={(event) => setCollecting((current) => current && { ...current, amount: event.target.value })}
+              />
+            </div>
+            <Input
+              label="Fecha del cobro"
+              type="date"
+              value={collecting.entryDate}
+              onChange={(event) => setCollecting((current) => current && { ...current, entryDate: event.target.value })}
+            />
+            <SelectField
+              label="Metodo"
+              value={collecting.paymentMethod}
+              options={paymentMethods}
+              onChange={(value) => setCollecting((current) => current && { ...current, paymentMethod: value })}
+            />
+            <label className="flex flex-col gap-1.5 text-sm lg:col-span-2">
+              <span className="font-medium text-zinc-300">Notas del cobro</span>
+              <textarea
+                value={collecting.notes}
+                onChange={(event) => setCollecting((current) => current && { ...current, notes: event.target.value })}
+                rows={2}
+                className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-emerald-500"
+                placeholder="Ej. Descuento fidelidad, cobro parcial o detalle del pago"
+              />
+            </label>
+            <div className="flex flex-wrap gap-2 lg:col-span-2">
+              <Button type="submit" loading={saving}>
+                {collecting.entry ? 'Guardar cobro' : 'Finalizar cita y sumar ingreso'}
+              </Button>
+              <Button type="button" variant="secondary" onClick={() => setCollecting(null)}>
+                Cerrar
+              </Button>
+            </div>
+          </form>
+        )}
+      </section>
     </div>
   )
+
+  function openCharge(appointment: Appointment, entry: FinanceEntry | null) {
+    const gross = entry?.gross_amount_cents ?? servicePriceCents(appointment)
+    const discount = entry?.discount_cents ?? 0
+    setError('')
+    setCollecting({
+      appointment,
+      entry,
+      grossAmount: moneyInput(gross),
+      discount: moneyInput(discount),
+      amount: moneyInput(entry?.amount_cents ?? Math.max(0, gross - discount)),
+      entryDate: entry?.entry_date ?? appointment.start_time.slice(0, 10),
+      paymentMethod: entry?.payment_method ?? 'manual',
+      notes: entry?.notes ?? '',
+    })
+  }
+
+  function changeCollectionMoney(field: 'grossAmount' | 'discount', value: string) {
+    setCollecting((current) => {
+      if (!current) return current
+      const next = { ...current, [field]: value }
+      const gross = parseMoney(next.grossAmount)
+      const discount = parseMoney(next.discount)
+      if (gross !== null && discount !== null) next.amount = moneyInput(Math.max(0, gross - discount))
+      return next
+    })
+  }
 }
 
 function MetricCard({ label, value, tone }: { label: string; value: string; tone: 'income' | 'expense' }) {
@@ -446,4 +706,27 @@ function SelectField({
 function formatEntryDate(value: string) {
   const [year, month, day] = value.split('-')
   return `${day}/${month}/${year}`
+}
+
+function parseMoney(value: string) {
+  const amount = Number.parseFloat(value.replace(',', '.'))
+  return Number.isFinite(amount) && amount >= 0 ? Math.round(amount * 100) : null
+}
+
+function moneyInput(cents: number) {
+  return (cents / 100).toFixed(2)
+}
+
+function servicePriceCents(appointment: Appointment) {
+  return Math.round(Number(appointment.service?.price ?? 0) * 100)
+}
+
+function appointmentStatusLabel(status: Appointment['status']) {
+  const labels = {
+    pending: 'Pendiente en agenda',
+    confirmed: 'Confirmada',
+    completed: 'Finalizada',
+    cancelled: 'Cancelada',
+  }
+  return labels[status]
 }
