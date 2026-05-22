@@ -135,6 +135,8 @@ export const FinanceEntrySchema = z.object({
   category: z.string().trim().min(2, 'Categoria invalida').max(80),
   description: z.string().trim().min(2, 'Descripcion requerida').max(160),
   amount_cents: z.number().int().min(0, 'Importe invalido'),
+  gross_amount_cents: z.number().int().min(0, 'Importe original invalido').nullable().optional(),
+  discount_cents: z.number().int().min(0, 'Descuento invalido').optional(),
   currency: z.string().trim().min(3).max(3).default('EUR'),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha invalida'),
   payment_method: z.string().trim().min(2).max(60).default('manual'),
@@ -142,6 +144,21 @@ export const FinanceEntrySchema = z.object({
   appointment_id: z.string().uuid().nullable().optional(),
   employee_id: z.string().uuid().nullable().optional(),
 })
+
+export const AppointmentCollectionSchema = z
+  .object({
+    amount_cents: z.number().int().min(0, 'Importe cobrado invalido'),
+    gross_amount_cents: z.number().int().min(0, 'Importe original invalido'),
+    discount_cents: z.number().int().min(0, 'Descuento invalido'),
+    currency: z.string().trim().min(3).max(3).default('EUR'),
+    entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha invalida'),
+    payment_method: z.string().trim().min(2).max(60).default('manual'),
+    notes: z.string().trim().max(500).nullable().optional(),
+  })
+  .refine((data) => data.discount_cents <= data.gross_amount_cents, {
+    message: 'El descuento no puede superar el importe original',
+    path: ['discount_cents'],
+  })
 
 export type LoginInput = z.infer<typeof LoginSchema>
 export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
@@ -156,3 +173,4 @@ export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
 export type BusinessScheduleInput = z.infer<typeof BusinessScheduleSchema>
 export type BusinessCreateInput = z.infer<typeof BusinessCreateSchema>
 export type FinanceEntryInput = z.infer<typeof FinanceEntrySchema>
+export type AppointmentCollectionInput = z.infer<typeof AppointmentCollectionSchema>

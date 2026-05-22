@@ -170,12 +170,18 @@ export interface FinanceEntry {
   category: string
   description: string
   amount_cents: number
+  gross_amount_cents?: number | null
+  discount_cents?: number
   currency: string
   entry_date: string
   payment_method: string
   notes?: string | null
   created_at: string
   updated_at: string
+}
+
+export type FinanceAppointment = Appointment & {
+  finance_entry?: FinanceEntry | null
 }
 
 export interface AvailabilitySlot {
