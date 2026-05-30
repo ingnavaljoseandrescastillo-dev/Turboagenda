@@ -1,12 +1,13 @@
 'use client'
 
-import { FormEvent, useMemo, useState } from 'react'
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { cn, formatCurrency, formatDateTime } from '@/lib/utils'
 import type { Appointment, FinanceEntry } from '@/types'
 
 type EntryType = 'income' | 'expense'
+type FinanceTab = 'summary' | 'appointments' | 'manual'
 type ApiResponse<T> = { data: T | null; error: string | null }
 
 interface FinancePanelProps {
@@ -60,11 +61,28 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
   const [form, setForm] = useState<EntryForm>(emptyForm)
   const [editing, setEditing] = useState<FinanceEntry | null>(null)
   const [collecting, setCollecting] = useState<CollectionForm | null>(null)
+  const [activeTab, setActiveTab] = useState<FinanceTab>('summary')
   const [month, setMonth] = useState(currentMonth)
   const [typeFilter, setTypeFilter] = useState<'all' | EntryType>('all')
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const chargeFormRef = useRef<HTMLFormElement | null>(null)
+  const manualFormRef = useRef<HTMLFormElement | null>(null)
+
+  useEffect(() => {
+    if (!collecting) return
+    window.setTimeout(() => {
+      chargeFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }, [collecting])
+
+  useEffect(() => {
+    if (!editing) return
+    window.setTimeout(() => {
+      manualFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }, [editing])
 
   const visibleEntries = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -115,6 +133,10 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
           .map((entry) => [entry.appointment_id as string, entry])
       ),
     [entries]
+  )
+  const pendingCollections = useMemo(
+    () => appointments.filter((appointment) => !appointmentIncomeById.has(appointment.id)).length,
+    [appointmentIncomeById, appointments]
   )
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -260,6 +282,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
   }
 
   function startEdit(entry: FinanceEntry) {
+    setActiveTab('manual')
     setEditing(entry)
     setForm({
       type: entry.type,
@@ -295,8 +318,34 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
         </div>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(320px,420px)_1fr]">
-        <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4">
+      <div className="flex gap-2 overflow-x-auto rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1">
+        <TabButton active={activeTab === 'summary'} onClick={() => setActiveTab('summary')}>
+          Resumen
+        </TabButton>
+        <TabButton active={activeTab === 'appointments'} onClick={() => setActiveTab('appointments')}>
+          Citas por cobrar
+          {pendingCollections > 0 && <span className="rounded-full bg-amber-400 px-2 py-0.5 text-[11px] text-zinc-950">{pendingCollections}</span>}
+        </TabButton>
+        <TabButton active={activeTab === 'manual'} onClick={() => setActiveTab('manual')}>
+          Movimiento manual
+        </TabButton>
+      </div>
+
+      {error && activeTab !== 'manual' && (
+        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+          {error}
+        </div>
+      )}
+
+      <div className={cn('grid gap-4', activeTab === 'manual' ? 'max-w-2xl' : 'xl:grid-cols-[1fr_260px]')}>
+        <form
+          ref={manualFormRef}
+          onSubmit={handleSubmit}
+          className={cn(
+            'space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/60 p-4',
+            activeTab === 'manual' ? 'block' : 'hidden'
+          )}
+        >
           <div>
             <h2 className="font-semibold text-zinc-100">
               {editing ? 'Editar movimiento' : 'Nuevo movimiento'}
@@ -402,7 +451,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
           </div>
         </form>
 
-        <div className="space-y-4">
+        <div className={cn('space-y-4', activeTab === 'summary' ? 'block' : 'hidden')}>
           <div className="grid gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 md:grid-cols-[1fr_0.8fr_0.8fr]">
             <Input label="Mes" type="month" value={month} onChange={(event) => setMonth(event.target.value)} />
             <SelectField
@@ -420,7 +469,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
             />
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
+          <div className="grid gap-4">
             <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/50">
               <div className="hidden grid-cols-[0.8fr_1.3fr_0.8fr_0.8fr_0.9fr] gap-3 border-b border-zinc-800 px-4 py-3 text-xs font-semibold uppercase tracking-wide text-zinc-500 md:grid">
                 <span>Fecha</span>
@@ -467,37 +516,38 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
               )}
             </div>
 
-            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-              <h2 className="font-semibold text-zinc-100">Gastos por categoria</h2>
-              <p className="mb-4 text-xs text-zinc-500">Top del periodo filtrado.</p>
-              {expenseByCategory.length === 0 ? (
-                <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-500">
-                  Sin gastos registrados.
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {expenseByCategory.map((item) => (
-                    <div key={item.category}>
-                      <div className="mb-1 flex justify-between text-sm">
-                        <span className="capitalize text-zinc-300">{item.category}</span>
-                        <span className="font-semibold text-zinc-100">{formatCurrency(item.amount / 100)}</span>
-                      </div>
-                      <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
-                        <div
-                          className="h-full rounded-full bg-red-400"
-                          style={{ width: `${Math.max(8, (item.amount / Math.max(totals.expenses, 1)) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
           </div>
+        </div>
+
+        <div className={cn('rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4', activeTab === 'summary' ? 'block' : 'hidden')}>
+          <h2 className="font-semibold text-zinc-100">Gastos por categoria</h2>
+          <p className="mb-4 text-xs text-zinc-500">Top del periodo filtrado.</p>
+          {expenseByCategory.length === 0 ? (
+            <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-4 text-sm text-zinc-500">
+              Sin gastos registrados.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {expenseByCategory.map((item) => (
+                <div key={item.category}>
+                  <div className="mb-1 flex justify-between text-sm">
+                    <span className="capitalize text-zinc-300">{item.category}</span>
+                    <span className="font-semibold text-zinc-100">{formatCurrency(item.amount / 100)}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
+                    <div
+                      className="h-full rounded-full bg-red-400"
+                      style={{ width: `${Math.max(8, (item.amount / Math.max(totals.expenses, 1)) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <section className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
+      <section className={cn('flex flex-col gap-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4', activeTab === 'appointments' ? 'flex' : 'hidden')}>
         <div>
           <h2 className="text-lg font-semibold text-zinc-100">Historial de citas realizadas</h2>
           <p className="text-sm text-zinc-500">
@@ -505,61 +555,9 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
           </p>
         </div>
 
-        {appointments.length === 0 ? (
-          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-8 text-center text-sm text-zinc-500">
-            Aun no hay citas pasadas para registrar.
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-zinc-800">
-            {appointments.map((appointment) => {
-              const entry = appointmentIncomeById.get(appointment.id) ?? null
-              return (
-                <div
-                  key={appointment.id}
-                  className="grid gap-3 border-b border-zinc-800 bg-zinc-950/40 px-4 py-4 last:border-b-0 lg:grid-cols-[1.05fr_1fr_0.7fr_auto] lg:items-center"
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold text-zinc-100">{appointment.client_name}</p>
-                    <p className="truncate text-sm text-zinc-400">
-                      {appointment.service?.name ?? 'Servicio'} con {appointment.employee?.name ?? 'equipo'}
-                    </p>
-                  </div>
-                  <div className="text-sm text-zinc-300">
-                    <p>{formatDateTime(appointment.start_time)}</p>
-                    <p className="text-xs text-zinc-500">{appointmentStatusLabel(appointment.status)}</p>
-                  </div>
-                  <div>
-                    {entry ? (
-                      <>
-                        <p className="font-bold text-emerald-300">{formatCurrency(entry.amount_cents / 100)}</p>
-                        {entry.discount_cents ? (
-                          <p className="text-xs text-zinc-500">
-                            Descuento {formatCurrency(entry.discount_cents / 100)}
-                          </p>
-                        ) : (
-                          <p className="text-xs text-zinc-500">Cobro confirmado</p>
-                        )}
-                      </>
-                    ) : (
-                      <>
-                        <p className="font-bold text-zinc-200">
-                          {formatCurrency(servicePriceCents(appointment) / 100)}
-                        </p>
-                        <p className="text-xs text-amber-300">Pendiente de cobro</p>
-                      </>
-                    )}
-                  </div>
-                  <Button type="button" size="sm" variant={entry ? 'secondary' : 'primary'} onClick={() => openCharge(appointment, entry)}>
-                    {entry ? 'Editar cobro' : 'Confirmar cobro'}
-                  </Button>
-                </div>
-              )
-            })}
-          </div>
-        )}
-
         {collecting && (
           <form
+            ref={chargeFormRef}
             onSubmit={saveAppointmentCharge}
             className="grid gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-4 lg:grid-cols-[1fr_1fr]"
           >
@@ -629,6 +627,60 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
             </div>
           </form>
         )}
+
+        {appointments.length === 0 ? (
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 px-4 py-8 text-center text-sm text-zinc-500">
+            Aun no hay citas pasadas para registrar.
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-zinc-800">
+            {appointments.map((appointment) => {
+              const entry = appointmentIncomeById.get(appointment.id) ?? null
+              return (
+                <div
+                  key={appointment.id}
+                  className="grid gap-3 border-b border-zinc-800 bg-zinc-950/40 px-4 py-4 last:border-b-0 lg:grid-cols-[1.05fr_1fr_0.7fr_auto] lg:items-center"
+                >
+                  <div className="min-w-0">
+                    <p className="font-semibold text-zinc-100">{appointment.client_name}</p>
+                    <p className="truncate text-sm text-zinc-400">
+                      {appointment.service?.name ?? 'Servicio'} con {appointment.employee?.name ?? 'equipo'}
+                    </p>
+                  </div>
+                  <div className="text-sm text-zinc-300">
+                    <p>{formatDateTime(appointment.start_time)}</p>
+                    <p className="text-xs text-zinc-500">{appointmentStatusLabel(appointment.status)}</p>
+                  </div>
+                  <div>
+                    {entry ? (
+                      <>
+                        <p className="font-bold text-emerald-300">{formatCurrency(entry.amount_cents / 100)}</p>
+                        {entry.discount_cents ? (
+                          <p className="text-xs text-zinc-500">
+                            Descuento {formatCurrency(entry.discount_cents / 100)}
+                          </p>
+                        ) : (
+                          <p className="text-xs text-zinc-500">Cobro confirmado</p>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-bold text-zinc-200">
+                          {formatCurrency(servicePriceCents(appointment) / 100)}
+                        </p>
+                        <p className="text-xs text-amber-300">Pendiente de cobro</p>
+                      </>
+                    )}
+                  </div>
+                  <Button type="button" size="sm" variant={entry ? 'secondary' : 'primary'} onClick={() => openCharge(appointment, entry)}>
+                    {entry ? 'Editar cobro' : 'Confirmar cobro'}
+                  </Button>
+                </div>
+              )
+            })}
+          </div>
+        )}
+
       </section>
     </div>
   )
@@ -637,6 +689,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
     const gross = entry?.gross_amount_cents ?? servicePriceCents(appointment)
     const discount = entry?.discount_cents ?? 0
     setError('')
+    setActiveTab('appointments')
     setCollecting({
       appointment,
       entry,
@@ -669,6 +722,29 @@ function MetricCard({ label, value, tone }: { label: string; value: string; tone
         {value}
       </div>
     </div>
+  )
+}
+
+function TabButton({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean
+  children: ReactNode
+  onClick: () => void
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+        active ? 'bg-emerald-500 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100'
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
