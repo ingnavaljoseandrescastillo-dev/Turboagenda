@@ -6,6 +6,59 @@ import { ReviewsList } from '@/components/public/ReviewsList'
 import Link from 'next/link'
 import type { Business, Employee, Review, Service } from '@/types'
 
+type PublicLocale = 'pt' | 'en' | 'es'
+
+const publicCopy = {
+  pt: {
+    book: 'Reservar',
+    onlineAgenda: 'Agenda online',
+    fallbackDescription: 'Reserve online em poucos passos. Escolha o servico, o profissional e o horario disponivel.',
+    bookNow: 'Reservar agora',
+    viewServices: 'Ver servicos',
+    reserveOnline: 'Reserve online',
+    activeServices: 'Servicos ativos',
+    services: 'Servicos',
+    bookService: 'Marcar',
+    team: 'Quem atende',
+    teamDesc: 'Escolha o profissional na hora de reservar.',
+    gallery: 'Galeria',
+    galleryDesc: 'Veja fotos recentes do negocio.',
+    photos: 'fotos',
+  },
+  es: {
+    book: 'Reservar',
+    onlineAgenda: 'Agenda online',
+    fallbackDescription: 'Reserva online en pocos pasos. Elige el servicio, el profesional y el horario disponible.',
+    bookNow: 'Reservar ahora',
+    viewServices: 'Ver servicios',
+    reserveOnline: 'Reserva online',
+    activeServices: 'Servicios activos',
+    services: 'Servicios',
+    bookService: 'Reservar',
+    team: 'Quien atiende',
+    teamDesc: 'Elige el profesional al momento de reservar.',
+    gallery: 'Galeria',
+    galleryDesc: 'Mira fotos recientes del negocio.',
+    photos: 'fotos',
+  },
+  en: {
+    book: 'Book',
+    onlineAgenda: 'Online booking',
+    fallbackDescription: 'Book online in a few steps. Choose the service, professional, and available time.',
+    bookNow: 'Book now',
+    viewServices: 'View services',
+    reserveOnline: 'Book online',
+    activeServices: 'Active services',
+    services: 'Services',
+    bookService: 'Book',
+    team: 'Team',
+    teamDesc: 'Choose the professional when booking.',
+    gallery: 'Gallery',
+    galleryDesc: 'See recent photos from the business.',
+    photos: 'photos',
+  },
+} satisfies Record<PublicLocale, Record<string, string>>
+
 interface PageProps {
   params: Promise<{ slug: string }>
 }
@@ -62,9 +115,11 @@ function readableTextColor(hex: string) {
 function GalleryPreview({
   images,
   primaryColor,
+  copy,
 }: {
   images?: string[] | null
   primaryColor: string
+  copy: typeof publicCopy.pt
 }) {
   const galleryImages = images?.filter(Boolean) ?? []
 
@@ -74,10 +129,10 @@ function GalleryPreview({
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-zinc-100">Galeria</h2>
-          <p className="text-sm text-zinc-500">Veja fotos recentes do negocio.</p>
+          <h2 className="text-lg font-bold text-zinc-100">{copy.gallery}</h2>
+          <p className="text-sm text-zinc-500">{copy.galleryDesc}</p>
         </div>
-        <p className="text-xs font-semibold text-zinc-500">{galleryImages.length} fotos</p>
+        <p className="text-xs font-semibold text-zinc-500">{galleryImages.length} {copy.photos}</p>
       </div>
       <div className="-mx-5 overflow-x-auto px-5 pb-2">
         <div className="flex snap-x snap-mandatory gap-3">
@@ -104,14 +159,22 @@ function GalleryPreview({
   )
 }
 
-function TeamPreview({ employees, primaryColor }: { employees: Employee[]; primaryColor: string }) {
+function TeamPreview({
+  employees,
+  primaryColor,
+  copy,
+}: {
+  employees: Employee[]
+  primaryColor: string
+  copy: typeof publicCopy.pt
+}) {
   if (employees.length === 0) return null
 
   return (
     <section className="space-y-4">
       <div>
-        <h2 className="text-lg font-bold text-zinc-100">Quem atende</h2>
-        <p className="text-sm text-zinc-500">Escolha o profissional na hora de reservar.</p>
+        <h2 className="text-lg font-bold text-zinc-100">{copy.team}</h2>
+        <p className="text-sm text-zinc-500">{copy.teamDesc}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         {employees.map((employee) => (
@@ -167,6 +230,8 @@ export default async function BusinessPublicPage({ params }: PageProps) {
     ? (revs.reduce((acc, r) => acc + r.rating, 0) / revs.length).toFixed(1)
     : null
   const theme = publicTheme(biz)
+  const copy = publicCopy[normalizePublicLocale(biz.default_language)]
+  const currency = biz.currency ?? 'EUR'
 
   return (
     <div className="min-h-screen text-zinc-100" style={{ ...pageBackground(theme), color: theme.text }}>
@@ -178,7 +243,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
             className="rounded-lg px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
             style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
           >
-            Reservar
+            {copy.book}
           </Link>
         </div>
       </header>
@@ -188,11 +253,11 @@ export default async function BusinessPublicPage({ params }: PageProps) {
           <div className="mx-auto grid max-w-5xl gap-8 px-5 py-10 md:grid-cols-[1.15fr_0.85fr] md:items-center">
             <div>
               <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.primary }}>
-                Agenda online
+                {copy.onlineAgenda}
               </p>
               <h1 className="mt-3 text-4xl font-black tracking-tight text-white md:text-5xl">{biz.name}</h1>
               <p className="mt-4 max-w-2xl text-base leading-7 text-zinc-300">
-                {biz.description || 'Reserve online em poucos passos. Escolha o servico, o profissional e o horario disponivel.'}
+                {biz.description || copy.fallbackDescription}
               </p>
               <div className="mt-5 flex flex-wrap gap-3 text-sm text-zinc-400">
                 {biz.address && <span>{biz.address}</span>}
@@ -205,13 +270,13 @@ export default async function BusinessPublicPage({ params }: PageProps) {
                   className="rounded-xl px-5 py-3 text-sm font-bold transition-opacity hover:opacity-90"
                   style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
                 >
-                  Reservar agora
+                  {copy.bookNow}
                 </Link>
                 <a
                   href="#servicos"
                   className="rounded-xl border border-zinc-700 px-5 py-3 text-sm font-semibold text-zinc-100 hover:border-zinc-500"
                 >
-                  Ver servicos
+                  {copy.viewServices}
                 </a>
               </div>
             </div>
@@ -222,7 +287,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
               >
                 <div className="flex h-full flex-col justify-end bg-gradient-to-t from-black/75 via-black/20 to-transparent p-4 sm:p-5">
                   <p className="text-xs font-semibold sm:text-sm" style={{ color: theme.onPrimary }}>
-                    Reserve online
+                    {copy.reserveOnline}
                   </p>
                   <p className="mt-1 max-w-full break-words text-lg font-black leading-tight text-white sm:text-2xl">
                     {biz.name}
@@ -238,7 +303,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
                       borderColor: `${theme.primary}55`,
                     }}
                   />
-                  <p className="text-sm font-semibold" style={{ color: theme.primary }}>Servicos ativos</p>
+                  <p className="text-sm font-semibold" style={{ color: theme.primary }}>{copy.activeServices}</p>
                   <p className="mt-1 text-2xl font-black text-white">{svcs.length}</p>
                 </div>
               </div>
@@ -248,13 +313,23 @@ export default async function BusinessPublicPage({ params }: PageProps) {
 
         <div className="mx-auto max-w-5xl space-y-12 px-5 py-10 pb-20">
           <section id="servicos">
-            <ServiceGrid services={svcs} slug={slug} primaryColor={theme.primary} />
+            <ServiceGrid
+              services={svcs}
+              slug={slug}
+              primaryColor={theme.primary}
+              currency={currency}
+              labels={{ title: copy.services, book: copy.bookService }}
+            />
           </section>
-          <TeamPreview employees={emps} primaryColor={theme.primary} />
-          <GalleryPreview images={biz.gallery_images} primaryColor={theme.primary} />
+          <TeamPreview employees={emps} primaryColor={theme.primary} copy={copy} />
+          <GalleryPreview images={biz.gallery_images} primaryColor={theme.primary} copy={copy} />
           <ReviewsList reviews={revs} primaryColor={theme.primary} />
         </div>
       </main>
     </div>
   )
+}
+
+function normalizePublicLocale(value: unknown): PublicLocale {
+  return value === 'en' || value === 'es' || value === 'pt' ? value : 'pt'
 }

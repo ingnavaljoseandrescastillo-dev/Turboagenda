@@ -6,12 +6,19 @@ interface EmployeeSelectorProps {
   selected: string | null
   onSelect: (id: string) => void
   primaryColor?: string
+  title?: string
 }
 
-export function EmployeeSelector({ employees, selected, onSelect, primaryColor = '#10b981' }: EmployeeSelectorProps) {
+export function EmployeeSelector({
+  employees,
+  selected,
+  onSelect,
+  primaryColor = '#10b981',
+  title = 'Escolha o colaborador',
+}: EmployeeSelectorProps) {
   return (
     <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-zinc-100">Escolha o colaborador</h3>
+      <h3 className="text-lg font-semibold text-zinc-100">{title}</h3>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         {employees.map((emp) => {
           const isSelected = selected === emp.id

@@ -14,7 +14,7 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { enUS, es, ptBR } from 'date-fns/locale'
 import { useAvailability } from '@/hooks/useAvailability'
 import { DEFAULT_BUSINESS_TIME_ZONE, zonedDateTimeToUtcIso } from '@/lib/utils'
 
@@ -28,6 +28,17 @@ interface DateTimePickerProps {
   onPrimaryColor?: string
   onSelect: (datetime: string) => void
   selected: string | null
+  localeCode?: 'pt' | 'en' | 'es'
+  labels?: {
+    title: string
+    subtitle: string
+    previousMonth: string
+    nextMonth: string
+    availableTimes: string
+    loading: string
+    empty: string
+    weekdays: string[]
+  }
 }
 
 export function DateTimePicker({
@@ -40,6 +51,8 @@ export function DateTimePicker({
   onPrimaryColor = '#09090b',
   onSelect,
   selected,
+  localeCode = 'pt',
+  labels = defaultLabels.pt,
 }: DateTimePickerProps) {
   const today = startOfDay(new Date())
   const maxDate = startOfDay(new Date())
@@ -64,6 +77,7 @@ export function DateTimePicker({
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
   const canGoPrev = isAfter(monthStart, startOfMonth(today))
   const canGoNext = isBefore(endOfMonth(addMonths(visibleMonth, 1)), maxDate)
+  const dateLocale = localeCode === 'es' ? es : localeCode === 'en' ? enUS : ptBR
 
   function slotToIso(time: string) {
     return zonedDateTimeToUtcIso(format(selectedDate, 'yyyy-MM-dd'), time, timeZone)
@@ -73,8 +87,8 @@ export function DateTimePicker({
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h3 className="text-lg font-semibold text-zinc-100">Escolha o dia</h3>
-          <p className="text-sm text-zinc-500">Selecione uma data disponivel no calendario.</p>
+          <h3 className="text-lg font-semibold text-zinc-100">{labels.title}</h3>
+          <p className="text-sm text-zinc-500">{labels.subtitle}</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -82,7 +96,7 @@ export function DateTimePicker({
             disabled={!canGoPrev}
             onClick={() => setVisibleMonth((month) => subMonths(month, 1))}
             className="h-9 w-9 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 disabled:opacity-40"
-            aria-label="Mes anterior"
+            aria-label={labels.previousMonth}
           >
             &lt;
           </button>
@@ -91,7 +105,7 @@ export function DateTimePicker({
             disabled={!canGoNext}
             onClick={() => setVisibleMonth((month) => addMonths(month, 1))}
             className="h-9 w-9 rounded-lg border border-zinc-800 bg-zinc-900 text-zinc-300 hover:border-zinc-700 disabled:opacity-40"
-            aria-label="Proximo mes"
+            aria-label={labels.nextMonth}
           >
             &gt;
           </button>
@@ -101,11 +115,11 @@ export function DateTimePicker({
       <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 p-4">
         <div className="mb-4 text-center">
           <p className="font-semibold capitalize text-zinc-100">
-            {format(visibleMonth, 'MMMM yyyy', { locale: ptBR })}
+            {format(visibleMonth, 'MMMM yyyy', { locale: dateLocale })}
           </p>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center text-[11px] font-semibold uppercase text-zinc-500">
-          {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'].map((day) => (
+          {labels.weekdays.map((day) => (
             <div key={day} className="py-1">
               {day}
             </div>
@@ -140,17 +154,17 @@ export function DateTimePicker({
 
       <div>
         <h3 className="mb-3 text-sm font-medium text-zinc-400">
-          Horarios disponiveis - {format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
+          {labels.availableTimes} - {format(selectedDate, "d 'de' MMMM", { locale: dateLocale })}
         </h3>
         {loading ? (
-          <p className="text-sm text-zinc-500">A carregar horarios...</p>
+          <p className="text-sm text-zinc-500">{labels.loading}</p>
         ) : error ? (
           <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
             {error}
           </p>
         ) : slots.length === 0 ? (
           <p className="rounded-lg border border-zinc-800 bg-zinc-900/70 px-3 py-3 text-sm text-zinc-500">
-            Sem horarios disponiveis para este dia. Escolha outra data no calendario.
+            {labels.empty}
           </p>
         ) : (
           <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
@@ -177,4 +191,17 @@ export function DateTimePicker({
       </div>
     </div>
   )
+}
+
+const defaultLabels = {
+  pt: {
+    title: 'Escolha o dia',
+    subtitle: 'Selecione uma data disponivel no calendario.',
+    previousMonth: 'Mes anterior',
+    nextMonth: 'Proximo mes',
+    availableTimes: 'Horarios disponiveis',
+    loading: 'A carregar horarios...',
+    empty: 'Sem horarios disponiveis para este dia. Escolha outra data no calendario.',
+    weekdays: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+  },
 }

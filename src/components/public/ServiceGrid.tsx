@@ -6,15 +6,26 @@ interface ServiceGridProps {
   services: Service[]
   slug: string
   primaryColor?: string
+  currency?: string
+  labels?: {
+    title: string
+    book: string
+  }
 }
 
-export function ServiceGrid({ services, slug, primaryColor = '#10b981' }: ServiceGridProps) {
+export function ServiceGrid({
+  services,
+  slug,
+  primaryColor = '#10b981',
+  currency = 'EUR',
+  labels = { title: 'Servicos', book: 'Marcar' },
+}: ServiceGridProps) {
   if (services.length === 0) return null
 
   return (
     <div>
       <h2 className="mb-4 text-lg font-bold text-zinc-100" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-        Servicos
+        {labels.title}
       </h2>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {services.map((service) => (
@@ -37,14 +48,14 @@ export function ServiceGrid({ services, slug, primaryColor = '#10b981' }: Servic
               </div>
               <div className="ml-3 flex-shrink-0 text-right">
                 <p className="text-lg font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: primaryColor }}>
-                  {formatCurrency(service.price)}
+                  {formatCurrency(service.price, currency)}
                 </p>
                 <Link
                   href={`/b/${slug}/book?service=${service.id}`}
                   className="mt-2 inline-block rounded-lg px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-90"
                   style={{ backgroundColor: `${primaryColor}24`, color: primaryColor }}
                 >
-                  Marcar
+                  {labels.book}
                 </Link>
               </div>
             </div>

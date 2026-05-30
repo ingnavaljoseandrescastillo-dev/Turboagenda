@@ -61,11 +61,17 @@ export function zonedDateTimeToUtcIso(date: string, time: string, timeZone = DEF
   return new Date(utc).toISOString()
 }
 
-export function formatCurrency(amount: number, currency = 'EUR'): string {
-  return new Intl.NumberFormat('pt-PT', {
-    style: 'currency',
-    currency,
-  }).format(amount)
+export function formatCurrency(amount: number, currency = 'EUR', locale = 'pt-PT'): string {
+  const normalizedCurrency = ['EUR', 'USD', 'VES'].includes(currency) ? currency : 'EUR'
+
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: normalizedCurrency,
+    }).format(amount)
+  } catch {
+    return `${amount.toFixed(2)} ${normalizedCurrency}`
+  }
 }
 
 export function slugify(text: string): string {

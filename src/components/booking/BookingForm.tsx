@@ -25,6 +25,17 @@ interface BookingFormProps {
   timeZone?: string
   primaryColor?: string
   onPrimaryColor?: string
+  labels?: {
+    title: string
+    appointmentFor: string
+    name: string
+    email: string
+    phone: string
+    birthdate: string
+    birthdateHelper: string
+    submit: string
+    createError: string
+  }
   onSuccess: () => void
 }
 
@@ -36,6 +47,7 @@ export function BookingForm({
   timeZone = DEFAULT_BUSINESS_TIME_ZONE,
   primaryColor = '#10b981',
   onPrimaryColor = '#09090b',
+  labels = defaultLabels,
   onSuccess,
 }: BookingFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
@@ -61,48 +73,48 @@ export function BookingForm({
         }),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.error ?? 'Erro ao criar agendamento')
+      if (!res.ok) throw new Error(json.error ?? labels.createError)
       onSuccess()
     } catch (err) {
-      setServerError(err instanceof Error ? err.message : 'Erro ao criar agendamento')
+      setServerError(err instanceof Error ? err.message : labels.createError)
     }
   }
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold text-zinc-100">Os seus dados</h3>
+      <h3 className="text-lg font-semibold text-zinc-100">{labels.title}</h3>
 
       <div className="rounded-xl border p-3" style={{ borderColor: `${primaryColor}33`, backgroundColor: `${primaryColor}0d` }}>
         <p className="text-sm font-medium" style={{ color: primaryColor }}>
-          Agendamento para {formatDateTime(startTime, timeZone)}
+          {labels.appointmentFor} {formatDateTime(startTime, timeZone)}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
-          label="Nome completo"
+          label={labels.name}
           placeholder="Maria Silva"
           error={errors.client_name?.message}
           {...register('client_name')}
         />
         <Input
-          label="Email"
+          label={labels.email}
           type="email"
           placeholder="maria@email.com"
           error={errors.client_email?.message}
           {...register('client_email')}
         />
         <Input
-          label="Telefone (opcional)"
+          label={labels.phone}
           type="tel"
           placeholder="+351 912 345 678"
           error={errors.client_phone?.message}
           {...register('client_phone')}
         />
         <Input
-          label="Data de nascimento (opcional)"
+          label={labels.birthdate}
           type="date"
-          helper="Usada apenas para mensagens de aniversario do negocio."
+          helper={labels.birthdateHelper}
           error={errors.client_birthdate?.message}
           {...register('client_birthdate')}
         />
@@ -119,9 +131,21 @@ export function BookingForm({
           className="w-full hover:opacity-90"
           style={{ backgroundColor: primaryColor, color: onPrimaryColor }}
         >
-          Confirmar agendamento
+          {labels.submit}
         </Button>
       </form>
     </div>
   )
+}
+
+const defaultLabels = {
+  title: 'Os seus dados',
+  appointmentFor: 'Agendamento para',
+  name: 'Nome completo',
+  email: 'Email',
+  phone: 'Telefone (opcional)',
+  birthdate: 'Data de nascimento (opcional)',
+  birthdateHelper: 'Usada apenas para mensagens de aniversario do negocio.',
+  submit: 'Confirmar agendamento',
+  createError: 'Erro ao criar agendamento',
 }
