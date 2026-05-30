@@ -19,10 +19,12 @@ function ServiceForm({
   defaultValues,
   onSubmit,
   loading,
+  currency,
 }: {
   defaultValues?: Partial<ServiceFormValues>
   onSubmit: (data: ServiceFormValues) => Promise<void>
   loading: boolean
+  currency: string
 }) {
   const { t } = useLanguage()
   const copy = t.dashboard.services
@@ -48,7 +50,7 @@ function ServiceForm({
           {...register('duration_minutes', { valueAsNumber: true })}
         />
         <Input
-          label={copy.price}
+          label={`${copy.price} (${currency})`}
           type="number"
           step="0.01"
           error={errors.price?.message}
@@ -76,13 +78,18 @@ export default function ServicesPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [editing, setEditing] = useState<Service | null>(null)
   const [deleting, setDeleting] = useState<Service | null>(null)
+  const [currency, setCurrency] = useState('EUR')
 
   const load = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch('/api/services')
+      const [res, businessRes] = await Promise.all([
+        fetch('/api/services'),
+        fetch('/api/businesses'),
+      ])
       const json = await res.json()
+      const businessJson = businessRes.ok ? await businessRes.json() : null
       if (res.status === 404) {
         router.replace('/dashboard/onboarding')
         return
@@ -91,6 +98,7 @@ export default function ServicesPage() {
         console.error('[Services] load failed', json.error)
         throw new Error(json.error ?? copy.loadError)
       }
+      setCurrency(businessJson?.data?.business?.currency ?? 'EUR')
       setServices(json.data ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.loadError)
@@ -203,7 +211,7 @@ export default function ServicesPage() {
                   {service.description && <p className="text-xs text-zinc-500 mt-0.5 line-clamp-2">{service.description}</p>}
                   <div className="flex gap-3 mt-2 text-xs text-zinc-500">
                     <span>{service.duration_minutes} min</span>
-                    <span className="text-emerald-400 font-semibold">{formatCurrency(service.price)}</span>
+                    <span className="text-emerald-400 font-semibold">{formatCurrency(service.price, currency)}</span>
                   </div>
                 </div>
                 <div className="flex gap-1 ml-3">
@@ -233,7 +241,7 @@ export default function ServicesPage() {
       )}
 
       <Dialog open={showCreate} onClose={() => setShowCreate(false)} title={copy.newTitle}>
-        <ServiceForm onSubmit={handleCreate} loading={saving} />
+        <ServiceForm onSubmit={handleCreate} loading={saving} currency={currency} />
       </Dialog>
 
       <Dialog open={!!editing} onClose={() => setEditing(null)} title={copy.editTitle}>
@@ -248,6 +256,7 @@ export default function ServicesPage() {
             }}
             onSubmit={handleEdit}
             loading={saving}
+            currency={currency}
           />
         )}
       </Dialog>

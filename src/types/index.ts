@@ -2,6 +2,8 @@ export interface Business {
   id: string
   slug: string
   name: string
+  default_language?: 'pt' | 'en' | 'es'
+  currency?: 'EUR' | 'USD' | 'VES'
   description?: string
   phone?: string
   notification_email?: string

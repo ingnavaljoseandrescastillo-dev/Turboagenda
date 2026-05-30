@@ -3,6 +3,8 @@ import { isValidTimeZone } from '@/lib/utils'
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color invalido')
 const TimeZoneSchema = z.string().min(3).max(64).refine(isValidTimeZone, 'Zona horaria invalida')
+const LocaleSchema = z.enum(['pt', 'en', 'es'])
+const CurrencySchema = z.enum(['EUR', 'USD', 'VES'])
 
 export const LoginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -87,6 +89,8 @@ export const AvailabilityQuerySchema = z.object({
 
 export const BusinessSettingsSchema = z.object({
   name: z.string().min(2),
+  default_language: LocaleSchema.optional(),
+  currency: CurrencySchema.optional(),
   description: z.string().optional(),
   phone: z.string().optional(),
   notification_email: z.string().email('Email invalido').or(z.literal('')).optional(),
@@ -112,6 +116,8 @@ export const BusinessScheduleSchema = z.object({
 
 export const BusinessCreateSchema = z.object({
   name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
+  default_language: LocaleSchema.optional(),
+  currency: CurrencySchema.optional(),
   phone: z.string().optional(),
   notification_email: z.string().email('Email invalido').or(z.literal('')).optional(),
   address: z.string().optional(),
@@ -137,7 +143,7 @@ export const FinanceEntrySchema = z.object({
   amount_cents: z.number().int().min(0, 'Importe invalido'),
   gross_amount_cents: z.number().int().min(0, 'Importe original invalido').nullable().optional(),
   discount_cents: z.number().int().min(0, 'Descuento invalido').optional(),
-  currency: z.string().trim().min(3).max(3).default('EUR'),
+  currency: CurrencySchema.default('EUR'),
   entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha invalida'),
   payment_method: z.string().trim().min(2).max(60).default('manual'),
   notes: z.string().trim().max(500).nullable().optional(),
@@ -150,7 +156,7 @@ export const AppointmentCollectionSchema = z
     amount_cents: z.number().int().min(0, 'Importe cobrado invalido'),
     gross_amount_cents: z.number().int().min(0, 'Importe original invalido'),
     discount_cents: z.number().int().min(0, 'Descuento invalido'),
-    currency: z.string().trim().min(3).max(3).default('EUR'),
+    currency: CurrencySchema.default('EUR'),
     entry_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Fecha invalida'),
     payment_method: z.string().trim().min(2).max(60).default('manual'),
     notes: z.string().trim().max(500).nullable().optional(),

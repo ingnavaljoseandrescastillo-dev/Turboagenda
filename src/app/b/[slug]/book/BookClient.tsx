@@ -9,7 +9,118 @@ import { BookingForm } from '@/components/booking/BookingForm'
 import { Button } from '@/components/ui/Button'
 import type { Business, BusinessSettings, Employee, Service } from '@/types'
 
-const STEPS = ['Servico', 'Profissional', 'Data e hora', 'Dados']
+type PublicLocale = 'pt' | 'en' | 'es'
+
+const bookingCopy = {
+  pt: {
+    steps: ['Servico', 'Profissional', 'Data e hora', 'Dados'],
+    completeTitle: 'Agendamento confirmado!',
+    completeSubtitle: 'Recebera a confirmacao em breve.',
+    backToProfile: 'Voltar ao perfil',
+    onlineBooking: 'Reserva online',
+    intro: 'Escolha o servico, profissional e horario. Confirme os seus dados no final.',
+    step: 'Passo',
+    of: 'de',
+    noServices: 'Este negocio ainda nao tem servicos ativos.',
+    noEmployees: 'Este negocio ainda nao tem profissionais ativos.',
+    continue: 'Continuar',
+    serviceTitle: 'Escolha o servico',
+    employeeTitle: 'Escolha o colaborador',
+    date: {
+      title: 'Escolha o dia',
+      subtitle: 'Selecione uma data disponivel no calendario.',
+      previousMonth: 'Mes anterior',
+      nextMonth: 'Proximo mes',
+      availableTimes: 'Horarios disponiveis',
+      loading: 'A carregar horarios...',
+      empty: 'Sem horarios disponiveis para este dia. Escolha outra data no calendario.',
+      weekdays: ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'],
+    },
+    form: {
+      title: 'Os seus dados',
+      appointmentFor: 'Agendamento para',
+      name: 'Nome completo',
+      email: 'Email',
+      phone: 'Telefone (opcional)',
+      birthdate: 'Data de nascimento (opcional)',
+      birthdateHelper: 'Usada apenas para mensagens de aniversario do negocio.',
+      submit: 'Confirmar agendamento',
+      createError: 'Erro ao criar agendamento',
+    },
+  },
+  es: {
+    steps: ['Servicio', 'Profesional', 'Fecha y hora', 'Datos'],
+    completeTitle: 'Reserva confirmada!',
+    completeSubtitle: 'Recibiras la confirmacion en breve.',
+    backToProfile: 'Volver al perfil',
+    onlineBooking: 'Reserva online',
+    intro: 'Elige el servicio, profesional y horario. Confirmas tus datos al final.',
+    step: 'Paso',
+    of: 'de',
+    noServices: 'Este negocio aun no tiene servicios activos.',
+    noEmployees: 'Este negocio aun no tiene profesionales activos.',
+    continue: 'Continuar',
+    serviceTitle: 'Elige el servicio',
+    employeeTitle: 'Elige el profesional',
+    date: {
+      title: 'Elige el dia',
+      subtitle: 'Selecciona una fecha disponible en el calendario.',
+      previousMonth: 'Mes anterior',
+      nextMonth: 'Mes siguiente',
+      availableTimes: 'Horarios disponibles',
+      loading: 'Cargando horarios...',
+      empty: 'No hay horarios disponibles para este dia. Elige otra fecha en el calendario.',
+      weekdays: ['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'],
+    },
+    form: {
+      title: 'Tus datos',
+      appointmentFor: 'Reserva para',
+      name: 'Nombre completo',
+      email: 'Email',
+      phone: 'Telefono (opcional)',
+      birthdate: 'Fecha de nacimiento (opcional)',
+      birthdateHelper: 'Usada solo para mensajes de cumpleanos del negocio.',
+      submit: 'Confirmar reserva',
+      createError: 'Error al crear la reserva',
+    },
+  },
+  en: {
+    steps: ['Service', 'Professional', 'Date and time', 'Details'],
+    completeTitle: 'Booking confirmed!',
+    completeSubtitle: 'You will receive a confirmation soon.',
+    backToProfile: 'Back to profile',
+    onlineBooking: 'Online booking',
+    intro: 'Choose the service, professional, and time. Confirm your details at the end.',
+    step: 'Step',
+    of: 'of',
+    noServices: 'This business has no active services yet.',
+    noEmployees: 'This business has no active professionals yet.',
+    continue: 'Continue',
+    serviceTitle: 'Choose a service',
+    employeeTitle: 'Choose a professional',
+    date: {
+      title: 'Choose a day',
+      subtitle: 'Select an available date in the calendar.',
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      availableTimes: 'Available times',
+      loading: 'Loading times...',
+      empty: 'No times available for this day. Choose another date in the calendar.',
+      weekdays: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    },
+    form: {
+      title: 'Your details',
+      appointmentFor: 'Booking for',
+      name: 'Full name',
+      email: 'Email',
+      phone: 'Phone (optional)',
+      birthdate: 'Birth date (optional)',
+      birthdateHelper: 'Only used for birthday messages from the business.',
+      submit: 'Confirm booking',
+      createError: 'Error creating booking',
+    },
+  },
+}
 
 interface BookClientProps {
   slug: string
@@ -31,6 +142,9 @@ export function BookClient({
   const router = useRouter()
   const theme = publicTheme(business)
   const timeZone = settings?.time_zone ?? 'Europe/Lisbon'
+  const locale = normalizePublicLocale(business.default_language)
+  const copy = bookingCopy[locale]
+  const currency = business.currency ?? 'EUR'
   const [step, setStep] = useState(initialService ? 1 : 0)
   const [completed, setCompleted] = useState(false)
   const [selectedService, setSelectedService] = useState<string | null>(initialService)
@@ -46,10 +160,10 @@ export function BookClient({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-zinc-100">Agendamento confirmado!</h2>
-          <p className="text-zinc-500">Recebera a confirmacao em breve.</p>
+          <h2 className="text-2xl font-bold text-zinc-100">{copy.completeTitle}</h2>
+          <p className="text-zinc-500">{copy.completeSubtitle}</p>
           <Button onClick={() => router.push(`/b/${slug}`)} variant="secondary">
-            Voltar ao perfil
+            {copy.backToProfile}
           </Button>
         </div>
       </div>
@@ -67,10 +181,10 @@ export function BookClient({
     <div className="min-h-screen" style={{ ...pageBackground(theme), color: theme.text }}>
       <div className="border-b border-white/10 bg-black/25 backdrop-blur">
         <div className="mx-auto max-w-3xl px-4 py-6">
-          <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.primary }}>Reserva online</p>
+          <p className="text-sm font-semibold uppercase tracking-wide" style={{ color: theme.primary }}>{copy.onlineBooking}</p>
           <h1 className="mt-2 text-2xl font-black text-white">{business.name}</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            Elige el servicio, profesional y horario. Confirmas tus datos al final.
+            {copy.intro}
           </p>
         </div>
       </div>
@@ -84,11 +198,11 @@ export function BookClient({
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            {step === 0 ? business.name : STEPS[step - 1]}
+            {step === 0 ? business.name : copy.steps[step - 1]}
           </button>
 
           <div className="flex gap-1.5 mb-4">
-            {STEPS.map((_, i) => (
+            {copy.steps.map((_, i) => (
               <div
                 key={i}
                 className="h-1.5 flex-1 rounded-full transition-colors"
@@ -97,19 +211,21 @@ export function BookClient({
             ))}
           </div>
           <p className="text-xs text-zinc-500">
-            Passo {step + 1} de {STEPS.length}: {STEPS[step]}
+            {copy.step} {step + 1} {copy.of} {copy.steps.length}: {copy.steps[step]}
           </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-black/35 p-4 shadow-2xl shadow-black/20 backdrop-blur md:p-6">
           {step === 0 && (
             services.length === 0 ? (
-              <p className="text-sm text-zinc-500">Este negocio aun no tiene servicios activos.</p>
+              <p className="text-sm text-zinc-500">{copy.noServices}</p>
             ) : (
               <ServiceSelector
                 services={services}
                 selected={selectedService}
                 primaryColor={theme.primary}
+                currency={currency}
+                title={copy.serviceTitle}
                 onSelect={(id) => {
                   setSelectedService(id)
                   setStep(1)
@@ -119,12 +235,13 @@ export function BookClient({
           )}
           {step === 1 && (
             employees.length === 0 ? (
-              <p className="text-sm text-zinc-500">Este negocio aun no tiene profesionales activos.</p>
+              <p className="text-sm text-zinc-500">{copy.noEmployees}</p>
             ) : (
               <EmployeeSelector
                 employees={employees}
                 selected={selectedEmployee}
                 primaryColor={theme.primary}
+                title={copy.employeeTitle}
                 onSelect={(id) => {
                   setSelectedEmployee(id)
                   setStep(2)
@@ -142,6 +259,8 @@ export function BookClient({
               selected={selectedDatetime}
               primaryColor={theme.primary}
               onPrimaryColor={theme.onPrimary}
+              localeCode={locale}
+              labels={copy.date}
               onSelect={(dt) => setSelectedDatetime(dt)}
             />
           )}
@@ -154,6 +273,7 @@ export function BookClient({
               timeZone={timeZone}
               primaryColor={theme.primary}
               onPrimaryColor={theme.onPrimary}
+              labels={copy.form}
               onSuccess={() => setCompleted(true)}
             />
           )}
@@ -165,13 +285,17 @@ export function BookClient({
               className="mt-6 w-full hover:opacity-90"
               style={{ backgroundColor: theme.primary, color: theme.onPrimary }}
             >
-              Continuar
+              {copy.continue}
             </Button>
           )}
         </div>
       </div>
     </div>
   )
+}
+
+function normalizePublicLocale(value: unknown): PublicLocale {
+  return value === 'en' || value === 'es' || value === 'pt' ? value : 'pt'
 }
 
 function publicTheme(business: Business) {

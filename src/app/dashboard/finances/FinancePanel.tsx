@@ -13,6 +13,7 @@ type ApiResponse<T> = { data: T | null; error: string | null }
 interface FinancePanelProps {
   initialEntries: FinanceEntry[]
   pastAppointments: Appointment[]
+  businessCurrency: string
 }
 
 interface EntryForm {
@@ -55,10 +56,10 @@ const incomeCategories = ['servicio', 'producto', 'propina', 'bono', 'otro']
 const expenseCategories = ['materiales', 'comision', 'alquiler', 'publicidad', 'herramientas', 'impuestos', 'otro']
 const paymentMethods = ['manual', 'efectivo', 'mbway', 'transferencia', 'tarjeta', 'otro']
 
-export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelProps) {
+export function FinancePanel({ initialEntries, pastAppointments, businessCurrency }: FinancePanelProps) {
   const [entries, setEntries] = useState(initialEntries)
   const [appointments, setAppointments] = useState(pastAppointments)
-  const [form, setForm] = useState<EntryForm>(emptyForm)
+  const [form, setForm] = useState<EntryForm>({ ...emptyForm, currency: businessCurrency })
   const [editing, setEditing] = useState<FinanceEntry | null>(null)
   const [collecting, setCollecting] = useState<CollectionForm | null>(null)
   const [activeTab, setActiveTab] = useState<FinanceTab>('summary')
@@ -177,7 +178,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
           ? current.map((entry) => (entry.id === result.data!.id ? result.data! : entry))
           : [result.data!, ...current]
       )
-      setForm(emptyForm)
+      setForm({ ...emptyForm, currency: businessCurrency })
       setEditing(null)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No fue posible guardar el movimiento.'
@@ -227,7 +228,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
       amount_cents: amount,
       gross_amount_cents: grossAmount,
       discount_cents: discount,
-      currency: collecting.entry?.currency ?? 'EUR',
+      currency: collecting.entry?.currency ?? businessCurrency,
       entry_date: collecting.entryDate,
       payment_method: collecting.paymentMethod,
       notes: collecting.notes || null,
@@ -298,7 +299,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
 
   function cancelEdit() {
     setEditing(null)
-    setForm(emptyForm)
+    setForm({ ...emptyForm, currency: businessCurrency })
     setError('')
   }
 
@@ -312,9 +313,9 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
           </p>
         </div>
         <div className="grid grid-cols-3 gap-2 sm:min-w-[520px]">
-          <MetricCard label="Ingresos" value={formatCurrency(totals.income / 100)} tone="income" />
-          <MetricCard label="Gastos" value={formatCurrency(totals.expenses / 100)} tone="expense" />
-          <MetricCard label="Neto" value={formatCurrency(totals.net / 100)} tone={totals.net >= 0 ? 'income' : 'expense'} />
+          <MetricCard label="Ingresos" value={formatCurrency(totals.income / 100, businessCurrency)} tone="income" />
+          <MetricCard label="Gastos" value={formatCurrency(totals.expenses / 100, businessCurrency)} tone="expense" />
+          <MetricCard label="Neto" value={formatCurrency(totals.net / 100, businessCurrency)} tone={totals.net >= 0 ? 'income' : 'expense'} />
         </div>
       </div>
 
@@ -532,7 +533,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
                 <div key={item.category}>
                   <div className="mb-1 flex justify-between text-sm">
                     <span className="capitalize text-zinc-300">{item.category}</span>
-                    <span className="font-semibold text-zinc-100">{formatCurrency(item.amount / 100)}</span>
+                    <span className="font-semibold text-zinc-100">{formatCurrency(item.amount / 100, businessCurrency)}</span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-zinc-800">
                     <div
@@ -654,10 +655,10 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
                   <div>
                     {entry ? (
                       <>
-                        <p className="font-bold text-emerald-300">{formatCurrency(entry.amount_cents / 100)}</p>
+                        <p className="font-bold text-emerald-300">{formatCurrency(entry.amount_cents / 100, entry.currency)}</p>
                         {entry.discount_cents ? (
                           <p className="text-xs text-zinc-500">
-                            Descuento {formatCurrency(entry.discount_cents / 100)}
+                            Descuento {formatCurrency(entry.discount_cents / 100, entry.currency)}
                           </p>
                         ) : (
                           <p className="text-xs text-zinc-500">Cobro confirmado</p>
@@ -666,7 +667,7 @@ export function FinancePanel({ initialEntries, pastAppointments }: FinancePanelP
                     ) : (
                       <>
                         <p className="font-bold text-zinc-200">
-                          {formatCurrency(servicePriceCents(appointment) / 100)}
+                          {formatCurrency(servicePriceCents(appointment) / 100, businessCurrency)}
                         </p>
                         <p className="text-xs text-amber-300">Pendiente de cobro</p>
                       </>

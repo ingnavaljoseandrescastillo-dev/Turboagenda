@@ -6,10 +6,32 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/contexts/LanguageContext'
+import type { Locale } from '@/i18n/translations'
+
+type SettingsTab = 'profile' | 'public' | 'preferences' | 'notifications'
+
+const settingsTabs: { id: SettingsTab; label: string; description: string }[] = [
+  { id: 'profile', label: 'Perfil', description: 'Datos basicos del negocio' },
+  { id: 'public', label: 'Pagina publica', description: 'Imagenes, galeria y colores' },
+  { id: 'preferences', label: 'Preferencias', description: 'Idioma y moneda' },
+  { id: 'notifications', label: 'Notificaciones', description: 'Email y WhatsApp' },
+]
+
+const languageOptions: { value: Locale; label: string; helper: string }[] = [
+  { value: 'pt', label: 'Portugues de Portugal', helper: 'Idioma por defecto' },
+  { value: 'es', label: 'Espanol', helper: 'Panel y pagina publica en espanol' },
+  { value: 'en', label: 'English', helper: 'Dashboard and public page in English' },
+]
+
+const currencyOptions = [
+  { value: 'EUR', label: 'Euro (EUR)', helper: 'Portugal y Union Europea' },
+  { value: 'USD', label: 'Dolar (USD)', helper: 'Clientes internacionales' },
+  { value: 'VES', label: 'Bolivar (VES)', helper: 'Venezuela' },
+]
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { t } = useLanguage()
+  const { t, setLocale } = useLanguage()
   const copy = t.dashboard.settings
   const common = t.dashboard.common
   const [loading, setLoading] = useState(true)
@@ -21,8 +43,11 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState('trial')
+  const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [form, setForm] = useState({
     name: '',
+    default_language: 'pt' as Locale,
+    currency: 'EUR',
     description: '',
     phone: '',
     notification_email: '',
@@ -79,6 +104,8 @@ export default function SettingsPage() {
         setSubscriptionPlan(plan)
         setForm({
           name: b.name ?? '',
+          default_language: normalizeLocale(b.default_language),
+          currency: normalizeCurrency(b.currency),
           description: b.description ?? '',
           phone: b.phone ?? '',
           notification_email: b.notification_email ?? '',
@@ -92,6 +119,7 @@ export default function SettingsPage() {
           theme_text_color: b.theme_text_color ?? '#f4f4f5',
           theme_background_image_url: b.theme_background_image_url ?? '',
         })
+        setLocale(normalizeLocale(b.default_language))
         if (settings) {
           setNotifications({
             email_notify_client_on_booking: settings.email_notify_client_on_booking ?? true,
@@ -125,7 +153,7 @@ export default function SettingsPage() {
     }
 
     void loadBusiness()
-  }, [copy.loadError, router])
+  }, [copy.loadError, router, setLocale])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -144,6 +172,7 @@ export default function SettingsPage() {
         throw new Error(json.error ?? copy.saveError)
       }
       setSuccess(true)
+      setLocale(form.default_language)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.saveError)
@@ -237,7 +266,25 @@ export default function SettingsPage() {
         <p className="text-sm text-zinc-500 mt-1">{copy.subtitle}</p>
       </div>
 
-      <Card>
+      <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 sm:grid-cols-4">
+        {settingsTabs.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveTab(tab.id)}
+            className={`rounded-xl px-3 py-3 text-left transition-colors ${
+              activeTab === tab.id ? 'bg-emerald-500 text-white' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-100'
+            }`}
+          >
+            <span className="block text-sm font-semibold">{tab.label}</span>
+            <span className={`mt-1 block text-[11px] ${activeTab === tab.id ? 'text-white/75' : 'text-zinc-600'}`}>
+              {tab.description}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <Card className={activeTab === 'profile' ? '' : 'hidden'}>
         <form onSubmit={handleSave} className="space-y-4">
           <Input
             label={copy.businessName}
@@ -296,7 +343,7 @@ export default function SettingsPage() {
         </form>
       </Card>
 
-      <Card>
+      <Card className={activeTab === 'public' ? '' : 'hidden'}>
         <form onSubmit={handleSave} className="space-y-5">
           <div>
             <h3 className="text-lg font-semibold text-zinc-100">{copy.publicPage}</h3>
@@ -479,7 +526,63 @@ export default function SettingsPage() {
         </form>
       </Card>
 
-      <Card>
+      <Card className={activeTab === 'preferences' ? '' : 'hidden'}>
+        <form onSubmit={handleSave} className="space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-100">Preferencias del negocio</h3>
+            <p className="text-sm text-zinc-500 mt-1">
+              Define como se abre el panel interno, el link publico y los precios.
+            </p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <SelectCard
+              label="Idioma principal"
+              value={form.default_language}
+              options={languageOptions}
+              onChange={(value) => setForm((current) => ({ ...current, default_language: value as Locale }))}
+            />
+            <SelectCard
+              label="Moneda"
+              value={form.currency}
+              options={currencyOptions}
+              onChange={(value) => setForm((current) => ({ ...current, currency: value }))}
+            />
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <p className="text-sm font-semibold text-zinc-100">Se aplicara en</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+                <p className="text-xs font-semibold uppercase text-zinc-500">Panel interno</p>
+                <p className="mt-1 text-sm text-zinc-300">Menus y pantallas del negocio se abriran en el idioma elegido.</p>
+              </div>
+              <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+                <p className="text-xs font-semibold uppercase text-zinc-500">Link publico</p>
+                <p className="mt-1 text-sm text-zinc-300">Clientes veran servicios, reserva y precios en esta configuracion.</p>
+              </div>
+            </div>
+          </div>
+
+          {success && (
+            <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+              Preferencias guardadas.
+            </p>
+          )}
+
+          {error && (
+            <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              {error}
+            </p>
+          )}
+
+          <Button type="submit" loading={saving}>
+            Guardar preferencias
+          </Button>
+        </form>
+      </Card>
+
+      <Card className={activeTab === 'notifications' ? '' : 'hidden'}>
         <form onSubmit={handleNotificationSave} className="space-y-4">
           <div>
             <h3 className="text-lg font-semibold text-zinc-100">Emails e notificacoes</h3>
@@ -692,6 +795,38 @@ function ImageUploadButton({
   )
 }
 
+function SelectCard({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: { value: string; label: string; helper: string }[]
+  onChange: (value: string) => void
+}) {
+  return (
+    <label className="grid gap-2 rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+      <span className="text-sm font-semibold text-zinc-100">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-emerald-500"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <span className="text-xs text-zinc-500">
+        {options.find((option) => option.value === value)?.helper}
+      </span>
+    </label>
+  )
+}
+
 function ColorField({
   label,
   value,
@@ -789,4 +924,12 @@ function TextAreaField({
 function normalizeGalleryImages(value: unknown) {
   const images = Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : []
   return [...images.slice(0, 4), '', '', '', ''].slice(0, 4)
+}
+
+function normalizeLocale(value: unknown): Locale {
+  return value === 'en' || value === 'es' || value === 'pt' ? value : 'pt'
+}
+
+function normalizeCurrency(value: unknown) {
+  return value === 'USD' || value === 'VES' || value === 'EUR' ? value : 'EUR'
 }

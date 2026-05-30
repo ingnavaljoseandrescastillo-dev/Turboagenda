@@ -13,6 +13,8 @@ export type CurrentBusiness = {
   cover_image_url?: string | null
   logo_image_url?: string | null
   gallery_images?: string[] | null
+  default_language?: 'pt' | 'en' | 'es'
+  currency?: 'EUR' | 'USD' | 'VES'
   owner_id?: string
 }
 

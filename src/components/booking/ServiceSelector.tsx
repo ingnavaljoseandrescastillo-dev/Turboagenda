@@ -6,12 +6,21 @@ interface ServiceSelectorProps {
   selected: string | null
   onSelect: (id: string) => void
   primaryColor?: string
+  currency?: string
+  title?: string
 }
 
-export function ServiceSelector({ services, selected, onSelect, primaryColor = '#10b981' }: ServiceSelectorProps) {
+export function ServiceSelector({
+  services,
+  selected,
+  onSelect,
+  primaryColor = '#10b981',
+  currency = 'EUR',
+  title = 'Escolha o servico',
+}: ServiceSelectorProps) {
   return (
     <div className="space-y-3">
-      <h3 className="text-lg font-semibold text-zinc-100">Escolha o servico</h3>
+      <h3 className="text-lg font-semibold text-zinc-100">{title}</h3>
       <div className="grid gap-3">
         {services.map((service) => {
           const isSelected = selected === service.id
@@ -35,7 +44,7 @@ export function ServiceSelector({ services, selected, onSelect, primaryColor = '
                   <p className="mt-1 text-xs text-zinc-500">{service.duration_minutes} min</p>
                 </div>
                 <p className="ml-4 flex-shrink-0 text-lg font-bold" style={{ color: primaryColor }}>
-                  {formatCurrency(service.price)}
+                  {formatCurrency(service.price, currency)}
                 </p>
               </div>
             </button>

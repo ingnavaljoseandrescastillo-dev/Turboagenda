@@ -46,6 +46,7 @@ export default async function FinancesPage() {
     <FinancePanel
       initialEntries={(data ?? []) as FinanceEntry[]}
       pastAppointments={(appointments ?? []) as Appointment[]}
+      businessCurrency={business.currency ?? 'EUR'}
     />
   )
 }
