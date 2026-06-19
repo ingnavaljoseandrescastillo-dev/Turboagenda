@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import { format, parseISO, isToday, isTomorrow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
+import { pt } from 'date-fns/locale'
 
 export const DEFAULT_BUSINESS_TIME_ZONE = 'Europe/Lisbon'
 
@@ -13,7 +13,7 @@ export function formatDate(dateStr: string): string {
   const date = parseISO(dateStr)
   if (isToday(date)) return 'Hoje'
   if (isTomorrow(date)) return 'Amanha'
-  return format(date, "dd 'de' MMMM", { locale: ptBR })
+  return format(date, "dd 'de' MMMM", { locale: pt })
 }
 
 export function formatTime(dateStr: string): string {
@@ -72,6 +72,14 @@ export function formatCurrency(amount: number, currency = 'EUR', locale = 'pt-PT
   } catch {
     return `${amount.toFixed(2)} ${normalizedCurrency}`
   }
+}
+
+export type AppLocale = 'pt' | 'en' | 'es'
+
+export function intlLocaleFromAppLocale(locale?: string | null): string {
+  if (locale === 'en') return 'en-US'
+  if (locale === 'es') return 'es-ES'
+  return 'pt-PT'
 }
 
 export function slugify(text: string): string {

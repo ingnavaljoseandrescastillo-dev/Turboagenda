@@ -113,6 +113,8 @@ export const AvailabilityQuerySchema = z.object({
 export const BusinessSettingsSchema = z.object({
   name: z.string().min(2),
   default_language: LocaleSchema.optional(),
+  dashboard_language: LocaleSchema.optional(),
+  public_language: LocaleSchema.optional(),
   currency: CurrencySchema.optional(),
   description: z.string().optional(),
   phone: z.string().optional(),
@@ -145,6 +147,8 @@ export const BusinessScheduleSchema = z.object({
 export const BusinessCreateSchema = z.object({
   name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
   default_language: LocaleSchema.optional(),
+  dashboard_language: LocaleSchema.optional(),
+  public_language: LocaleSchema.optional(),
   currency: CurrencySchema.optional(),
   phone: z.string().optional(),
   notification_email: z.string().email('Email invalido').or(z.literal('')).optional(),

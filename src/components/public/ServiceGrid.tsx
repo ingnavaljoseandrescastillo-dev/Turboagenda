@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, intlLocaleFromAppLocale, type AppLocale } from '@/lib/utils'
 import type { Service } from '@/types'
 
 interface ServiceGridProps {
@@ -7,6 +7,7 @@ interface ServiceGridProps {
   slug: string
   primaryColor?: string
   currency?: string
+  locale?: AppLocale
   labels?: {
     title: string
     book: string
@@ -18,6 +19,7 @@ export function ServiceGrid({
   slug,
   primaryColor = '#10b981',
   currency = 'EUR',
+  locale = 'pt',
   labels = { title: 'Servicos', book: 'Marcar' },
 }: ServiceGridProps) {
   if (services.length === 0) return null
@@ -48,7 +50,7 @@ export function ServiceGrid({
               </div>
               <div className="ml-3 flex-shrink-0 text-right">
                 <p className="text-lg font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: primaryColor }}>
-                  {formatCurrency(service.price, currency)}
+                  {formatCurrency(service.price, currency, intlLocaleFromAppLocale(locale))}
                 </p>
                 <Link
                   href={`/b/${slug}/book?service=${service.id}`}

@@ -14,6 +14,8 @@ export type CurrentBusiness = {
   logo_image_url?: string | null
   gallery_images?: string[] | null
   default_language?: 'pt' | 'en' | 'es'
+  dashboard_language?: 'pt' | 'en' | 'es'
+  public_language?: 'pt' | 'en' | 'es'
   currency?: 'EUR' | 'USD' | 'VES'
   owner_id?: string
 }

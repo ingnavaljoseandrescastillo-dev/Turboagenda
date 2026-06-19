@@ -17,7 +17,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   return (
     <div className="flex min-h-screen bg-zinc-950 md:h-screen md:overflow-hidden">
-      <DashboardPreferenceSync locale={business?.default_language ?? 'pt'} />
+      <DashboardPreferenceSync locale={business?.dashboard_language ?? business?.default_language ?? 'pt'} />
       <Sidebar businessName={businessName} plan="Plus" />
       <div className="flex min-w-0 flex-1 flex-col md:overflow-hidden">
         <TopNav user={user} businessName={businessName} />

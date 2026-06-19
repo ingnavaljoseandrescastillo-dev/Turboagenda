@@ -142,7 +142,7 @@ export function BookClient({
   const router = useRouter()
   const theme = publicTheme(business)
   const timeZone = settings?.time_zone ?? 'Europe/Lisbon'
-  const locale = normalizePublicLocale(business.default_language)
+  const locale = normalizePublicLocale(business.public_language ?? business.default_language)
   const copy = bookingCopy[locale]
   const currency = business.currency ?? 'EUR'
   const [step, setStep] = useState(initialService ? 1 : 0)
@@ -225,6 +225,7 @@ export function BookClient({
                 selected={selectedService}
                 primaryColor={theme.primary}
                 currency={currency}
+                locale={locale}
                 title={copy.serviceTitle}
                 onSelect={(id) => {
                   setSelectedService(id)

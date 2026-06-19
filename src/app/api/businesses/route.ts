@@ -53,10 +53,15 @@ export async function POST(request: NextRequest) {
     }
 
     const { name, slug, ...rest } = parsed.data
+    const dashboardLanguage = rest.dashboard_language ?? rest.default_language ?? 'pt'
+    const publicLanguage = rest.public_language ?? rest.default_language ?? dashboardLanguage
     const { data, error } = await supabase
       .from('businesses')
       .insert({
         ...rest,
+        default_language: dashboardLanguage,
+        dashboard_language: dashboardLanguage,
+        public_language: publicLanguage,
         gallery_images: rest.gallery_images?.filter(Boolean) ?? [],
         name,
         slug: slug ?? uniqueSlug(name),
@@ -90,8 +95,13 @@ export async function PATCH(request: NextRequest) {
       return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
     }
 
+    const dashboardLanguage = parsed.data.dashboard_language ?? parsed.data.default_language ?? 'pt'
+    const publicLanguage = parsed.data.public_language ?? parsed.data.default_language ?? dashboardLanguage
     const payload = {
       ...parsed.data,
+      default_language: dashboardLanguage,
+      dashboard_language: dashboardLanguage,
+      public_language: publicLanguage,
       notification_email: parsed.data.notification_email || null,
       cover_image_url: parsed.data.cover_image_url || null,
       logo_image_url: parsed.data.logo_image_url || null,

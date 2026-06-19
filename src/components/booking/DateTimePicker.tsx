@@ -14,7 +14,7 @@ import {
   startOfMonth,
   subMonths,
 } from 'date-fns'
-import { enUS, es, ptBR } from 'date-fns/locale'
+import { enUS, es, pt } from 'date-fns/locale'
 import { useAvailability } from '@/hooks/useAvailability'
 import { DEFAULT_BUSINESS_TIME_ZONE, zonedDateTimeToUtcIso } from '@/lib/utils'
 
@@ -111,7 +111,7 @@ export function DateTimePicker({
   const canGoNext = explicitMonthMode
     ? !isAfter(nextMonth, lastAvailableMonth)
     : isBefore(endOfMonth(addMonths(visibleMonth, 1)), maxDate)
-  const dateLocale = localeCode === 'es' ? es : localeCode === 'en' ? enUS : ptBR
+  const dateLocale = localeCode === 'es' ? es : localeCode === 'en' ? enUS : pt
 
   function slotToIso(time: string) {
     return zonedDateTimeToUtcIso(format(selectedDate, 'yyyy-MM-dd'), time, timeZone)
