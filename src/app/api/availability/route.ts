@@ -3,10 +3,14 @@ import { createClient } from '@/lib/supabase/server'
 import { AvailabilityQuerySchema } from '@/lib/validators'
 import { formatResponse, handleError } from '@/lib/api-helpers'
 
-function isWithinBookingWindow(date: string, maxBookingDays: number) {
+function isWithinBookingWindow(date: string, maxBookingDays: number, availableMonths: string[] = []) {
   const requested = new Date(`${date}T00:00:00`)
   const today = new Date()
   today.setHours(0, 0, 0, 0)
+
+  if (availableMonths.length > 0) {
+    return requested >= today && availableMonths.includes(date.slice(0, 7))
+  }
 
   const latest = new Date(today)
   latest.setDate(latest.getDate() + Math.max(0, maxBookingDays - 1))
@@ -38,14 +42,14 @@ export async function GET(request: NextRequest) {
 
     const { data: settings, error: settingsError } = await supabase
       .from('business_settings')
-      .select('max_booking_days')
+      .select('max_booking_days, available_months')
       .eq('business_id', business_id)
       .maybeSingle()
 
     if (settingsError) return handleError(settingsError.message, 500)
 
     const maxBookingDays = settings?.max_booking_days ?? 30
-    if (!isWithinBookingWindow(date, maxBookingDays)) {
+    if (!isWithinBookingWindow(date, maxBookingDays, settings?.available_months ?? [])) {
       return formatResponse({ slots: [] })
     }
 

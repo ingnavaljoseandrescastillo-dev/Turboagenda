@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
+  addMonths,
   eachDayOfInterval,
   endOfMonth,
   format,
@@ -20,7 +21,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { formatDate } from '@/lib/utils'
-import type { Appointment, BusinessSettings, BusinessDayOverride } from '@/types'
+import type { Appointment, BusinessSettings, BusinessDayOverride, TimeRange } from '@/types'
 
 const DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom']
 const WORK_DAYS = [
@@ -32,12 +33,13 @@ const WORK_DAYS = [
   { label: 'Sex', value: 5 },
   { label: 'Sab', value: 6 },
 ]
+const MAX_MONTH_CHOICES = 12
 
 const TIME_ZONES = [
   { label: 'Portugal continental (Lisboa)', value: 'Europe/Lisbon' },
   { label: 'Azores', value: 'Atlantic/Azores' },
   { label: 'Madeira / Canarias', value: 'Atlantic/Madeira' },
-  { label: 'España peninsular', value: 'Europe/Madrid' },
+  { label: 'Espana peninsular', value: 'Europe/Madrid' },
   { label: 'UTC', value: 'UTC' },
   { label: 'Venezuela', value: 'America/Caracas' },
 ]
@@ -46,6 +48,21 @@ interface AgendaManagerProps {
   appointments: Appointment[]
   settings: BusinessSettings | null
   closedDays: BusinessDayOverride[]
+}
+
+type ScheduleState = {
+  opening_time: string
+  closing_time: string
+  slot_duration_minutes: number
+  working_days: number[]
+  available_months: string[]
+  working_schedule: Record<string, TimeRange[]>
+  time_zone: string
+}
+
+type DayScheduleState = {
+  time_ranges: TimeRange[]
+  slot_duration_minutes: number
 }
 
 export function AgendaManager({ appointments, settings, closedDays }: AgendaManagerProps) {
@@ -58,22 +75,17 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [scheduleSuccess, setScheduleSuccess] = useState(false)
   const [scheduleError, setScheduleError] = useState<string | null>(null)
-  const [schedule, setSchedule] = useState({
-    opening_time: String(settings?.opening_time ?? '09:00').slice(0, 5),
-    closing_time: String(settings?.closing_time ?? '18:00').slice(0, 5),
-    slot_duration_minutes: settings?.slot_duration_minutes ?? 30,
-    working_days: settings?.working_days ?? [1, 2, 3, 4, 5],
-    max_booking_months: Math.max(1, Math.ceil((settings?.max_booking_days ?? 30) / 30)),
-    time_zone: settings?.time_zone ?? 'Europe/Lisbon',
-  })
-  const [daySchedule, setDaySchedule] = useState(() => createDaySchedule(null, schedule))
+  const monthChoices = useMemo(() => buildMonthChoices(), [])
+  const [schedule, setSchedule] = useState<ScheduleState>(() => createScheduleState(settings))
+  const [daySchedule, setDaySchedule] = useState<DayScheduleState>(() => createDaySchedule(null, createScheduleState(settings)))
 
   const selectedDateKey = format(selectedDate, 'yyyy-MM-dd')
   const selectedOverride = dayOverrides.get(selectedDateKey)
   const selectedIsClosed = Boolean(selectedOverride?.is_closed)
-  const selectedHasSpecialSchedule = Boolean(
-    selectedOverride && !selectedOverride.is_closed && selectedOverride.opening_time && selectedOverride.closing_time
-  )
+  const selectedRanges = selectedOverride && !selectedOverride.is_closed
+    ? normalizeRanges(selectedOverride.time_ranges ?? [], selectedOverride.opening_time ?? schedule.opening_time, selectedOverride.closing_time ?? schedule.closing_time)
+    : getRangesForDay(schedule, selectedDate.getDay())
+  const selectedHasSpecialSchedule = Boolean(selectedOverride && !selectedOverride.is_closed && hasOverrideSchedule(selectedOverride))
   const closedDates = useMemo(
     () => new Set([...dayOverrides.values()].filter((day) => day.is_closed).map((day) => day.date)),
     [dayOverrides]
@@ -82,7 +94,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     () =>
       new Set(
         [...dayOverrides.values()]
-          .filter((day) => !day.is_closed && day.opening_time && day.closing_time)
+          .filter((day) => !day.is_closed && hasOverrideSchedule(day))
           .map((day) => day.date)
       ),
     [dayOverrides]
@@ -129,19 +141,97 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     }
   }, [visibleMonth])
 
+  function toggleAvailableMonth(monthKey: string) {
+    setSchedule((current) => {
+      const hasMonth = current.available_months.includes(monthKey)
+      const available_months = hasMonth
+        ? current.available_months.filter((month) => month !== monthKey)
+        : [...current.available_months, monthKey].sort()
+      return { ...current, available_months }
+    })
+  }
+
   function toggleWorkingDay(day: number) {
-    setSchedule((current) => ({
-      ...current,
-      working_days: current.working_days.includes(day)
+    setSchedule((current) => {
+      const isActive = current.working_days.includes(day)
+      const working_days = isActive
         ? current.working_days.filter((d) => d !== day)
-        : [...current.working_days, day].sort(),
-    }))
+        : [...current.working_days, day].sort()
+      const working_schedule = { ...current.working_schedule }
+
+      if (isActive) {
+        delete working_schedule[String(day)]
+      } else {
+        working_schedule[String(day)] = [{ start: current.opening_time, end: current.closing_time }]
+      }
+
+      return { ...current, working_days, working_schedule }
+    })
+  }
+
+  function updateDayRange(day: number, index: number, field: keyof TimeRange, value: string) {
+    setSchedule((current) => {
+      const key = String(day)
+      const ranges = normalizeRanges(current.working_schedule[key] ?? [], current.opening_time, current.closing_time)
+      ranges[index] = { ...ranges[index], [field]: value }
+      return {
+        ...current,
+        working_schedule: { ...current.working_schedule, [key]: ranges },
+      }
+    })
+  }
+
+  function addDayRange(day: number) {
+    setSchedule((current) => {
+      const key = String(day)
+      const ranges = normalizeRanges(current.working_schedule[key] ?? [], current.opening_time, current.closing_time)
+      if (ranges.length >= 2) return current
+      return {
+        ...current,
+        working_schedule: { ...current.working_schedule, [key]: [...ranges, { start: '13:30', end: current.closing_time }] },
+      }
+    })
+  }
+
+  function removeDayRange(day: number, index: number) {
+    setSchedule((current) => {
+      const key = String(day)
+      const ranges = normalizeRanges(current.working_schedule[key] ?? [], current.opening_time, current.closing_time)
+      if (ranges.length <= 1) return current
+      return {
+        ...current,
+        working_schedule: { ...current.working_schedule, [key]: ranges.filter((_, rangeIndex) => rangeIndex !== index) },
+      }
+    })
+  }
+
+  function updateSpecialRange(index: number, field: keyof TimeRange, value: string) {
+    setDaySchedule((current) => {
+      const ranges = [...current.time_ranges]
+      ranges[index] = { ...ranges[index], [field]: value }
+      return { ...current, time_ranges: ranges }
+    })
+  }
+
+  function addSpecialRange() {
+    setDaySchedule((current) => {
+      if (current.time_ranges.length >= 2) return current
+      const last = current.time_ranges[current.time_ranges.length - 1]
+      return { ...current, time_ranges: [...current.time_ranges, { start: '13:30', end: last?.end ?? schedule.closing_time }] }
+    })
+  }
+
+  function removeSpecialRange(index: number) {
+    setDaySchedule((current) => {
+      if (current.time_ranges.length <= 1) return current
+      return { ...current, time_ranges: current.time_ranges.filter((_, rangeIndex) => rangeIndex !== index) }
+    })
   }
 
   function selectDate(date: Date) {
     const key = format(date, 'yyyy-MM-dd')
     setSelectedDate(date)
-    setDaySchedule(createDaySchedule(dayOverrides.get(key) ?? null, schedule))
+    setDaySchedule(createDaySchedule(dayOverrides.get(key) ?? null, schedule, date))
     setDayError(null)
     setDaySuccess(null)
   }
@@ -152,16 +242,20 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     setScheduleSuccess(false)
     setScheduleError(null)
     try {
+      const normalized = normalizeSchedule(schedule)
+      const primaryRange = getPrimaryRange(normalized)
       const res = await fetch('/api/business-settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          opening_time: schedule.opening_time,
-          closing_time: schedule.closing_time,
-          slot_duration_minutes: schedule.slot_duration_minutes,
-          working_days: schedule.working_days,
-          max_booking_days: schedule.max_booking_months * 30,
-          time_zone: schedule.time_zone,
+          opening_time: primaryRange.start,
+          closing_time: primaryRange.end,
+          slot_duration_minutes: normalized.slot_duration_minutes,
+          working_days: normalized.working_days,
+          max_booking_days: Math.max(1, normalized.available_months.length) * 31,
+          available_months: normalized.available_months,
+          working_schedule: normalized.working_schedule,
+          time_zone: normalized.time_zone,
         }),
       })
       const json = await res.json()
@@ -169,8 +263,9 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         console.error('[AgendaManager] schedule save failed', json.error)
         throw new Error(json.error ?? 'Nao foi possivel guardar o horario.')
       }
+      setSchedule(normalized)
       setScheduleSuccess(true)
-      if (!selectedOverride) setDaySchedule(createDaySchedule(null, schedule))
+      if (!selectedOverride) setDaySchedule(createDaySchedule(null, normalized, selectedDate))
       setTimeout(() => setScheduleSuccess(false), 3000)
     } catch (err) {
       setScheduleError(err instanceof Error ? err.message : 'Nao foi possivel guardar o horario.')
@@ -202,7 +297,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         else next.delete(selectedDateKey)
         return next
       })
-      if (!nextClosed) setDaySchedule(createDaySchedule(null, schedule))
+      if (!nextClosed) setDaySchedule(createDaySchedule(null, schedule, selectedDate))
       setDaySuccess(nextClosed ? 'Dia desativado para reservas.' : 'Dia ativado con horario general.')
     } catch (err) {
       setDayError(err instanceof Error ? err.message : 'Nao foi possivel atualizar o dia.')
@@ -217,14 +312,17 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     setDayError(null)
     setDaySuccess(null)
     try {
+      const timeRanges = normalizeRanges(daySchedule.time_ranges, schedule.opening_time, schedule.closing_time)
+      const lastRange = timeRanges[timeRanges.length - 1]
       const res = await fetch('/api/business-day-overrides', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           date: selectedDateKey,
           is_closed: false,
-          opening_time: daySchedule.opening_time,
-          closing_time: daySchedule.closing_time,
+          opening_time: timeRanges[0]?.start,
+          closing_time: lastRange?.end,
+          time_ranges: timeRanges,
           slot_duration_minutes: daySchedule.slot_duration_minutes,
         }),
       })
@@ -234,6 +332,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         throw new Error(json.error ?? 'Nao foi possivel guardar o horario especial.')
       }
 
+      setDaySchedule((current) => ({ ...current, time_ranges: timeRanges }))
       setDayOverrides((current) => {
         const next = new Map(current)
         next.set(selectedDateKey, json.data as BusinessDayOverride)
@@ -268,7 +367,7 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
         next.delete(selectedDateKey)
         return next
       })
-      setDaySchedule(createDaySchedule(null, schedule))
+      setDaySchedule(createDaySchedule(null, schedule, selectedDate))
       setDaySuccess('Este dia voltou a usar o horario general.')
     } catch (err) {
       setDayError(err instanceof Error ? err.message : 'Nao foi possivel remover o horario especial.')
@@ -281,25 +380,10 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
     <div className="grid gap-5 xl:grid-cols-[0.95fr_1.05fr]">
       <div className="space-y-5">
         <Card>
-          <form onSubmit={handleScheduleSave} className="space-y-4">
+          <form onSubmit={handleScheduleSave} className="space-y-5">
             <div>
               <h3 className="text-lg font-semibold text-zinc-100">Horario e reservas</h3>
               <p className="mt-1 text-sm text-zinc-500">Controla quando los clientes pueden agendar.</p>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label="Abertura"
-                type="time"
-                value={schedule.opening_time}
-                onChange={(e) => setSchedule((s) => ({ ...s, opening_time: e.target.value }))}
-              />
-              <Input
-                label="Fecho"
-                type="time"
-                value={schedule.closing_time}
-                onChange={(e) => setSchedule((s) => ({ ...s, closing_time: e.target.value }))}
-              />
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
@@ -330,17 +414,35 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
                   Los correos y reservas publicas usaran esta zona horaria.
                 </span>
               </label>
-              <Input
-                label="Meses abertos"
-                type="number"
-                min={1}
-                max={12}
-                helper={`${schedule.max_booking_months * 30} dias disponibles para reserva`}
-                value={schedule.max_booking_months}
-                onChange={(e) =>
-                  setSchedule((s) => ({ ...s, max_booking_months: Number(e.target.value) || 1 }))
-                }
-              />
+            </div>
+
+            <div>
+              <p className="mb-2 text-sm font-medium text-zinc-300">Meses abiertos para reservas</p>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {monthChoices.map((month) => {
+                  const selected = schedule.available_months.includes(month.key)
+                  return (
+                    <button
+                      key={month.key}
+                      type="button"
+                      onClick={() => toggleAvailableMonth(month.key)}
+                      className={`rounded-lg border px-3 py-2 text-left text-sm font-medium transition-colors ${
+                        selected
+                          ? 'border-emerald-500 bg-emerald-500 text-white'
+                          : 'border-zinc-800 bg-zinc-950 text-zinc-400 hover:border-zinc-700'
+                      }`}
+                    >
+                      <span className="block capitalize">{month.label}</span>
+                      <span className={selected ? 'text-xs text-emerald-50' : 'text-xs text-zinc-600'}>
+                        {selected ? 'Abierto' : 'Bloqueado'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              <p className="mt-2 text-xs text-zinc-500">
+                Puedes abrir meses salteados, por ejemplo enero, febrero y abril.
+              </p>
             </div>
 
             <div>
@@ -361,6 +463,59 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
                   </button>
                 ))}
               </div>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium text-zinc-300">Horarios por dia</p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Usa una segunda franja para pausa de almuerzo o descanso.
+                </p>
+              </div>
+              {schedule.working_days.map((day) => {
+                const ranges = getRangesForDay(schedule, day)
+                return (
+                  <div key={day} className="rounded-2xl border border-zinc-800 bg-zinc-950 p-3">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-zinc-100">{WORK_DAYS.find((item) => item.value === day)?.label}</p>
+                      <button
+                        type="button"
+                        onClick={() => addDayRange(day)}
+                        disabled={ranges.length >= 2}
+                        className="rounded-lg border border-zinc-700 px-2.5 py-1 text-xs font-semibold text-zinc-300 disabled:opacity-40"
+                      >
+                        + Franja
+                      </button>
+                    </div>
+                    <div className="space-y-2">
+                      {ranges.map((range, index) => (
+                        <div key={`${day}-${index}`} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                          <Input
+                            label={`Inicio ${index + 1}`}
+                            type="time"
+                            value={range.start}
+                            onChange={(event) => updateDayRange(day, index, 'start', event.target.value)}
+                          />
+                          <Input
+                            label={`Fin ${index + 1}`}
+                            type="time"
+                            value={range.end}
+                            onChange={(event) => updateDayRange(day, index, 'end', event.target.value)}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeDayRange(day, index)}
+                            disabled={ranges.length <= 1}
+                            className="self-end rounded-lg border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-300 disabled:opacity-40"
+                          >
+                            Quitar
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
 
             {scheduleSuccess && (
@@ -404,8 +559,8 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
               </p>
               <p className="mt-1 text-xs text-zinc-600">
                 {selectedHasSpecialSchedule
-                  ? `Horario especial: ${String(selectedOverride?.opening_time).slice(0, 5)} - ${String(selectedOverride?.closing_time).slice(0, 5)}`
-                  : `Horario general: ${schedule.opening_time} - ${schedule.closing_time}`}
+                  ? `Horario especial: ${rangesSummary(selectedRanges)}`
+                  : `Horario general: ${rangesSummary(selectedRanges)}`}
               </p>
             </div>
             <Button
@@ -432,21 +587,42 @@ export function AgendaManager({ appointments, settings, closedDays }: AgendaMana
               </p>
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Input
-                label="Abertura"
-                type="time"
-                disabled={selectedIsClosed}
-                value={daySchedule.opening_time}
-                onChange={(e) => setDaySchedule((current) => ({ ...current, opening_time: e.target.value }))}
-              />
-              <Input
-                label="Fecho"
-                type="time"
-                disabled={selectedIsClosed}
-                value={daySchedule.closing_time}
-                onChange={(e) => setDaySchedule((current) => ({ ...current, closing_time: e.target.value }))}
-              />
+            {daySchedule.time_ranges.map((range, index) => (
+              <div key={index} className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+                <Input
+                  label={`Abertura ${index + 1}`}
+                  type="time"
+                  disabled={selectedIsClosed}
+                  value={range.start}
+                  onChange={(event) => updateSpecialRange(index, 'start', event.target.value)}
+                />
+                <Input
+                  label={`Fecho ${index + 1}`}
+                  type="time"
+                  disabled={selectedIsClosed}
+                  value={range.end}
+                  onChange={(event) => updateSpecialRange(index, 'end', event.target.value)}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeSpecialRange(index)}
+                  disabled={selectedIsClosed || daySchedule.time_ranges.length <= 1}
+                  className="self-end rounded-lg border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-300 disabled:opacity-40"
+                >
+                  Quitar
+                </button>
+              </div>
+            ))}
+
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={addSpecialRange}
+                disabled={selectedIsClosed || daySchedule.time_ranges.length >= 2}
+                className="rounded-lg border border-zinc-700 px-3 py-2 text-sm font-semibold text-zinc-300 disabled:opacity-40"
+              >
+                + Agregar franja
+              </button>
             </div>
 
             <Input
@@ -627,14 +803,131 @@ function AgendaCalendar({
   )
 }
 
-function createDaySchedule(override: BusinessDayOverride | null, schedule: {
-  opening_time: string
-  closing_time: string
-  slot_duration_minutes: number
-}) {
+function createScheduleState(settings: BusinessSettings | null): ScheduleState {
+  const opening_time = String(settings?.opening_time ?? '09:00').slice(0, 5)
+  const closing_time = String(settings?.closing_time ?? '18:00').slice(0, 5)
+  const working_days = settings?.working_days?.length ? settings.working_days : [1, 2, 3, 4, 5]
+  const working_schedule = createWorkingSchedule(settings, working_days, opening_time, closing_time)
+
   return {
-    opening_time: String(override?.opening_time ?? schedule.opening_time).slice(0, 5),
-    closing_time: String(override?.closing_time ?? schedule.closing_time).slice(0, 5),
+    opening_time,
+    closing_time,
+    slot_duration_minutes: settings?.slot_duration_minutes ?? 30,
+    working_days,
+    available_months: createAvailableMonths(settings),
+    working_schedule,
+    time_zone: settings?.time_zone ?? 'Europe/Lisbon',
+  }
+}
+
+function createDaySchedule(override: BusinessDayOverride | null, schedule: ScheduleState, date = new Date()): DayScheduleState {
+  const day = new Date(`${override?.date ?? format(date, 'yyyy-MM-dd')}T00:00:00`).getDay()
+  const fallbackRanges = getRangesForDay(schedule, day)
+  const fallbackStart = fallbackRanges[0]?.start ?? schedule.opening_time
+  const fallbackEnd = fallbackRanges[fallbackRanges.length - 1]?.end ?? schedule.closing_time
+
+  return {
+    time_ranges: normalizeRanges(override?.time_ranges ?? [], override?.opening_time ?? fallbackStart, override?.closing_time ?? fallbackEnd),
     slot_duration_minutes: override?.slot_duration_minutes ?? schedule.slot_duration_minutes,
   }
+}
+
+function createWorkingSchedule(
+  settings: BusinessSettings | null,
+  workingDays: number[],
+  openingTime: string,
+  closingTime: string
+) {
+  const existing = settings?.working_schedule ?? {}
+  const schedule: Record<string, TimeRange[]> = {}
+
+  for (const day of workingDays) {
+    const key = String(day)
+    schedule[key] = normalizeRanges(existing[key] ?? [], openingTime, closingTime)
+  }
+
+  return schedule
+}
+
+function createAvailableMonths(settings: BusinessSettings | null) {
+  if (settings?.available_months?.length) return [...settings.available_months].filter(isMonthKey).sort()
+
+  const monthsToOpen = Math.max(1, Math.ceil((settings?.max_booking_days ?? 30) / 30))
+  return buildMonthChoices()
+    .slice(0, monthsToOpen)
+    .map((month) => month.key)
+}
+
+function buildMonthChoices() {
+  const start = startOfMonth(new Date())
+  return Array.from({ length: MAX_MONTH_CHOICES }, (_, index) => {
+    const date = addMonths(start, index)
+    return {
+      key: format(date, 'yyyy-MM'),
+      label: format(date, 'MMM yyyy', { locale: ptBR }),
+    }
+  })
+}
+
+function normalizeSchedule(schedule: ScheduleState): ScheduleState {
+  const working_schedule: Record<string, TimeRange[]> = {}
+  for (const day of schedule.working_days) {
+    working_schedule[String(day)] = normalizeRanges(
+      schedule.working_schedule[String(day)] ?? [],
+      schedule.opening_time,
+      schedule.closing_time
+    )
+  }
+
+  const primaryRange = getPrimaryRange({ ...schedule, working_schedule })
+
+  return {
+    ...schedule,
+    opening_time: primaryRange.start,
+    closing_time: primaryRange.end,
+    available_months: schedule.available_months.filter(isMonthKey).sort(),
+    working_schedule,
+  }
+}
+
+function getRangesForDay(schedule: ScheduleState, day: number) {
+  return normalizeRanges(schedule.working_schedule[String(day)] ?? [], schedule.opening_time, schedule.closing_time)
+}
+
+function normalizeRanges(ranges: TimeRange[], fallbackStart: string, fallbackEnd: string) {
+  const clean = ranges
+    .map((range) => ({ start: String(range.start ?? '').slice(0, 5), end: String(range.end ?? '').slice(0, 5) }))
+    .filter((range) => isTime(range.start) && isTime(range.end) && range.start < range.end)
+    .slice(0, 2)
+
+  if (clean.length) return clean
+  return [{ start: String(fallbackStart).slice(0, 5), end: String(fallbackEnd).slice(0, 5) }]
+}
+
+function getPrimaryRange(schedule: ScheduleState) {
+  const firstDay = schedule.working_days[0] ?? 1
+  const ranges = getRangesForDay(schedule, firstDay)
+  return {
+    start: ranges[0]?.start ?? schedule.opening_time,
+    end: ranges[ranges.length - 1]?.end ?? schedule.closing_time,
+  }
+}
+
+function rangesSummary(ranges: TimeRange[]) {
+  return ranges.map((range) => `${range.start} - ${range.end}`).join(' / ')
+}
+
+function hasOverrideSchedule(day: BusinessDayOverride) {
+  return Boolean(
+    day.time_ranges?.length ||
+      (day.opening_time && day.closing_time)
+  )
+}
+
+function isTime(value: string) {
+  return /^\d{2}:\d{2}$/.test(value)
+}
+
+function isMonthKey(value: string) {
+  return /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12
 }

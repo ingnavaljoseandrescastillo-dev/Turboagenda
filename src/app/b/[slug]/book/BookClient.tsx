@@ -255,6 +255,7 @@ export function BookClient({
               serviceId={selectedService}
               employeeId={selectedEmployee}
               maxBookingDays={settings?.max_booking_days ?? 30}
+              availableMonths={settings?.available_months ?? []}
               timeZone={timeZone}
               selected={selectedDatetime}
               primaryColor={theme.primary}
