@@ -3,6 +3,8 @@ export interface Business {
   slug: string
   name: string
   default_language?: 'pt' | 'en' | 'es'
+  dashboard_language?: 'pt' | 'en' | 'es'
+  public_language?: 'pt' | 'en' | 'es'
   currency?: 'EUR' | 'USD' | 'VES'
   description?: string
   phone?: string

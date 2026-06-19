@@ -1,4 +1,4 @@
-import { formatCurrency } from '@/lib/utils'
+import { formatCurrency, intlLocaleFromAppLocale, type AppLocale } from '@/lib/utils'
 import type { Service } from '@/types'
 
 interface ServiceSelectorProps {
@@ -7,6 +7,7 @@ interface ServiceSelectorProps {
   onSelect: (id: string) => void
   primaryColor?: string
   currency?: string
+  locale?: AppLocale
   title?: string
 }
 
@@ -16,6 +17,7 @@ export function ServiceSelector({
   onSelect,
   primaryColor = '#10b981',
   currency = 'EUR',
+  locale = 'pt',
   title = 'Escolha o servico',
 }: ServiceSelectorProps) {
   return (
@@ -44,7 +46,7 @@ export function ServiceSelector({
                   <p className="mt-1 text-xs text-zinc-500">{service.duration_minutes} min</p>
                 </div>
                 <p className="ml-4 flex-shrink-0 text-lg font-bold" style={{ color: primaryColor }}>
-                  {formatCurrency(service.price, currency)}
+                  {formatCurrency(service.price, currency, intlLocaleFromAppLocale(locale))}
                 </p>
               </div>
             </button>

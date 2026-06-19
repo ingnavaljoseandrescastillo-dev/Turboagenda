@@ -230,7 +230,8 @@ export default async function BusinessPublicPage({ params }: PageProps) {
     ? (revs.reduce((acc, r) => acc + r.rating, 0) / revs.length).toFixed(1)
     : null
   const theme = publicTheme(biz)
-  const copy = publicCopy[normalizePublicLocale(biz.default_language)]
+  const locale = normalizePublicLocale(biz.public_language ?? biz.default_language)
+  const copy = publicCopy[locale]
   const currency = biz.currency ?? 'EUR'
 
   return (
@@ -318,6 +319,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
               slug={slug}
               primaryColor={theme.primary}
               currency={currency}
+              locale={locale}
               labels={{ title: copy.services, book: copy.bookService }}
             />
           </section>

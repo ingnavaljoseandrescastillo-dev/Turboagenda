@@ -17,17 +17,114 @@ const settingsTabs: { id: SettingsTab; label: string; description: string }[] = 
   { id: 'notifications', label: 'Notificaciones', description: 'Email y WhatsApp' },
 ]
 
-const languageOptions: { value: Locale; label: string; helper: string }[] = [
-  { value: 'pt', label: 'Portugues de Portugal', helper: 'Idioma por defecto' },
-  { value: 'es', label: 'Espanol', helper: 'Panel y pagina publica en espanol' },
-  { value: 'en', label: 'English', helper: 'Dashboard and public page in English' },
-]
-
-const currencyOptions = [
-  { value: 'EUR', label: 'Euro (EUR)', helper: 'Portugal y Union Europea' },
-  { value: 'USD', label: 'Dolar (USD)', helper: 'Clientes internacionales' },
-  { value: 'VES', label: 'Bolivar (VES)', helper: 'Venezuela' },
-]
+const preferenceCopy = {
+  pt: {
+    tabs: {
+      profile: { label: 'Perfil', description: 'Dados básicos do negócio' },
+      public: { label: 'Página pública', description: 'Imagens, galeria e cores' },
+      preferences: { label: 'Preferências', description: 'Idioma e moeda' },
+      notifications: { label: 'Notificações', description: 'Email e WhatsApp' },
+    },
+    languageOptions: [
+      { value: 'pt', label: 'Português de Portugal', helper: 'Idioma principal em Portugal' },
+      { value: 'es', label: 'Espanhol', helper: 'Para negócios e clientes em espanhol' },
+      { value: 'en', label: 'Inglês', helper: 'Para uso internacional' },
+    ],
+    currencyOptions: [
+      { value: 'EUR', label: 'Euro (EUR)', helper: 'Portugal e União Europeia' },
+      { value: 'USD', label: 'Dólar (USD)', helper: 'Clientes internacionais' },
+      { value: 'VES', label: 'Bolívar (VES)', helper: 'Venezuela' },
+    ],
+    title: 'Preferências do negócio',
+    description: 'Defina o idioma do painel, o idioma do link público e a moeda dos preços.',
+    dashboardLanguage: 'Idioma do painel',
+    publicLanguage: 'Idioma do link público',
+    currency: 'Moeda',
+    appliesTo: 'Será aplicado em',
+    dashboardTitle: 'Painel interno',
+    dashboardDescription: 'Menus e telas do negócio abrem neste idioma.',
+    publicTitle: 'Link público',
+    publicDescription: 'Clientes veem serviços, reservas e mensagens públicas neste idioma.',
+    saved: 'Preferências guardadas.',
+    save: 'Guardar preferências',
+  },
+  es: {
+    tabs: {
+      profile: { label: 'Perfil', description: 'Datos básicos del negocio' },
+      public: { label: 'Página pública', description: 'Imágenes, galería y colores' },
+      preferences: { label: 'Preferencias', description: 'Idioma y moneda' },
+      notifications: { label: 'Notificaciones', description: 'Email y WhatsApp' },
+    },
+    languageOptions: [
+      { value: 'pt', label: 'Portugués de Portugal', helper: 'Idioma principal en Portugal' },
+      { value: 'es', label: 'Español', helper: 'Para negocios y clientes en español' },
+      { value: 'en', label: 'Inglés', helper: 'Para uso internacional' },
+    ],
+    currencyOptions: [
+      { value: 'EUR', label: 'Euro (EUR)', helper: 'Portugal y Unión Europea' },
+      { value: 'USD', label: 'Dólar (USD)', helper: 'Clientes internacionales' },
+      { value: 'VES', label: 'Bolívar (VES)', helper: 'Venezuela' },
+    ],
+    title: 'Preferencias del negocio',
+    description: 'Define el idioma del panel, el idioma del link público y la moneda de los precios.',
+    dashboardLanguage: 'Idioma del panel',
+    publicLanguage: 'Idioma del link público',
+    currency: 'Moneda',
+    appliesTo: 'Se aplicará en',
+    dashboardTitle: 'Panel interno',
+    dashboardDescription: 'Menús y pantallas del negocio se abren en este idioma.',
+    publicTitle: 'Link público',
+    publicDescription: 'Los clientes ven servicios, reservas y mensajes públicos en este idioma.',
+    saved: 'Preferencias guardadas.',
+    save: 'Guardar preferencias',
+  },
+  en: {
+    tabs: {
+      profile: { label: 'Profile', description: 'Basic business details' },
+      public: { label: 'Public page', description: 'Images, gallery and colors' },
+      preferences: { label: 'Preferences', description: 'Language and currency' },
+      notifications: { label: 'Notifications', description: 'Email and WhatsApp' },
+    },
+    languageOptions: [
+      { value: 'pt', label: 'Portuguese (Portugal)', helper: 'Primary language in Portugal' },
+      { value: 'es', label: 'Spanish', helper: 'For Spanish-speaking businesses and clients' },
+      { value: 'en', label: 'English', helper: 'For international use' },
+    ],
+    currencyOptions: [
+      { value: 'EUR', label: 'Euro (EUR)', helper: 'Portugal and the European Union' },
+      { value: 'USD', label: 'Dollar (USD)', helper: 'International clients' },
+      { value: 'VES', label: 'Bolivar (VES)', helper: 'Venezuela' },
+    ],
+    title: 'Business preferences',
+    description: 'Choose the dashboard language, public link language and price currency.',
+    dashboardLanguage: 'Dashboard language',
+    publicLanguage: 'Public link language',
+    currency: 'Currency',
+    appliesTo: 'Applies to',
+    dashboardTitle: 'Internal dashboard',
+    dashboardDescription: 'Business menus and screens open in this language.',
+    publicTitle: 'Public link',
+    publicDescription: 'Clients see services, bookings and public messages in this language.',
+    saved: 'Preferences saved.',
+    save: 'Save preferences',
+  },
+} satisfies Record<Locale, {
+  tabs: Record<SettingsTab, { label: string; description: string }>
+  languageOptions: { value: Locale; label: string; helper: string }[]
+  currencyOptions: { value: string; label: string; helper: string }[]
+  title: string
+  description: string
+  dashboardLanguage: string
+  publicLanguage: string
+  currency: string
+  appliesTo: string
+  dashboardTitle: string
+  dashboardDescription: string
+  publicTitle: string
+  publicDescription: string
+  saved: string
+  save: string
+}>
 
 export default function SettingsPage() {
   const router = useRouter()
@@ -47,6 +144,8 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     name: '',
     default_language: 'pt' as Locale,
+    dashboard_language: 'pt' as Locale,
+    public_language: 'pt' as Locale,
     currency: 'EUR',
     description: '',
     phone: '',
@@ -102,9 +201,13 @@ export default function SettingsPage() {
         const plan = json.data.subscription?.plan ?? 'trial'
         const whatsappAvailable = plan === 'plus'
         setSubscriptionPlan(plan)
+        const dashboardLanguage = normalizeLocale(b.dashboard_language ?? b.default_language)
+        const publicLanguage = normalizeLocale(b.public_language ?? b.default_language)
         setForm({
           name: b.name ?? '',
-          default_language: normalizeLocale(b.default_language),
+          default_language: dashboardLanguage,
+          dashboard_language: dashboardLanguage,
+          public_language: publicLanguage,
           currency: normalizeCurrency(b.currency),
           description: b.description ?? '',
           phone: b.phone ?? '',
@@ -119,7 +222,7 @@ export default function SettingsPage() {
           theme_text_color: b.theme_text_color ?? '#f4f4f5',
           theme_background_image_url: b.theme_background_image_url ?? '',
         })
-        setLocale(normalizeLocale(b.default_language))
+        setLocale(dashboardLanguage)
         if (settings) {
           setNotifications({
             email_notify_client_on_booking: settings.email_notify_client_on_booking ?? true,
@@ -172,7 +275,7 @@ export default function SettingsPage() {
         throw new Error(json.error ?? copy.saveError)
       }
       setSuccess(true)
-      setLocale(form.default_language)
+      setLocale(form.dashboard_language)
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : copy.saveError)
@@ -258,6 +361,11 @@ export default function SettingsPage() {
 
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
   const whatsappAvailable = subscriptionPlan === 'plus'
+  const preferencesText = preferenceCopy[form.dashboard_language] ?? preferenceCopy.pt
+  const visibleTabs = settingsTabs.map((tab) => ({
+    ...tab,
+    ...preferencesText.tabs[tab.id],
+  }))
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -267,7 +375,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 sm:grid-cols-4">
-        {settingsTabs.map((tab) => (
+        {visibleTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -529,44 +637,55 @@ export default function SettingsPage() {
       <Card className={activeTab === 'preferences' ? '' : 'hidden'}>
         <form onSubmit={handleSave} className="space-y-5">
           <div>
-            <h3 className="text-lg font-semibold text-zinc-100">Preferencias del negocio</h3>
-            <p className="text-sm text-zinc-500 mt-1">
-              Define como se abre el panel interno, el link publico y los precios.
-            </p>
+            <h3 className="text-lg font-semibold text-zinc-100">{preferencesText.title}</h3>
+            <p className="text-sm text-zinc-500 mt-1">{preferencesText.description}</p>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             <SelectCard
-              label="Idioma principal"
-              value={form.default_language}
-              options={languageOptions}
-              onChange={(value) => setForm((current) => ({ ...current, default_language: value as Locale }))}
+              label={preferencesText.dashboardLanguage}
+              value={form.dashboard_language}
+              options={preferencesText.languageOptions}
+              onChange={(value) => {
+                const locale = value as Locale
+                setForm((current) => ({
+                  ...current,
+                  default_language: locale,
+                  dashboard_language: locale,
+                }))
+              }}
             />
             <SelectCard
-              label="Moneda"
+              label={preferencesText.publicLanguage}
+              value={form.public_language}
+              options={preferencesText.languageOptions}
+              onChange={(value) => setForm((current) => ({ ...current, public_language: value as Locale }))}
+            />
+            <SelectCard
+              label={preferencesText.currency}
               value={form.currency}
-              options={currencyOptions}
+              options={preferencesText.currencyOptions}
               onChange={(value) => setForm((current) => ({ ...current, currency: value }))}
             />
           </div>
 
           <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
-            <p className="text-sm font-semibold text-zinc-100">Se aplicara en</p>
+            <p className="text-sm font-semibold text-zinc-100">{preferencesText.appliesTo}</p>
             <div className="mt-3 grid gap-3 md:grid-cols-2">
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-                <p className="text-xs font-semibold uppercase text-zinc-500">Panel interno</p>
-                <p className="mt-1 text-sm text-zinc-300">Menus y pantallas del negocio se abriran en el idioma elegido.</p>
+                <p className="text-xs font-semibold uppercase text-zinc-500">{preferencesText.dashboardTitle}</p>
+                <p className="mt-1 text-sm text-zinc-300">{preferencesText.dashboardDescription}</p>
               </div>
               <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
-                <p className="text-xs font-semibold uppercase text-zinc-500">Link publico</p>
-                <p className="mt-1 text-sm text-zinc-300">Clientes veran servicios, reserva y precios en esta configuracion.</p>
+                <p className="text-xs font-semibold uppercase text-zinc-500">{preferencesText.publicTitle}</p>
+                <p className="mt-1 text-sm text-zinc-300">{preferencesText.publicDescription}</p>
               </div>
             </div>
           </div>
 
           {success && (
             <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
-              Preferencias guardadas.
+              {preferencesText.saved}
             </p>
           )}
 
@@ -577,7 +696,7 @@ export default function SettingsPage() {
           )}
 
           <Button type="submit" loading={saving}>
-            Guardar preferencias
+            {preferencesText.save}
           </Button>
         </form>
       </Card>
