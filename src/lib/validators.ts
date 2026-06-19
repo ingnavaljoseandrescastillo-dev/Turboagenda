@@ -5,6 +5,29 @@ const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color invalido')
 const TimeZoneSchema = z.string().min(3).max(64).refine(isValidTimeZone, 'Zona horaria invalida')
 const LocaleSchema = z.enum(['pt', 'en', 'es'])
 const CurrencySchema = z.enum(['EUR', 'USD', 'VES'])
+const TimeSchema = z.string().regex(/^\d{2}:\d{2}$/, 'Horario invalido').refine((value) => {
+  const [hours, minutes] = value.split(':').map(Number)
+  return hours >= 0 && hours <= 23 && minutes >= 0 && minutes <= 59
+}, 'Horario invalido')
+export const TimeRangeSchema = z
+  .object({
+    start: TimeSchema,
+    end: TimeSchema,
+  })
+  .refine((value) => value.start < value.end, {
+    message: 'La hora de inicio debe ser menor que la hora de cierre',
+    path: ['end'],
+  })
+
+const MonthKeySchema = z.string().regex(/^\d{4}-\d{2}$/, 'Mes invalido').refine((value) => {
+  const month = Number(value.slice(5, 7))
+  return month >= 1 && month <= 12
+}, 'Mes invalido')
+
+const WorkingScheduleSchema = z.record(
+  z.string().regex(/^[0-6]$/, 'Dia invalido'),
+  z.array(TimeRangeSchema).min(1).max(2, 'Solo se permiten dos franjas por dia')
+)
 
 export const LoginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -106,12 +129,17 @@ export const BusinessSettingsSchema = z.object({
 })
 
 export const BusinessScheduleSchema = z.object({
-  opening_time: z.string().regex(/^\d{2}:\d{2}$/, 'Hora de abertura invalida'),
-  closing_time: z.string().regex(/^\d{2}:\d{2}$/, 'Hora de fecho invalida'),
+  opening_time: TimeSchema,
+  closing_time: TimeSchema,
   slot_duration_minutes: z.number().int().min(5).max(240),
   working_days: z.array(z.number().int().min(0).max(6)).min(1, 'Escolha pelo menos um dia de trabalho'),
   max_booking_days: z.number().int().min(1).max(365),
+  available_months: z.array(MonthKeySchema).max(24, 'Demasiados meses seleccionados').optional(),
+  working_schedule: WorkingScheduleSchema.optional(),
   time_zone: TimeZoneSchema,
+}).refine((value) => value.opening_time < value.closing_time, {
+  message: 'Hora de abertura deve ser menor que hora de fecho',
+  path: ['closing_time'],
 })
 
 export const BusinessCreateSchema = z.object({

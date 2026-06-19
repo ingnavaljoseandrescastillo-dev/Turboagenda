@@ -27,6 +27,8 @@ export interface BusinessSettings {
   slot_duration_minutes: number
   working_days: number[]
   max_booking_days: number
+  available_months?: string[]
+  working_schedule?: Record<string, TimeRange[]>
   time_zone?: string
   email_notify_client_on_booking?: boolean
   email_notify_business_on_booking?: boolean
@@ -45,11 +47,17 @@ export interface BusinessSettings {
   whatsapp_rebooking_reminder_message?: string
 }
 
+export interface TimeRange {
+  start: string
+  end: string
+}
+
 export interface BusinessDayOverride {
   date: string
   is_closed: boolean
   opening_time?: string | null
   closing_time?: string | null
+  time_ranges?: TimeRange[] | null
   slot_duration_minutes?: number | null
   note?: string | null
 }

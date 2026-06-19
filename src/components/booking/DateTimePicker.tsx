@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   addMonths,
   eachDayOfInterval,
@@ -23,6 +23,7 @@ interface DateTimePickerProps {
   serviceId: string
   employeeId: string
   maxBookingDays?: number
+  availableMonths?: string[]
   timeZone?: string
   primaryColor?: string
   onPrimaryColor?: string
@@ -46,6 +47,7 @@ export function DateTimePicker({
   serviceId,
   employeeId,
   maxBookingDays = 30,
+  availableMonths = [],
   timeZone = DEFAULT_BUSINESS_TIME_ZONE,
   primaryColor = '#10b981',
   onPrimaryColor = '#09090b',
@@ -57,10 +59,36 @@ export function DateTimePicker({
   const today = startOfDay(new Date())
   const maxDate = startOfDay(new Date())
   maxDate.setDate(maxDate.getDate() + Math.max(0, maxBookingDays - 1))
+  const sortedAvailableMonths = useMemo(
+    () => [...availableMonths].filter(isValidMonthKey).sort(),
+    [availableMonths]
+  )
+  const explicitMonthMode = sortedAvailableMonths.length > 0
+  const firstAvailableMonth = useMemo(
+    () => (explicitMonthMode ? monthKeyToDate(sortedAvailableMonths[0]) : startOfMonth(today)),
+    [explicitMonthMode, sortedAvailableMonths, today]
+  )
+  const lastAvailableMonth = useMemo(
+    () =>
+      explicitMonthMode
+        ? monthKeyToDate(sortedAvailableMonths[sortedAvailableMonths.length - 1])
+        : startOfMonth(maxDate),
+    [explicitMonthMode, maxDate, sortedAvailableMonths]
+  )
 
   const [selectedDate, setSelectedDate] = useState<Date>(today)
-  const [visibleMonth, setVisibleMonth] = useState<Date>(startOfMonth(today))
+  const [visibleMonth, setVisibleMonth] = useState<Date>(explicitMonthMode ? firstAvailableMonth : startOfMonth(today))
   const { slots, loading, error, fetchSlots } = useAvailability()
+
+  useEffect(() => {
+    if (!explicitMonthMode) return
+    const selectedKey = format(selectedDate, 'yyyy-MM')
+    if (sortedAvailableMonths.includes(selectedKey)) return
+
+    const nextDate = isBefore(firstAvailableMonth, today) ? today : firstAvailableMonth
+    setSelectedDate(nextDate)
+    setVisibleMonth(startOfMonth(nextDate))
+  }, [explicitMonthMode, firstAvailableMonth, selectedDate, sortedAvailableMonths, today])
 
   useEffect(() => {
     fetchSlots({
@@ -75,8 +103,14 @@ export function DateTimePicker({
   const monthEnd = endOfMonth(visibleMonth)
   const leadingBlanks = Array.from({ length: getDay(monthStart) })
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd })
-  const canGoPrev = isAfter(monthStart, startOfMonth(today))
-  const canGoNext = isBefore(endOfMonth(addMonths(visibleMonth, 1)), maxDate)
+  const previousMonth = startOfMonth(subMonths(visibleMonth, 1))
+  const nextMonth = startOfMonth(addMonths(visibleMonth, 1))
+  const canGoPrev = explicitMonthMode
+    ? !isBefore(previousMonth, firstAvailableMonth)
+    : isAfter(monthStart, startOfMonth(today))
+  const canGoNext = explicitMonthMode
+    ? !isAfter(nextMonth, lastAvailableMonth)
+    : isBefore(endOfMonth(addMonths(visibleMonth, 1)), maxDate)
   const dateLocale = localeCode === 'es' ? es : localeCode === 'en' ? enUS : ptBR
 
   function slotToIso(time: string) {
@@ -130,7 +164,8 @@ export function DateTimePicker({
             <div key={`blank-${index}`} className="aspect-square" />
           ))}
           {days.map((day) => {
-            const unavailable = isBefore(day, today) || isAfter(day, maxDate)
+            const monthAllowed = !explicitMonthMode || sortedAvailableMonths.includes(format(day, 'yyyy-MM'))
+            const unavailable = isBefore(day, today) || !monthAllowed || (!explicitMonthMode && isAfter(day, maxDate))
             const isSelected = isSameDay(day, selectedDate)
             return (
               <button
@@ -191,6 +226,15 @@ export function DateTimePicker({
       </div>
     </div>
   )
+}
+
+function isValidMonthKey(value: string) {
+  return /^\d{4}-\d{2}$/.test(value) && Number(value.slice(5, 7)) >= 1 && Number(value.slice(5, 7)) <= 12
+}
+
+function monthKeyToDate(value: string) {
+  const [year, month] = value.split('-').map(Number)
+  return new Date(year, month - 1, 1)
 }
 
 const defaultLabels = {
