@@ -86,8 +86,12 @@ export function DateTimePicker({
     if (sortedAvailableMonths.includes(selectedKey)) return
 
     const nextDate = isBefore(firstAvailableMonth, today) ? today : firstAvailableMonth
-    setSelectedDate(nextDate)
-    setVisibleMonth(startOfMonth(nextDate))
+    const timeoutId = window.setTimeout(() => {
+      setSelectedDate(nextDate)
+      setVisibleMonth(startOfMonth(nextDate))
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [explicitMonthMode, firstAvailableMonth, selectedDate, sortedAvailableMonths, today])
 
   useEffect(() => {
