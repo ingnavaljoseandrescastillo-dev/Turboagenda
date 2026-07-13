@@ -14,6 +14,7 @@ const ClientSchema = z.object({
   client_email: z.string().email('Email inválido'),
   client_phone: z.string().optional(),
   client_birthdate: z.string().optional(),
+  accepted_terms: z.boolean().refine((value) => value, 'Tem de aceitar os termos e a politica de privacidade'),
 })
 
 type ClientInput = z.infer<typeof ClientSchema>
@@ -34,6 +35,8 @@ interface BookingFormProps {
     phone: string
     birthdate: string
     birthdateHelper: string
+    legalConsent: string
+    legalConsentError: string
     submit: string
     createError: string
   }
@@ -57,9 +60,15 @@ export function BookingForm({
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<ClientInput>({ resolver: zodResolver(ClientSchema) })
+  } = useForm<ClientInput>({
+    resolver: zodResolver(ClientSchema),
+    defaultValues: { accepted_terms: false },
+  })
 
-  async function onSubmit(data: ClientInput) {
+  async function onSubmit(formData: ClientInput) {
+    const { accepted_terms: acceptedTerms, ...data } = formData
+    if (!acceptedTerms) return
+
     setServerError(null)
     try {
       const res = await fetch('/api/appointments', {
@@ -120,6 +129,28 @@ export function BookingForm({
           {...register('client_birthdate')}
         />
 
+        <label className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs leading-5 text-zinc-400">
+          <input
+            type="checkbox"
+            className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 accent-emerald-500"
+            {...register('accepted_terms')}
+          />
+          <span>
+            {labels.legalConsent}{' '}
+            <Link href="/termos" className="text-zinc-200 transition-colors hover:text-white">
+              Termos
+            </Link>{' '}
+            e a{' '}
+            <Link href="/privacidade" className="text-zinc-200 transition-colors hover:text-white">
+              Politica de Privacidade
+            </Link>
+            .
+          </span>
+        </label>
+        {errors.accepted_terms && (
+          <p className="text-xs text-red-400">{labels.legalConsentError}</p>
+        )}
+
         {serverError && (
           <p className="rounded-lg bg-red-500/10 border border-red-500/20 px-3 py-2 text-sm text-red-400">
             {serverError}
@@ -155,6 +186,8 @@ const defaultLabels = {
   phone: 'Telefone (opcional)',
   birthdate: 'Data de nascimento (opcional)',
   birthdateHelper: 'Usada apenas para mensagens de aniversario do negocio.',
+  legalConsent: 'Li e aceito os',
+  legalConsentError: 'Tem de aceitar os termos e a politica de privacidade para confirmar.',
   submit: 'Confirmar agendamento',
   createError: 'Erro ao criar agendamento',
 }

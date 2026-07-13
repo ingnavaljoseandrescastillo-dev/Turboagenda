@@ -3,12 +3,19 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
+import { z } from 'zod'
 import { RegisterSchema, type RegisterInput } from '@/lib/validators'
 import { useAuth } from '@/hooks/useAuth'
 import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
+
+const RegisterWithTermsSchema = RegisterSchema.extend({
+  acceptedTerms: z.boolean().refine((value) => value, 'Tem de aceitar os termos e a politica de privacidade'),
+})
+
+type RegisterWithTermsInput = RegisterInput & { acceptedTerms: boolean }
 
 export function RegisterForm() {
   const { register: registerUser } = useAuth()
@@ -21,12 +28,18 @@ export function RegisterForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterInput>({ resolver: zodResolver(RegisterSchema) })
+  } = useForm<RegisterWithTermsInput>({
+    resolver: zodResolver(RegisterWithTermsSchema),
+    defaultValues: { acceptedTerms: false },
+  })
 
-  async function onSubmit(data: RegisterInput) {
+  async function onSubmit(data: RegisterWithTermsInput) {
+    const { acceptedTerms, ...registrationData } = data
+    if (!acceptedTerms) return
+
     setServerError(null)
     try {
-      const result = await registerUser(data)
+      const result = await registerUser(registrationData)
       if (result === 'confirmation_required') setEmailSent(true)
     } catch (err) {
       setServerError(err instanceof Error ? err.message : r.error)
@@ -86,21 +99,31 @@ export function RegisterForm() {
         </p>
       )}
 
+      <label className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs leading-5 text-zinc-400">
+        <input
+          type="checkbox"
+          className="mt-1 h-4 w-4 rounded border-zinc-700 bg-zinc-950 accent-emerald-500"
+          {...register('acceptedTerms')}
+        />
+        <span>
+          {r.noCard} Ao criar conta, li e aceito os{' '}
+          <Link href="/termos" className="text-zinc-200 transition-colors hover:text-white">
+            Termos
+          </Link>{' '}
+          e a{' '}
+          <Link href="/privacidade" className="text-zinc-200 transition-colors hover:text-white">
+            Politica de Privacidade
+          </Link>
+          .
+        </span>
+      </label>
+      {errors.acceptedTerms && (
+        <p className="text-xs text-red-400">{errors.acceptedTerms.message}</p>
+      )}
+
       <Button type="submit" loading={isSubmitting} className="w-full mt-2">
         {r.submit}
       </Button>
-
-      <p className="text-center text-xs leading-5 text-zinc-500">
-        {r.noCard} Ao criar conta, aceita os{' '}
-        <Link href="/termos" className="text-zinc-300 transition-colors hover:text-white">
-          Termos
-        </Link>{' '}
-        e a{' '}
-        <Link href="/privacidade" className="text-zinc-300 transition-colors hover:text-white">
-          Politica de Privacidade
-        </Link>
-        .
-      </p>
 
       <p className="text-center text-sm text-zinc-500">
         {r.hasAccount}{' '}
