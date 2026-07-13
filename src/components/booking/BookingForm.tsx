@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -133,6 +134,14 @@ export function BookingForm({
         >
           {labels.submit}
         </Button>
+
+        <p className="text-center text-xs leading-5 text-zinc-500">
+          Ao confirmar, os seus dados serao usados para gerir esta marcacao. Consulte a{' '}
+          <Link href="/privacidade" className="text-zinc-300 transition-colors hover:text-white">
+            Politica de Privacidade
+          </Link>
+          .
+        </p>
       </form>
     </div>
   )

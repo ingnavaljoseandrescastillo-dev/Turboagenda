@@ -1,6 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
+import Link from 'next/link'
 import { Logo } from '@/components/ui/Logo'
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -30,9 +31,15 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           {children}
         </div>
 
-        <p className="text-center text-xs text-zinc-600 mt-6">
-          © 2026 TurboAgenda · turboagenda.pt
-        </p>
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-zinc-600">
+          <span>© 2026 TurboAgenda</span>
+          <Link href="/privacidade" className="transition-colors hover:text-zinc-400">
+            Privacidade
+          </Link>
+          <Link href="/termos" className="transition-colors hover:text-zinc-400">
+            Termos
+          </Link>
+        </div>
       </div>
     </div>
   )

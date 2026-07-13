@@ -219,8 +219,8 @@ export default function HomePage() {
               <span className="ml-2 text-xs">2026 · turboagenda.pt</span>
             </div>
             <div className="flex gap-5 text-xs">
-              <a className="cursor-pointer hover:text-zinc-300">{t.footer.privacy}</a>
-              <a className="cursor-pointer hover:text-zinc-300">{t.footer.terms}</a>
+              <Link href="/privacidade" className="hover:text-zinc-300">{t.footer.privacy}</Link>
+              <Link href="/termos" className="hover:text-zinc-300">{t.footer.terms}</Link>
               <a className="cursor-pointer hover:text-zinc-300">{t.footer.contact}</a>
             </div>
           </div>

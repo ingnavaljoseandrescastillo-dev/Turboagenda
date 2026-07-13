@@ -90,7 +90,17 @@ export function RegisterForm() {
         {r.submit}
       </Button>
 
-      <p className="text-center text-xs text-zinc-500">{r.noCard}</p>
+      <p className="text-center text-xs leading-5 text-zinc-500">
+        {r.noCard} Ao criar conta, aceita os{' '}
+        <Link href="/termos" className="text-zinc-300 transition-colors hover:text-white">
+          Termos
+        </Link>{' '}
+        e a{' '}
+        <Link href="/privacidade" className="text-zinc-300 transition-colors hover:text-white">
+          Politica de Privacidade
+        </Link>
+        .
+      </p>
 
       <p className="text-center text-sm text-zinc-500">
         {r.hasAccount}{' '}
