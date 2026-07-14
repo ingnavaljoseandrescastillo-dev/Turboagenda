@@ -18,6 +18,7 @@ export async function GET() {
 
     await ensureBusinessBootstrapRows(supabase, user.id, business.id)
     const plan = await getSubscriptionPlan(supabase, business.id)
+    const smsAvailable = plan === 'basic' || plan === 'plus'
     const whatsappAvailable = plan === 'plus'
 
     const { data, error } = await supabase
@@ -33,6 +34,8 @@ export async function GET() {
     const settings = (data ?? {}) as Record<string, unknown> & { whatsapp_enabled?: boolean }
     return formatResponse({
       ...settings,
+      sms_reminder_24h_enabled: smsAvailable ? Boolean(settings.sms_reminder_24h_enabled) : false,
+      sms_available: smsAvailable,
       whatsapp_enabled: whatsappAvailable ? Boolean(settings.whatsapp_enabled) : false,
       whatsapp_available: whatsappAvailable,
       plan,
@@ -54,7 +57,11 @@ export async function PATCH(request: NextRequest) {
     const parsed = NotificationSettingsSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
     const plan = await getSubscriptionPlan(supabase, business.id)
+    const smsAvailable = plan === 'basic' || plan === 'plus'
     const whatsappAvailable = plan === 'plus'
+    if (!smsAvailable && parsed.data.sms_reminder_24h_enabled) {
+      return handleError('SMS se activa al pasar al Plan Basic. El trial solo muestra la opcion.', 403)
+    }
     if (!whatsappAvailable && parsed.data.whatsapp_enabled) {
       return handleError('WhatsApp esta disponible solo en el Plan Plus. El Plan Basic mantiene recordatorios por email.', 403)
     }
@@ -63,6 +70,7 @@ export async function PATCH(request: NextRequest) {
       .from('business_settings')
       .update({
         ...parsed.data,
+        sms_reminder_24h_enabled: smsAvailable ? parsed.data.sms_reminder_24h_enabled : false,
         whatsapp_enabled: whatsappAvailable ? parsed.data.whatsapp_enabled : false,
         whatsapp_rebooking_reminder_enabled: whatsappAvailable
           ? parsed.data.whatsapp_rebooking_reminder_enabled
@@ -77,6 +85,8 @@ export async function PATCH(request: NextRequest) {
     if (error) return handleError(error.message, 422)
     return formatResponse({
       ...data,
+      sms_reminder_24h_enabled: smsAvailable ? Boolean(data?.sms_reminder_24h_enabled) : false,
+      sms_available: smsAvailable,
       whatsapp_enabled: whatsappAvailable ? Boolean(data?.whatsapp_enabled) : false,
       whatsapp_available: whatsappAvailable,
       plan,

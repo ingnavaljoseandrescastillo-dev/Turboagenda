@@ -200,6 +200,7 @@ export default function SettingsPage() {
         const b = json.data.business
         const settings = json.data.settings
         const plan = json.data.subscription?.plan ?? 'trial'
+        const smsAvailable = plan === 'basic' || plan === 'plus'
         const whatsappAvailable = plan === 'plus'
         setSubscriptionPlan(plan)
         const dashboardLanguage = normalizeLocale(b.dashboard_language ?? b.default_language)
@@ -230,7 +231,7 @@ export default function SettingsPage() {
             email_notify_business_on_booking: settings.email_notify_business_on_booking ?? true,
             email_reminder_24h_enabled: settings.email_reminder_24h_enabled ?? true,
             email_notify_client_on_cancellation: settings.email_notify_client_on_cancellation ?? true,
-            sms_reminder_24h_enabled: settings.sms_reminder_24h_enabled ?? false,
+            sms_reminder_24h_enabled: smsAvailable ? settings.sms_reminder_24h_enabled ?? false : false,
             email_rebooking_reminder_enabled: settings.email_rebooking_reminder_enabled ?? false,
             email_rebooking_reminder_delay_days: settings.email_rebooking_reminder_delay_days ?? 21,
             email_rebooking_reminder_message:
@@ -362,6 +363,7 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
+  const smsAvailable = subscriptionPlan === 'basic' || subscriptionPlan === 'plus'
   const whatsappAvailable = subscriptionPlan === 'plus'
   const preferencesText = preferenceCopy[form.dashboard_language] ?? preferenceCopy.pt
   const visibleTabs = settingsTabs.map((tab) => ({
@@ -785,17 +787,22 @@ export default function SettingsPage() {
             <div>
               <h4 className="text-sm font-semibold text-zinc-100">SMS</h4>
               <p className="mt-1 text-xs text-zinc-500">
-                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido. El Basic incluye 150 SMS al mes.
+                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido. Se activa al pasar a Basic o Plus.
               </p>
             </div>
             <ToggleRow
               label="Recordatorio SMS 1 o 2 dias antes"
-              description="Envia un SMS antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio."
-              checked={notifications.sms_reminder_24h_enabled}
+              description={
+                smsAvailable
+                  ? 'Envia un SMS antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio.'
+                  : 'El trial informa esta funcion, pero no envia SMS. Activa Basic para usar 150 SMS/mes.'
+              }
+              checked={smsAvailable && notifications.sms_reminder_24h_enabled}
+              disabled={!smsAvailable}
               onChange={(value) => setNotifications((current) => ({ ...current, sms_reminder_24h_enabled: value }))}
             />
             <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
-              Usa este canal para avisos de citas, no marketing. Incluye 150 SMS/mes por negocio; si el cliente no dejo telefono o el numero no es valido, el sistema lo omite.
+              Usa este canal para avisos de citas, no marketing. Basic incluye 150 SMS/mes por negocio; en trial queda bloqueado.
             </p>
           </div>
 

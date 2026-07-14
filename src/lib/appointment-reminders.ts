@@ -65,6 +65,12 @@ type ReminderClient = {
   email: string
 }
 
+type ReminderSubscription = {
+  business_id: string
+  plan: 'trial' | 'basic' | 'plus'
+  status: string
+}
+
 type ExistingEvent = {
   appointment_id: string | null
   channel: 'email' | 'sms'
@@ -140,6 +146,7 @@ export async function processAppointmentReminderEmails(
     { data: eventRows, error: eventsError },
     { data: clientRows, error: clientsError },
     { data: smsUsageRows, error: smsUsageError },
+    { data: subscriptionRows, error: subscriptionsError },
   ] = await Promise.all([
     admin.from('businesses').select('id, name, slug, phone').in('id', businessIds),
     admin.from('business_settings').select('business_id, email_reminder_24h_enabled, sms_reminder_24h_enabled, time_zone').in('business_id', businessIds),
@@ -165,6 +172,10 @@ export async function processAppointmentReminderEmails(
       .in('status', ['queued', 'sent'])
       .gte('created_at', getMonthStart(now).toISOString())
       .limit(10000),
+    admin
+      .from('subscriptions')
+      .select('business_id, plan, status')
+      .in('business_id', businessIds),
   ])
 
   if (businessesError) throw new Error(businessesError.message)
@@ -174,6 +185,7 @@ export async function processAppointmentReminderEmails(
   if (eventsError) throw new Error(eventsError.message)
   if (clientsError) throw new Error(clientsError.message)
   if (smsUsageError) throw new Error(smsUsageError.message)
+  if (subscriptionsError) throw new Error(subscriptionsError.message)
 
   const businesses = mapById((businessRows ?? []) as ReminderBusiness[])
   const settings = new Map(
@@ -193,10 +205,15 @@ export async function processAppointmentReminderEmails(
     ])
   )
   const smsUsage = countByBusiness((smsUsageRows ?? []) as SmsUsageEvent[])
+  const subscriptions = new Map(
+    ((subscriptionRows ?? []) as ReminderSubscription[]).map((row) => [row.business_id, row])
+  )
 
   for (const appointment of appointments) {
     const business = businesses.get(appointment.business_id)
     const businessSettings = settings.get(appointment.business_id)
+    const subscription = subscriptions.get(appointment.business_id)
+    const smsAvailable = subscription?.plan === 'basic' || subscription?.plan === 'plus'
 
     if (!business) {
       result.skipped += 1
@@ -257,6 +274,7 @@ export async function processAppointmentReminderEmails(
     const smsPhone = normalizeSmsPhone(appointment.client_phone)
     if (
       businessSettings?.sms_reminder_24h_enabled &&
+      smsAvailable &&
       smsPhone &&
       (smsUsage.get(appointment.business_id) ?? 0) < SMS_MONTHLY_LIMIT &&
       !alreadyHandled.has(`${appointment.id}:sms`)

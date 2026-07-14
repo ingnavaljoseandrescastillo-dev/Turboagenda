@@ -136,7 +136,7 @@ export default function HomePage() {
             <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-medium text-emerald-200">
               <span>30 dias gratis</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
-              <span>Primeiro mes a 12,60 EUR</span>
+              <span>SMS ativos ao passar para Basic</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
               <span>Depois 18 EUR por mes</span>
             </div>
@@ -152,7 +152,7 @@ export default function HomePage() {
                 <span className="text-xs text-zinc-500">/ mes</span>
               </div>
               <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
-                30 dias gratis. Primeiro pagamento com 30% de desconto.
+                30 dias gratis para testar a agenda. Ao ativar Basic, inclui 150 SMS/mes.
               </div>
               <a
                 href={basePlanSalesHref}
