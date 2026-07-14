@@ -72,6 +72,7 @@ export const NotificationSettingsSchema = z.object({
   email_notify_business_on_booking: z.boolean(),
   email_reminder_24h_enabled: z.boolean(),
   email_notify_client_on_cancellation: z.boolean(),
+  sms_reminder_24h_enabled: z.boolean(),
   email_rebooking_reminder_enabled: z.boolean(),
   email_rebooking_reminder_delay_days: z.number().int().min(1).max(365),
   email_rebooking_reminder_message: z.string().min(10).max(1000),

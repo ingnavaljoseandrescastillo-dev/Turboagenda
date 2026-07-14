@@ -14,7 +14,7 @@ const settingsTabs: { id: SettingsTab; label: string; description: string }[] = 
   { id: 'profile', label: 'Perfil', description: 'Datos basicos del negocio' },
   { id: 'public', label: 'Pagina publica', description: 'Imagenes, galeria y colores' },
   { id: 'preferences', label: 'Preferencias', description: 'Idioma y moneda' },
-  { id: 'notifications', label: 'Notificaciones', description: 'Email y WhatsApp' },
+  { id: 'notifications', label: 'Notificaciones', description: 'Email, SMS y WhatsApp' },
 ]
 
 const preferenceCopy = {
@@ -23,7 +23,7 @@ const preferenceCopy = {
       profile: { label: 'Perfil', description: 'Dados básicos do negócio' },
       public: { label: 'Página pública', description: 'Imagens, galeria e cores' },
       preferences: { label: 'Preferências', description: 'Idioma e moeda' },
-      notifications: { label: 'Notificações', description: 'Email e WhatsApp' },
+      notifications: { label: 'Notificações', description: 'Email, SMS e WhatsApp' },
     },
     languageOptions: [
       { value: 'pt', label: 'Português de Portugal', helper: 'Idioma principal em Portugal' },
@@ -53,7 +53,7 @@ const preferenceCopy = {
       profile: { label: 'Perfil', description: 'Datos básicos del negocio' },
       public: { label: 'Página pública', description: 'Imágenes, galería y colores' },
       preferences: { label: 'Preferencias', description: 'Idioma y moneda' },
-      notifications: { label: 'Notificaciones', description: 'Email y WhatsApp' },
+      notifications: { label: 'Notificaciones', description: 'Email, SMS y WhatsApp' },
     },
     languageOptions: [
       { value: 'pt', label: 'Portugués de Portugal', helper: 'Idioma principal en Portugal' },
@@ -83,7 +83,7 @@ const preferenceCopy = {
       profile: { label: 'Profile', description: 'Basic business details' },
       public: { label: 'Public page', description: 'Images, gallery and colors' },
       preferences: { label: 'Preferences', description: 'Language and currency' },
-      notifications: { label: 'Notifications', description: 'Email and WhatsApp' },
+      notifications: { label: 'Notifications', description: 'Email, SMS and WhatsApp' },
     },
     languageOptions: [
       { value: 'pt', label: 'Portuguese (Portugal)', helper: 'Primary language in Portugal' },
@@ -165,6 +165,7 @@ export default function SettingsPage() {
     email_notify_business_on_booking: true,
     email_reminder_24h_enabled: true,
     email_notify_client_on_cancellation: true,
+    sms_reminder_24h_enabled: false,
     email_rebooking_reminder_enabled: false,
     email_rebooking_reminder_delay_days: 21,
     email_rebooking_reminder_message:
@@ -229,6 +230,7 @@ export default function SettingsPage() {
             email_notify_business_on_booking: settings.email_notify_business_on_booking ?? true,
             email_reminder_24h_enabled: settings.email_reminder_24h_enabled ?? true,
             email_notify_client_on_cancellation: settings.email_notify_client_on_cancellation ?? true,
+            sms_reminder_24h_enabled: settings.sms_reminder_24h_enabled ?? false,
             email_rebooking_reminder_enabled: settings.email_rebooking_reminder_enabled ?? false,
             email_rebooking_reminder_delay_days: settings.email_rebooking_reminder_delay_days ?? 21,
             email_rebooking_reminder_message:
@@ -777,6 +779,24 @@ export default function SettingsPage() {
               checked={notifications.email_notify_client_on_cancellation}
               onChange={(value) => setNotifications((current) => ({ ...current, email_notify_client_on_cancellation: value }))}
             />
+          </div>
+
+          <div className="space-y-3 rounded-xl border border-zinc-800 bg-zinc-950/60 p-4">
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-100">SMS</h4>
+              <p className="mt-1 text-xs text-zinc-500">
+                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido.
+              </p>
+            </div>
+            <ToggleRow
+              label="Recordatorio SMS 24 horas antes"
+              description="Envia un SMS al cliente antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio."
+              checked={notifications.sms_reminder_24h_enabled}
+              onChange={(value) => setNotifications((current) => ({ ...current, sms_reminder_24h_enabled: value }))}
+            />
+            <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
+              Usa este canal para avisos de citas, no marketing. Si el cliente no dejo telefono o el numero no esta en formato valido, el sistema lo omite.
+            </p>
           </div>
 
           {!whatsappAvailable && (

@@ -23,7 +23,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('business_settings')
       .select(
-        'email_notify_client_on_booking, email_notify_business_on_booking, email_reminder_24h_enabled, email_notify_client_on_cancellation, whatsapp_enabled, whatsapp_notify_client_on_booking, whatsapp_notify_business_on_booking, whatsapp_reminder_24h_enabled, whatsapp_birthday_enabled'
+        'email_notify_client_on_booking, email_notify_business_on_booking, email_reminder_24h_enabled, email_notify_client_on_cancellation, sms_reminder_24h_enabled, whatsapp_enabled, whatsapp_notify_client_on_booking, whatsapp_notify_business_on_booking, whatsapp_reminder_24h_enabled, whatsapp_birthday_enabled'
           + ', email_rebooking_reminder_enabled, email_rebooking_reminder_delay_days, email_rebooking_reminder_message, whatsapp_rebooking_reminder_enabled, whatsapp_rebooking_reminder_delay_days, whatsapp_rebooking_reminder_message'
       )
       .eq('business_id', business.id)
@@ -70,7 +70,7 @@ export async function PATCH(request: NextRequest) {
       })
       .eq('business_id', business.id)
       .select(
-        'email_notify_client_on_booking, email_notify_business_on_booking, email_reminder_24h_enabled, email_notify_client_on_cancellation, email_rebooking_reminder_enabled, email_rebooking_reminder_delay_days, email_rebooking_reminder_message, whatsapp_enabled, whatsapp_notify_client_on_booking, whatsapp_notify_business_on_booking, whatsapp_reminder_24h_enabled, whatsapp_birthday_enabled, whatsapp_rebooking_reminder_enabled, whatsapp_rebooking_reminder_delay_days, whatsapp_rebooking_reminder_message'
+        'email_notify_client_on_booking, email_notify_business_on_booking, email_reminder_24h_enabled, email_notify_client_on_cancellation, sms_reminder_24h_enabled, email_rebooking_reminder_enabled, email_rebooking_reminder_delay_days, email_rebooking_reminder_message, whatsapp_enabled, whatsapp_notify_client_on_booking, whatsapp_notify_business_on_booking, whatsapp_reminder_24h_enabled, whatsapp_birthday_enabled, whatsapp_rebooking_reminder_enabled, whatsapp_rebooking_reminder_delay_days, whatsapp_rebooking_reminder_message'
       )
       .single()
 

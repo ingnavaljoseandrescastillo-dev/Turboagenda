@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getEmailFrom, getResend } from '@/lib/resend'
 import { getBusinessPublicUrl } from '@/lib/client-management'
+import { normalizeSmsPhone, sendSms } from '@/lib/twilio'
 import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
 
 type AdminClient = SupabaseClient
@@ -42,6 +43,7 @@ type ReminderBusiness = {
 type ReminderSettings = {
   business_id: string
   email_reminder_24h_enabled: boolean | null
+  sms_reminder_24h_enabled: boolean | null
   time_zone: string | null
 }
 
@@ -63,6 +65,7 @@ type ReminderClient = {
 
 type ExistingEvent = {
   appointment_id: string | null
+  channel: 'email' | 'sms'
 }
 
 const HOUR_MS = 60 * 60 * 1000
@@ -115,13 +118,13 @@ export async function processAppointmentReminderEmails(
     { data: clientRows, error: clientsError },
   ] = await Promise.all([
     admin.from('businesses').select('id, name, slug, phone').in('id', businessIds),
-    admin.from('business_settings').select('business_id, email_reminder_24h_enabled, time_zone').in('business_id', businessIds),
+    admin.from('business_settings').select('business_id, email_reminder_24h_enabled, sms_reminder_24h_enabled, time_zone').in('business_id', businessIds),
     admin.from('services').select('id, name').in('id', serviceIds),
     admin.from('employees').select('id, name').in('id', employeeIds),
     admin
       .from('notification_events')
-      .select('appointment_id')
-      .eq('channel', 'email')
+      .select('appointment_id, channel')
+      .in('channel', ['email', 'sms'])
       .eq('event_type', REMINDER_EVENT)
       .in('status', ['queued', 'sent'])
       .in('appointment_id', appointmentIds),
@@ -146,8 +149,8 @@ export async function processAppointmentReminderEmails(
   const employees = mapById((employeeRows ?? []) as ReminderEmployee[])
   const alreadyHandled = new Set(
     ((eventRows ?? []) as ExistingEvent[])
-      .map((event) => event.appointment_id)
-      .filter(Boolean) as string[]
+      .filter((event) => event.appointment_id)
+      .map((event) => `${event.appointment_id}:${event.channel}`)
   )
   const clientsByBusinessEmail = new Map(
     ((clientRows ?? []) as ReminderClient[]).map((client) => [
@@ -160,58 +163,114 @@ export async function processAppointmentReminderEmails(
     const business = businesses.get(appointment.business_id)
     const businessSettings = settings.get(appointment.business_id)
 
-    if (!business || !appointment.client_email || businessSettings?.email_reminder_24h_enabled === false) {
+    if (!business) {
       result.skipped += 1
       continue
     }
 
-    if (alreadyHandled.has(appointment.id)) {
-      result.skipped += 1
-      continue
-    }
-
-    result.due += 1
     const timeZone = normalizeTimeZone(businessSettings?.time_zone)
     const serviceName = services.get(appointment.service_id)?.name ?? 'Servico'
     const employeeName = employees.get(appointment.employee_id)?.name ?? 'Profissional'
     const publicUrl = getBusinessPublicUrl(business)
     const when = formatDateTime(appointment.start_time, timeZone)
-    const client = clientsByBusinessEmail.get(clientKey(appointment.business_id, appointment.client_email))
+    const client = appointment.client_email
+      ? clientsByBusinessEmail.get(clientKey(appointment.business_id, appointment.client_email))
+      : undefined
     const message = `Ola ${appointment.client_name}, este e um lembrete da sua reserva em ${business.name} para ${when}.`
+    let handledAppointment = false
 
-    if (dryRun) {
-      continue
+    if (
+      appointment.client_email &&
+      businessSettings?.email_reminder_24h_enabled !== false &&
+      !alreadyHandled.has(`${appointment.id}:email`)
+    ) {
+      result.due += 1
+      handledAppointment = true
+
+      if (!dryRun) {
+        const sent = await sendReminderEmail({
+          appointment,
+          business,
+          serviceName,
+          employeeName,
+          publicUrl,
+          when,
+          message,
+        })
+
+        await insertReminderEvent({
+          admin,
+          appointment,
+          business,
+          clientId: client?.id ?? null,
+          channel: 'email',
+          recipientPhone: appointment.client_phone,
+          serviceName,
+          employeeName,
+          publicUrl,
+          timeZone,
+          message,
+          status: sent.ok ? 'sent' : 'failed',
+          error: sent.error,
+        })
+
+        if (sent.ok) result.sent += 1
+        else result.failed += 1
+      }
     }
 
-    const sent = await sendReminderEmail({
-      appointment,
-      business,
-      serviceName,
-      employeeName,
-      publicUrl,
-      when,
-      message,
-    })
+    const smsPhone = normalizeSmsPhone(appointment.client_phone)
+    if (
+      businessSettings?.sms_reminder_24h_enabled &&
+      smsPhone &&
+      !alreadyHandled.has(`${appointment.id}:sms`)
+    ) {
+      result.due += 1
+      handledAppointment = true
+      const smsMessage = buildReminderSms({
+        clientName: appointment.client_name,
+        businessName: business.name,
+        when,
+        businessPhone: business.phone,
+      })
 
-    await insertReminderEvent({
-      admin,
-      appointment,
-      business,
-      clientId: client?.id ?? null,
-      serviceName,
-      employeeName,
-      publicUrl,
-      timeZone,
-      message,
-      status: sent.ok ? 'sent' : 'failed',
-      error: sent.error,
-    })
+      if (!dryRun) {
+        const sent = await sendReminderSms(smsPhone, smsMessage)
 
-    if (sent.ok) result.sent += 1
-    else result.failed += 1
+        await insertReminderEvent({
+          admin,
+          appointment,
+          business,
+          clientId: client?.id ?? null,
+          channel: 'sms',
+          recipientPhone: smsPhone,
+          serviceName,
+          employeeName,
+          publicUrl,
+          timeZone,
+          message: smsMessage,
+          status: sent.ok ? 'sent' : 'failed',
+          error: sent.error,
+        })
+
+        if (sent.ok) result.sent += 1
+        else result.failed += 1
+      }
+    }
+
+    if (!handledAppointment) result.skipped += 1
   }
 
   return result
+}
+
+async function sendReminderSms(to: string, message: string) {
+  try {
+    await sendSms({ to, body: message })
+    return { ok: true, error: null }
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'SMS send failed' }
+  }
 }
 
 async function sendReminderEmail({
@@ -260,6 +319,8 @@ async function insertReminderEvent({
   appointment,
   business,
   clientId,
+  channel,
+  recipientPhone,
   serviceName,
   employeeName,
   publicUrl,
@@ -272,6 +333,8 @@ async function insertReminderEvent({
   appointment: ReminderAppointment
   business: ReminderBusiness
   clientId: string | null
+  channel: 'email' | 'sms'
+  recipientPhone: string | null
   serviceName: string
   employeeName: string
   publicUrl: string
@@ -285,11 +348,11 @@ async function insertReminderEvent({
     business_id: business.id,
     appointment_id: appointment.id,
     client_id: clientId,
-    channel: 'email',
+    channel,
     event_type: REMINDER_EVENT,
     recipient_type: 'client',
     recipient_name: appointment.client_name,
-    recipient_phone: appointment.client_phone,
+    recipient_phone: recipientPhone,
     recipient_email: appointment.client_email,
     status,
     scheduled_for: scheduledFor,
@@ -309,6 +372,21 @@ async function insertReminderEvent({
   })
 
   if (insertError) throw new Error(insertError.message)
+}
+
+function buildReminderSms({
+  clientName,
+  businessName,
+  when,
+  businessPhone,
+}: {
+  clientName: string
+  businessName: string
+  when: string
+  businessPhone: string | null
+}) {
+  const contact = businessPhone ? ` Se nao puder comparecer, contacte ${businessPhone}.` : ''
+  return `Ola ${clientName}, lembrete da sua reserva em ${businessName}: ${when}.${contact}`
 }
 
 function reminderEmailHtml({
