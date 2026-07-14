@@ -46,6 +46,7 @@ type ReminderSettings = {
   business_id: string
   email_reminder_24h_enabled: boolean | null
   sms_reminder_24h_enabled: boolean | null
+  sms_trial_override_until: string | null
   time_zone: string | null
 }
 
@@ -149,7 +150,7 @@ export async function processAppointmentReminderEmails(
     { data: subscriptionRows, error: subscriptionsError },
   ] = await Promise.all([
     admin.from('businesses').select('id, name, slug, phone').in('id', businessIds),
-    admin.from('business_settings').select('business_id, email_reminder_24h_enabled, sms_reminder_24h_enabled, time_zone').in('business_id', businessIds),
+    admin.from('business_settings').select('business_id, email_reminder_24h_enabled, sms_reminder_24h_enabled, sms_trial_override_until, time_zone').in('business_id', businessIds),
     admin.from('services').select('id, name').in('id', serviceIds),
     admin.from('employees').select('id, name').in('id', employeeIds),
     admin
@@ -213,7 +214,7 @@ export async function processAppointmentReminderEmails(
     const business = businesses.get(appointment.business_id)
     const businessSettings = settings.get(appointment.business_id)
     const subscription = subscriptions.get(appointment.business_id)
-    const smsAvailable = subscription?.plan === 'basic' || subscription?.plan === 'plus'
+    const smsAvailable = isSmsAvailable(subscription, businessSettings?.sms_trial_override_until)
 
     if (!business) {
       result.skipped += 1
@@ -523,6 +524,11 @@ function countByBusiness(items: SmsUsageEvent[]) {
 
 function getMonthStart(now: Date) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+}
+
+function isSmsAvailable(subscription: ReminderSubscription | undefined, overrideUntil?: string | null) {
+  if (subscription?.plan === 'basic' || subscription?.plan === 'plus') return true
+  return Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now())
 }
 
 function clientKey(businessId: string, email: string) {

@@ -140,6 +140,7 @@ export default function SettingsPage() {
   const [error, setError] = useState<string | null>(null)
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState('trial')
+  const [smsTrialOverrideUntil, setSmsTrialOverrideUntil] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [form, setForm] = useState({
     name: '',
@@ -200,9 +201,10 @@ export default function SettingsPage() {
         const b = json.data.business
         const settings = json.data.settings
         const plan = json.data.subscription?.plan ?? 'trial'
-        const smsAvailable = plan === 'basic' || plan === 'plus'
+        const smsAvailable = isSmsAvailable(plan, settings?.sms_trial_override_until)
         const whatsappAvailable = plan === 'plus'
         setSubscriptionPlan(plan)
+        setSmsTrialOverrideUntil(settings?.sms_trial_override_until ?? null)
         const dashboardLanguage = normalizeLocale(b.dashboard_language ?? b.default_language)
         const publicLanguage = normalizeLocale(b.public_language ?? b.default_language)
         setForm({
@@ -345,6 +347,7 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...notifications,
+          sms_reminder_24h_enabled: smsAvailable ? notifications.sms_reminder_24h_enabled : false,
           whatsapp_enabled: subscriptionPlan === 'plus' ? notifications.whatsapp_enabled : false,
         }),
       })
@@ -363,7 +366,7 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
-  const smsAvailable = subscriptionPlan === 'basic' || subscriptionPlan === 'plus'
+  const smsAvailable = isSmsAvailable(subscriptionPlan, smsTrialOverrideUntil)
   const whatsappAvailable = subscriptionPlan === 'plus'
   const preferencesText = preferenceCopy[form.dashboard_language] ?? preferenceCopy.pt
   const visibleTabs = settingsTabs.map((tab) => ({
@@ -1010,6 +1013,11 @@ function readableTextColor(hex: string) {
   const g = parseInt(normalized.slice(2, 4), 16)
   const b = parseInt(normalized.slice(4, 6), 16)
   return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
+}
+
+function isSmsAvailable(plan: string, overrideUntil?: string | null) {
+  if (plan === 'basic' || plan === 'plus') return true
+  return Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now())
 }
 
 function ToggleRow({
