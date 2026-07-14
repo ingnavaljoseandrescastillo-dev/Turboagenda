@@ -70,9 +70,14 @@ type ExistingEvent = {
   channel: 'email' | 'sms'
 }
 
+type SmsUsageEvent = {
+  business_id: string
+}
+
 const HOUR_MS = 60 * 60 * 1000
 const MINUTE_MS = 60 * 1000
 const REMINDER_EVENT = 'appointment_reminder_24h'
+const SMS_MONTHLY_LIMIT = 150
 
 function getReminderWindow(now: Date, options: AppointmentReminderOptions) {
   if (typeof options.targetHours === 'number' && typeof options.windowMinutes === 'number') {
@@ -134,6 +139,7 @@ export async function processAppointmentReminderEmails(
     { data: employeeRows, error: employeesError },
     { data: eventRows, error: eventsError },
     { data: clientRows, error: clientsError },
+    { data: smsUsageRows, error: smsUsageError },
   ] = await Promise.all([
     admin.from('businesses').select('id, name, slug, phone').in('id', businessIds),
     admin.from('business_settings').select('business_id, email_reminder_24h_enabled, sms_reminder_24h_enabled, time_zone').in('business_id', businessIds),
@@ -150,6 +156,15 @@ export async function processAppointmentReminderEmails(
       .from('clients')
       .select('id, business_id, email')
       .in('business_id', businessIds),
+    admin
+      .from('notification_events')
+      .select('business_id')
+      .in('business_id', businessIds)
+      .eq('channel', 'sms')
+      .eq('event_type', REMINDER_EVENT)
+      .in('status', ['queued', 'sent'])
+      .gte('created_at', getMonthStart(now).toISOString())
+      .limit(10000),
   ])
 
   if (businessesError) throw new Error(businessesError.message)
@@ -158,6 +173,7 @@ export async function processAppointmentReminderEmails(
   if (employeesError) throw new Error(employeesError.message)
   if (eventsError) throw new Error(eventsError.message)
   if (clientsError) throw new Error(clientsError.message)
+  if (smsUsageError) throw new Error(smsUsageError.message)
 
   const businesses = mapById((businessRows ?? []) as ReminderBusiness[])
   const settings = new Map(
@@ -176,6 +192,7 @@ export async function processAppointmentReminderEmails(
       client,
     ])
   )
+  const smsUsage = countByBusiness((smsUsageRows ?? []) as SmsUsageEvent[])
 
   for (const appointment of appointments) {
     const business = businesses.get(appointment.business_id)
@@ -241,6 +258,7 @@ export async function processAppointmentReminderEmails(
     if (
       businessSettings?.sms_reminder_24h_enabled &&
       smsPhone &&
+      (smsUsage.get(appointment.business_id) ?? 0) < SMS_MONTHLY_LIMIT &&
       !alreadyHandled.has(`${appointment.id}:sms`)
     ) {
       result.due += 1
@@ -273,6 +291,7 @@ export async function processAppointmentReminderEmails(
 
         if (sent.ok) result.sent += 1
         else result.failed += 1
+        if (sent.ok) smsUsage.set(appointment.business_id, (smsUsage.get(appointment.business_id) ?? 0) + 1)
       }
     }
 
@@ -474,6 +493,18 @@ function unique(values: string[]) {
 
 function mapById<T extends { id: string }>(items: T[]) {
   return new Map(items.map((item) => [item.id, item]))
+}
+
+function countByBusiness(items: SmsUsageEvent[]) {
+  const counts = new Map<string, number>()
+  for (const item of items) {
+    counts.set(item.business_id, (counts.get(item.business_id) ?? 0) + 1)
+  }
+  return counts
+}
+
+function getMonthStart(now: Date) {
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
 }
 
 function clientKey(businessId: string, email: string) {

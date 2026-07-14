@@ -732,8 +732,8 @@ export default function SettingsPage() {
               onChange={(value) => setNotifications((current) => ({ ...current, email_notify_business_on_booking: value }))}
             />
             <ToggleRow
-              label="Recordatorio al cliente 24 horas antes"
-              description="Activa el futuro recordatorio por email antes de la cita."
+              label="Recordatorio al cliente 1 o 2 dias antes"
+              description="Envia un email el dia anterior o hasta dos dias antes de la cita, segun la hora del cron."
               checked={notifications.email_reminder_24h_enabled}
               onChange={(value) => setNotifications((current) => ({ ...current, email_reminder_24h_enabled: value }))}
             />
@@ -785,17 +785,17 @@ export default function SettingsPage() {
             <div>
               <h4 className="text-sm font-semibold text-zinc-100">SMS</h4>
               <p className="mt-1 text-xs text-zinc-500">
-                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido.
+                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido. El Basic incluye 150 SMS al mes.
               </p>
             </div>
             <ToggleRow
-              label="Recordatorio SMS 24 horas antes"
-              description="Envia un SMS al cliente antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio."
+              label="Recordatorio SMS 1 o 2 dias antes"
+              description="Envia un SMS antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio."
               checked={notifications.sms_reminder_24h_enabled}
               onChange={(value) => setNotifications((current) => ({ ...current, sms_reminder_24h_enabled: value }))}
             />
             <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
-              Usa este canal para avisos de citas, no marketing. Si el cliente no dejo telefono o el numero no esta en formato valido, el sistema lo omite.
+              Usa este canal para avisos de citas, no marketing. Incluye 150 SMS/mes por negocio; si el cliente no dejo telefono o el numero no es valido, el sistema lo omite.
             </p>
           </div>
 

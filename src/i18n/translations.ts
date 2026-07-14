@@ -59,8 +59,8 @@ const pt = {
     lockedBtn: '🔒 Em breve',
     basic: {
       name: 'Básico',
-      yearlyNote: '≈ 209,90€/ano',
-      features: ['1 colaborador', 'Agenda online ilimitada', 'Lembretes por email', 'Galeria 5 fotos', 'Avaliações', 'Suporte por email'],
+      yearlyNote: 'Aprox. 216 EUR/ano',
+      features: ['1 colaborador', 'Agenda online ilimitada', 'Lembretes por email e SMS', '150 SMS/mes incluidos', 'Lembrete 1 ou 2 dias antes', 'Galeria 5 fotos', 'Avaliacoes', 'Suporte por email'],
     },
     plus: {
       name: 'Plus',
@@ -287,8 +287,8 @@ const en: typeof pt = {
     lockedBtn: '🔒 Coming soon',
     basic: {
       name: 'Basic',
-      yearlyNote: '≈ €209.90/year',
-      features: ['1 staff member', 'Unlimited online booking', 'Email reminders', '5-photo gallery', 'Reviews', 'Email support'],
+      yearlyNote: 'Approx. 216 EUR/year',
+      features: ['1 staff member', 'Unlimited online booking', 'Email and SMS reminders', '150 SMS/month included', 'Reminder 1 or 2 days before', '5-photo gallery', 'Reviews', 'Email support'],
     },
     plus: {
       name: 'Plus',
@@ -515,8 +515,8 @@ const es: typeof pt = {
     lockedBtn: '🔒 Próximamente',
     basic: {
       name: 'Básico',
-      yearlyNote: '≈ 209,90€/año',
-      features: ['1 colaborador', 'Agenda online ilimitada', 'Recordatorios por email', 'Galería 5 fotos', 'Valoraciones', 'Soporte por email'],
+      yearlyNote: 'Aprox. 216 EUR/anio',
+      features: ['1 colaborador', 'Agenda online ilimitada', 'Recordatorios por email y SMS', '150 SMS/mes incluidos', 'Recordatorio 1 o 2 dias antes', 'Galeria 5 fotos', 'Valoraciones', 'Soporte por email'],
     },
     plus: {
       name: 'Plus',

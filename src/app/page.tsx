@@ -136,9 +136,9 @@ export default function HomePage() {
             <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-medium text-emerald-200">
               <span>30 dias gratis</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
-              <span>Primeiro mes a 10,49 EUR</span>
+              <span>Primeiro mes a 12,60 EUR</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
-              <span>Depois 14,99 EUR por mes</span>
+              <span>Depois 18 EUR por mes</span>
             </div>
           </div>
 
@@ -147,7 +147,7 @@ export default function HomePage() {
               <div className="mb-2 text-sm font-medium text-zinc-400">{p.basic.name}</div>
               <div className="mb-1 flex items-baseline gap-2">
                 <span className="text-4xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                  14,99 EUR
+                  18 EUR
                 </span>
                 <span className="text-xs text-zinc-500">/ mes</span>
               </div>
