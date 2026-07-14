@@ -9,6 +9,8 @@ type AdminClient = SupabaseClient
 type AppointmentReminderOptions = {
   dryRun?: boolean
   now?: Date
+  targetHours?: number
+  windowMinutes?: number
 }
 
 type AppointmentReminderResult = {
@@ -69,7 +71,24 @@ type ExistingEvent = {
 }
 
 const HOUR_MS = 60 * 60 * 1000
+const MINUTE_MS = 60 * 1000
 const REMINDER_EVENT = 'appointment_reminder_24h'
+
+function getReminderWindow(now: Date, options: AppointmentReminderOptions) {
+  if (typeof options.targetHours === 'number' && typeof options.windowMinutes === 'number') {
+    const target = now.getTime() + options.targetHours * HOUR_MS
+    const halfWindow = (options.windowMinutes * MINUTE_MS) / 2
+    return {
+      windowStart: new Date(target - halfWindow),
+      windowEnd: new Date(target + halfWindow),
+    }
+  }
+
+  return {
+    windowStart: new Date(now.getTime() + 20 * HOUR_MS),
+    windowEnd: new Date(now.getTime() + 44 * HOUR_MS),
+  }
+}
 
 export async function processAppointmentReminderEmails(
   admin: AdminClient,
@@ -77,8 +96,7 @@ export async function processAppointmentReminderEmails(
 ): Promise<AppointmentReminderResult> {
   const dryRun = Boolean(options.dryRun)
   const now = options.now ?? new Date()
-  const windowStart = new Date(now.getTime() + 20 * HOUR_MS)
-  const windowEnd = new Date(now.getTime() + 44 * HOUR_MS)
+  const { windowStart, windowEnd } = getReminderWindow(now, options)
 
   const result: AppointmentReminderResult = {
     scanned: 0,

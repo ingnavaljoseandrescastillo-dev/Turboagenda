@@ -13,7 +13,13 @@ export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
     const dryRun = url.searchParams.get('dry_run') === '1'
-    const result = await processAppointmentReminderEmails(createAdminClient(), { dryRun })
+    const targetHours = parseNumberParam(url.searchParams.get('target_hours'), 1, 168)
+    const windowMinutes = parseNumberParam(url.searchParams.get('window_minutes'), 5, 180)
+    const result = await processAppointmentReminderEmails(createAdminClient(), {
+      dryRun,
+      targetHours,
+      windowMinutes,
+    })
     return NextResponse.json({ ok: true, result })
   } catch (err) {
     console.error('[cron appointment reminders] failed', err)
@@ -22,4 +28,11 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
+}
+
+function parseNumberParam(value: string | null, min: number, max: number) {
+  if (!value) return undefined
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) return undefined
+  return parsed
 }
