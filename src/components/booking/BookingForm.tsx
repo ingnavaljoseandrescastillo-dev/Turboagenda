@@ -11,10 +11,13 @@ import { DEFAULT_BUSINESS_TIME_ZONE, formatDateTime } from '@/lib/utils'
 
 const ClientSchema = z.object({
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  client_email: z.string().email('Email inválido'),
+  client_email: z.string().email('Email invalido').optional().or(z.literal('')),
   client_phone: z.string().optional(),
   client_birthdate: z.string().optional(),
   accepted_terms: z.boolean().refine((value) => value, 'Tem de aceitar os termos e a politica de privacidade'),
+}).refine((value) => Boolean(value.client_email || value.client_phone), {
+  message: 'Informe email ou telefone para contacto',
+  path: ['client_phone'],
 })
 
 type ClientInput = z.infer<typeof ClientSchema>
@@ -182,8 +185,8 @@ const defaultLabels = {
   title: 'Os seus dados',
   appointmentFor: 'Agendamento para',
   name: 'Nome completo',
-  email: 'Email',
-  phone: 'Telefone (opcional)',
+  email: 'Email (opcional)',
+  phone: 'Telefone',
   birthdate: 'Data de nascimento (opcional)',
   birthdateHelper: 'Usada apenas para mensagens de aniversario do negocio.',
   legalConsent: 'Li e aceito os',

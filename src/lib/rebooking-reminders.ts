@@ -32,7 +32,7 @@ type RebookingAppointment = {
   id: string
   business_id: string
   client_name: string
-  client_email: string
+  client_email: string | null
   client_phone: string | null
   start_time: string
   end_time: string
@@ -188,6 +188,7 @@ async function processBusinessRebooking({
 
   const latestByEmail = new Map<string, RebookingAppointment>()
   for (const appointment of (pastAppointments ?? []) as RebookingAppointment[]) {
+    if (!appointment.client_email) continue
     const key = appointment.client_email.toLowerCase()
     if (!latestByEmail.has(key)) latestByEmail.set(key, appointment)
   }

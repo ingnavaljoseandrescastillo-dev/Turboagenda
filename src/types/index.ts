@@ -109,7 +109,7 @@ export interface Appointment {
   service_id: string
   employee_id: string
   client_name: string
-  client_email: string
+  client_email: string | null
   client_phone?: string
   start_time: string
   end_time: string

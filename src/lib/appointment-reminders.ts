@@ -28,7 +28,7 @@ type ReminderAppointment = {
   service_id: string
   employee_id: string
   client_name: string
-  client_email: string
+  client_email: string | null
   client_phone: string | null
   start_time: string
   end_time: string
@@ -239,10 +239,11 @@ export async function processAppointmentReminderEmails(
     ) {
       result.due += 1
       handledAppointment = true
+      const emailAppointment = { ...appointment, client_email: appointment.client_email }
 
       if (!dryRun) {
         const sent = await sendReminderEmail({
-          appointment,
+          appointment: emailAppointment,
           business,
           serviceName,
           employeeName,
@@ -338,7 +339,7 @@ async function sendReminderEmail({
   when,
   message,
 }: {
-  appointment: ReminderAppointment
+  appointment: ReminderAppointment & { client_email: string }
   business: ReminderBusiness
   serviceName: string
   employeeName: string

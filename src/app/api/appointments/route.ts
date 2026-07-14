@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       p_service_id: parsed.data.service_id,
       p_employee_id: parsed.data.employee_id,
       p_client_name: parsed.data.client_name,
-      p_client_email: parsed.data.client_email,
+      p_client_email: parsed.data.client_email || null,
       p_client_phone: parsed.data.client_phone ?? null,
       p_client_birthdate: parsed.data.client_birthdate || null,
       p_start_time: parsed.data.start_time,

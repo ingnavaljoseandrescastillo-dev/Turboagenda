@@ -5,7 +5,7 @@ import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
 type AppointmentEmailData = {
   id: string
   client_name: string
-  client_email: string
+  client_email: string | null
   client_phone: string | null
   start_time: string
   end_time: string
@@ -64,7 +64,7 @@ async function sendAppointmentEmails(appointmentId: string, kind: AppointmentEma
     const sends = []
 
     if (kind === 'created') {
-      if (clientBookingEnabled) {
+      if (clientBookingEnabled && appointment.client_email) {
         sends.push(
           resend.emails.send({
             from,
@@ -102,7 +102,7 @@ async function sendAppointmentEmails(appointmentId: string, kind: AppointmentEma
       }
     }
 
-    if (kind === 'cancelled' && cancellationEnabled) {
+    if (kind === 'cancelled' && cancellationEnabled && appointment.client_email) {
       sends.push(
         resend.emails.send({
           from,
@@ -188,7 +188,7 @@ function appointmentBusinessHtml({
 }: {
   businessName: string
   clientName: string
-  clientEmail: string
+  clientEmail: string | null
   clientPhone: string | null
   serviceName: string
   employeeName: string
@@ -200,7 +200,7 @@ function appointmentBusinessHtml({
       <p>Nova reserva recebida.</p>
       <div class="box">
         <p><strong>Cliente:</strong> ${escapeHtml(clientName)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(clientEmail)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(clientEmail || 'Nao informado')}</p>
         <p><strong>Telefone:</strong> ${escapeHtml(clientPhone || 'Nao informado')}</p>
         <p><strong>Servico:</strong> ${escapeHtml(serviceName)}</p>
         <p><strong>Profissional:</strong> ${escapeHtml(employeeName)}</p>

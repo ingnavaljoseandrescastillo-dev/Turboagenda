@@ -142,6 +142,7 @@ function buildClientSummaries(
   const byEmail = new Map<string, AppointmentWithRelations[]>()
 
   for (const appointment of appointments) {
+    if (!appointment.client_email) continue
     const key = appointment.client_email.toLowerCase()
     const list = byEmail.get(key) ?? []
     list.push(appointment)

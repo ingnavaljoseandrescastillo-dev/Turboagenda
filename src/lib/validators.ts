@@ -60,11 +60,14 @@ export const AppointmentSchema = z.object({
   service_id: z.string().uuid(),
   employee_id: z.string().uuid(),
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  client_email: z.string().email('Email inválido'),
+  client_email: z.string().email('Email invalido').optional().or(z.literal('')),
   client_phone: z.string().optional(),
   client_birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de nascimento invalida').optional().or(z.literal('')),
   start_time: z.string().datetime(),
   notes: z.string().optional(),
+}).refine((value) => Boolean(value.client_email || value.client_phone), {
+  message: 'Informe email ou telefone para contacto',
+  path: ['client_phone'],
 })
 
 export const NotificationSettingsSchema = z.object({
