@@ -59,7 +59,7 @@ const pt = {
     lockedBtn: '🔒 Em breve',
     basic: {
       name: 'Básico',
-      yearlyNote: 'Aprox. 216 EUR/ano',
+      yearlyNote: 'Aprox. 215.88 EUR/ano',
       features: ['1 colaborador', 'Agenda online ilimitada', 'Lembretes por email e SMS', '150 SMS/mes no Basic ativo', 'Lembrete 1 ou 2 dias antes', 'Galeria 5 fotos', 'Avaliacoes', 'Suporte por email'],
     },
     plus: {
@@ -287,7 +287,7 @@ const en: typeof pt = {
     lockedBtn: '🔒 Coming soon',
     basic: {
       name: 'Basic',
-      yearlyNote: 'Approx. 216 EUR/year',
+      yearlyNote: 'Approx. 215.88 EUR/year',
       features: ['1 staff member', 'Unlimited online booking', 'Email and SMS reminders', '150 SMS/month with active Basic', 'Reminder 1 or 2 days before', '5-photo gallery', 'Reviews', 'Email support'],
     },
     plus: {
@@ -515,7 +515,7 @@ const es: typeof pt = {
     lockedBtn: '🔒 Próximamente',
     basic: {
       name: 'Básico',
-      yearlyNote: 'Aprox. 216 EUR/anio',
+      yearlyNote: 'Aprox. 215.88 EUR/anio',
       features: ['1 colaborador', 'Agenda online ilimitada', 'Recordatorios por email y SMS', '150 SMS/mes con Basic activo', 'Recordatorio 1 o 2 dias antes', 'Galeria 5 fotos', 'Valoraciones', 'Soporte por email'],
     },
     plus: {

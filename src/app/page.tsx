@@ -138,7 +138,7 @@ export default function HomePage() {
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
               <span>SMS ativos ao passar para Basic</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
-              <span>Depois 18 EUR por mes</span>
+              <span>Depois 17.99 EUR por mes</span>
             </div>
           </div>
 
@@ -147,7 +147,7 @@ export default function HomePage() {
               <div className="mb-2 text-sm font-medium text-zinc-400">{p.basic.name}</div>
               <div className="mb-1 flex items-baseline gap-2">
                 <span className="text-4xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                  18 EUR
+                  17.99 EUR
                 </span>
                 <span className="text-xs text-zinc-500">/ mes</span>
               </div>
