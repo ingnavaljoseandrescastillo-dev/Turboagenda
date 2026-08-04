@@ -23,7 +23,13 @@ export default async function BookPage({ params, searchParams }: PageProps) {
   if (business.is_paused) notFound()
 
   const [{ data: services }, { data: employees }, { data: settings }] = await Promise.all([
-    supabase.from('services').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
+    supabase
+      .from('services')
+      .select('*')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('name'),
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
     supabase.from('business_settings').select('*').eq('business_id', business.id).maybeSingle(),
   ])

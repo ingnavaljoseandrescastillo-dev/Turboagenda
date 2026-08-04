@@ -89,6 +89,7 @@ export interface Service {
   duration_minutes: number
   price: number
   is_active: boolean
+  deleted_at?: string | null
   created_at: string
 }
 

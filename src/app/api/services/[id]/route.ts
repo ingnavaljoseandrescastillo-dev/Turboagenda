@@ -42,14 +42,16 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
 
     const { id } = await params
 
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('services')
-      .delete()
+      .update({ is_active: false, deleted_at: new Date().toISOString() })
       .eq('id', id)
       .eq('business_id', business.id)
+      .select('id')
+      .single()
 
     if (error) return handleError(error.message)
-    return formatResponse({ deleted: true })
+    return formatResponse({ deleted: true, id: data.id })
   } catch (err) {
     return handleError(err)
   }

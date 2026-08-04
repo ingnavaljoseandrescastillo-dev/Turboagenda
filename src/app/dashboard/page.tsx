@@ -27,10 +27,11 @@ async function getDashboardData() {
     .order('start_time')
 
   const appts = (data ?? []) as Appointment[]
+  const visibleAppointments = appts.filter((appointment) => appointment.status !== 'cancelled')
 
   return {
     business,
-    appointments: appts,
+    appointments: visibleAppointments,
     metrics: {
       total: appts.length,
       pending: appts.filter((a) => a.status === 'pending').length,

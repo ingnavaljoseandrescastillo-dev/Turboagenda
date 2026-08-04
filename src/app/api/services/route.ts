@@ -14,6 +14,7 @@ export async function GET() {
       .from('services')
       .select('*')
       .eq('business_id', business.id)
+      .is('deleted_at', null)
       .order('name')
 
     if (error) return handleError(error.message)

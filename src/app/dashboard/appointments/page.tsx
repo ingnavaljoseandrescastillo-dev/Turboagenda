@@ -21,6 +21,7 @@ export default async function AppointmentsPage() {
     .from('appointments')
     .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
     .eq('business_id', business.id)
+    .neq('status', 'cancelled')
     .order('start_time', { ascending: false })
     .limit(100)
 
