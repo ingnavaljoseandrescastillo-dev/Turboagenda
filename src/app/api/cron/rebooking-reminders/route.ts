@@ -13,16 +13,18 @@ export async function GET(request: Request) {
 
   try {
     const admin = createAdminClient()
-    const [rebooking, subscriptionExpiryPush] = await Promise.all([
+    const [rebooking, adminSubscriptionExpiryPush, businessSubscriptionExpiryPush] = await Promise.all([
       processRebookingReminders(admin),
-      sendSubscriptionExpiryPushReminders(admin),
+      sendSubscriptionExpiryPushReminders(admin, { audience: 'admin', daysAhead: 1 }),
+      sendSubscriptionExpiryPushReminders(admin, { audience: 'business', daysAhead: 2 }),
     ])
 
     return NextResponse.json({
       ok: true,
       result: {
         rebooking,
-        subscriptionExpiryPush,
+        adminSubscriptionExpiryPush,
+        businessSubscriptionExpiryPush,
       },
     })
   } catch (err) {

@@ -129,10 +129,11 @@ export async function sendAdminBusinessRegisteredPush({
 
 export async function sendSubscriptionExpiryPushReminders(
   admin: AdminClient,
-  options: { now?: Date; daysAhead?: number } = {}
+  options: { now?: Date; daysAhead?: number; audience?: PushAudience } = {}
 ) {
   const now = options.now ?? new Date()
   const daysAhead = options.daysAhead ?? 1
+  const audience = options.audience ?? 'admin'
   const targetDateKey = getDateKey(new Date(now.getTime() + daysAhead * DAY_MS), LISBON_TIME_ZONE)
   const result = { scanned: 0, due: 0, sent: 0, failed: 0, skipped: 0 }
 
@@ -162,13 +163,20 @@ export async function sendSubscriptionExpiryPushReminders(
       continue
     }
 
-    const eventKey = `subscription-expiry:${business.id}:${targetDateKey}`
+    const amount = formatCurrency((subscription.price_cents ?? 0) / 100, subscription.currency ?? 'EUR')
+    const notice = buildSubscriptionExpiryNotice({
+      audience,
+      business,
+      amount,
+      daysAhead,
+    })
+    const eventKey = `subscription-expiry:${audience}:${business.id}:${targetDateKey}:${daysAhead}`
     const wasClaimed = await claimPushEvent(admin, {
       eventKey,
-      audience: 'admin',
+      audience,
       businessId: business.id,
-      title: 'Cliente por vencer',
-      body: `${business.name} vence manana. Revisa si pago antes de desactivar.`,
+      title: notice.title,
+      body: notice.body,
     })
 
     if (!wasClaimed) {
@@ -176,12 +184,16 @@ export async function sendSubscriptionExpiryPushReminders(
       continue
     }
 
-    const amount = formatCurrency((subscription.price_cents ?? 0) / 100, subscription.currency ?? 'EUR')
-    const sendResult = await sendPushToAdmins(admin, {
-      title: 'Cliente por vencer',
-      body: `${business.name} vence manana (${amount}). Revisa si pago antes de desactivar.`,
-      url: `/admin/businesses/${business.id}`,
-    })
+    const sendResult =
+      audience === 'admin'
+        ? await sendPushToAdmins(admin, {
+            ...notice,
+            url: `/admin/businesses/${business.id}`,
+          })
+        : await sendPushToBusiness(admin, business.id, {
+            ...notice,
+            url: '/dashboard/settings',
+          })
 
     result.sent += sendResult.sent
     result.failed += sendResult.failed
@@ -189,6 +201,33 @@ export async function sendSubscriptionExpiryPushReminders(
   }
 
   return result
+}
+
+function buildSubscriptionExpiryNotice({
+  audience,
+  business,
+  amount,
+  daysAhead,
+}: {
+  audience: PushAudience
+  business: NonNullable<SubscriptionDueRow['businesses']>
+  amount: string
+  daysAhead: number
+}) {
+  if (audience === 'business') {
+    return {
+      title: 'A tua subscricao vence em breve',
+      body: `A subscricao do ${business.name} vence em ${daysAhead} dias (${amount}). Regulariza para manter os avisos ativos.`,
+    }
+  }
+
+  return {
+    title: 'Cliente por vencer',
+    body:
+      daysAhead === 1
+        ? `${business.name} vence manana (${amount}). Revisa si pago antes de desactivar.`
+        : `${business.name} vence en ${daysAhead} dias (${amount}). Revisa si pago antes de desactivar.`,
+  }
 }
 
 export async function sendPushToBusiness(admin: AdminClient, businessId: string, payload: PushPayload) {
