@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getEmailFrom, getResend } from '@/lib/resend'
 import { getBusinessPublicUrl } from '@/lib/client-management'
+import { sendMessageFailurePush, type MessageFailureEvent } from '@/lib/push-notifications'
 import { normalizeSmsPhone, sendSms } from '@/lib/twilio'
 import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
 
@@ -293,7 +294,7 @@ export async function processAppointmentReminderEmails(
       if (!dryRun) {
         const sent = await sendReminderSms(smsPhone, smsMessage)
 
-        await insertReminderEvent({
+        const event = await insertReminderEvent({
           admin,
           appointment,
           business,
@@ -307,10 +308,15 @@ export async function processAppointmentReminderEmails(
           message: smsMessage,
           status: sent.ok ? 'sent' : 'failed',
           error: sent.error,
+          providerMessageId: sent.providerMessageId,
+          providerStatus: sent.providerStatus,
         })
 
         if (sent.ok) result.sent += 1
-        else result.failed += 1
+        else {
+          result.failed += 1
+          await sendMessageFailurePush(admin, event, { notifyBusiness: true })
+        }
         if (sent.ok) smsUsage.set(appointment.business_id, (smsUsage.get(appointment.business_id) ?? 0) + 1)
       }
     }
@@ -323,10 +329,20 @@ export async function processAppointmentReminderEmails(
 
 async function sendReminderSms(to: string, message: string) {
   try {
-    await sendSms({ to, body: message })
-    return { ok: true, error: null }
+    const result = await sendSms({ to, body: message })
+    return {
+      ok: true,
+      error: null,
+      providerMessageId: result.sid,
+      providerStatus: result.status,
+    }
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : 'SMS send failed' }
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : 'SMS send failed',
+      providerMessageId: null,
+      providerStatus: null,
+    }
   }
 }
 
@@ -385,6 +401,8 @@ async function insertReminderEvent({
   message,
   status,
   error,
+  providerMessageId,
+  providerStatus,
 }: {
   admin: AdminClient
   appointment: ReminderAppointment
@@ -399,36 +417,45 @@ async function insertReminderEvent({
   message: string
   status: 'sent' | 'failed'
   error: string | null
+  providerMessageId?: string | null
+  providerStatus?: string | null
 }) {
   const scheduledFor = new Date(new Date(appointment.start_time).getTime() - 24 * HOUR_MS).toISOString()
-  const { error: insertError } = await admin.from('notification_events').insert({
-    business_id: business.id,
-    appointment_id: appointment.id,
-    client_id: clientId,
-    channel,
-    event_type: REMINDER_EVENT,
-    recipient_type: 'client',
-    recipient_name: appointment.client_name,
-    recipient_phone: recipientPhone,
-    recipient_email: appointment.client_email,
-    status,
-    scheduled_for: scheduledFor,
-    payload: {
-      message,
-      public_url: publicUrl,
-      business_name: business.name,
-      business_phone: business.phone,
-      service_name: serviceName,
-      employee_name: employeeName,
-      appointment_start: appointment.start_time,
-      appointment_end: appointment.end_time,
-      time_zone: timeZone,
-    },
-    error,
-    sent_at: status === 'sent' ? new Date().toISOString() : null,
-  })
+  const { data, error: insertError } = await admin
+    .from('notification_events')
+    .insert({
+      business_id: business.id,
+      appointment_id: appointment.id,
+      client_id: clientId,
+      channel,
+      event_type: REMINDER_EVENT,
+      recipient_type: 'client',
+      recipient_name: appointment.client_name,
+      recipient_phone: recipientPhone,
+      recipient_email: appointment.client_email,
+      status,
+      scheduled_for: scheduledFor,
+      payload: {
+        message,
+        public_url: publicUrl,
+        business_name: business.name,
+        business_phone: business.phone,
+        service_name: serviceName,
+        employee_name: employeeName,
+        appointment_start: appointment.start_time,
+        appointment_end: appointment.end_time,
+        time_zone: timeZone,
+      },
+      error,
+      sent_at: status === 'sent' ? new Date().toISOString() : null,
+      provider_message_id: providerMessageId,
+      provider_status: providerStatus,
+    })
+    .select('id, business_id, appointment_id, channel, event_type, recipient_name, recipient_phone, status, error, payload, provider_message_id, provider_status')
+    .single()
 
   if (insertError) throw new Error(insertError.message)
+  return data as MessageFailureEvent
 }
 
 function buildReminderSms({

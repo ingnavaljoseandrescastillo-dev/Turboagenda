@@ -68,6 +68,21 @@ type PushResult = {
   skipped: number
 }
 
+export type MessageFailureEvent = {
+  id: string
+  business_id: string
+  appointment_id: string | null
+  channel: string
+  event_type: string
+  recipient_name: string | null
+  recipient_phone: string | null
+  status: string
+  error: string | null
+  payload: Record<string, unknown> | null
+  provider_message_id?: string | null
+  provider_status?: string | null
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000
 const LISBON_TIME_ZONE = 'Europe/Lisbon'
 
@@ -124,6 +139,66 @@ export async function sendAdminBusinessRegisteredPush({
     })
   } catch (err) {
     console.error('[push business registered] failed', err)
+  }
+}
+
+export async function sendMessageFailurePush(
+  admin: AdminClient,
+  event: MessageFailureEvent,
+  options: { notifyBusiness?: boolean } = {}
+) {
+  try {
+    const [business, appointment] = await Promise.all([
+      loadBusinessForPush(admin, event.business_id),
+      event.appointment_id ? loadAppointmentForPush(admin, event.appointment_id) : Promise.resolve(null),
+    ])
+
+    if (!business) return
+
+    const channel = event.channel.toUpperCase()
+    const recipient = event.recipient_name || event.recipient_phone || 'cliente'
+    const reason = event.error || event.provider_status || 'sem detalhe do provedor'
+    const appointmentText = appointment
+      ? ` Cita: ${appointment.client_name}, ${formatDateTime(appointment.start_time)}.`
+      : ''
+
+    const adminEventKey = `message-failed:admin:${event.id}:${event.provider_status ?? event.status}`
+    const adminClaimed = await claimPushEvent(admin, {
+      eventKey: adminEventKey,
+      audience: 'admin',
+      businessId: event.business_id,
+      title: `${channel} fallido`,
+      body: `${business.name}: fallo el mensaje para ${recipient}.${appointmentText} Motivo: ${reason}`,
+    })
+
+    if (adminClaimed) {
+      await sendPushToAdmins(admin, {
+        title: `${channel} fallido`,
+        body: `${business.name}: fallo el mensaje para ${recipient}.${appointmentText}`,
+        url: `/admin/businesses/${event.business_id}`,
+      })
+    }
+
+    if (!options.notifyBusiness || event.channel !== 'sms' || event.event_type !== 'appointment_reminder_24h') return
+
+    const businessEventKey = `message-failed:business:${event.id}:${event.provider_status ?? event.status}`
+    const businessClaimed = await claimPushEvent(admin, {
+      eventKey: businessEventKey,
+      audience: 'business',
+      businessId: event.business_id,
+      title: 'SMS nao entregue',
+      body: `O lembrete por SMS para ${recipient} nao foi entregue. Confirma o telefone do cliente.`,
+    })
+
+    if (businessClaimed) {
+      await sendPushToBusiness(admin, event.business_id, {
+        title: 'SMS nao entregue',
+        body: `O lembrete por SMS para ${recipient} nao foi entregue. Confirma o telefone do cliente.`,
+        url: '/dashboard/clients',
+      })
+    }
+  } catch (err) {
+    console.error('[push message failure] failed', err)
   }
 }
 
@@ -314,6 +389,28 @@ async function loadAppointmentPushData(admin: AdminClient, appointmentId: string
     ...appointment,
     business_settings: (settings as AppointmentPushData['business_settings']) ?? null,
   }
+}
+
+async function loadBusinessForPush(admin: AdminClient, businessId: string) {
+  const { data, error } = await admin
+    .from('businesses')
+    .select('id, name, slug')
+    .eq('id', businessId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data as { id: string; name: string; slug: string } | null
+}
+
+async function loadAppointmentForPush(admin: AdminClient, appointmentId: string) {
+  const { data, error } = await admin
+    .from('appointments')
+    .select('id, client_name, start_time')
+    .eq('id', appointmentId)
+    .maybeSingle()
+
+  if (error) throw new Error(error.message)
+  return data as { id: string; client_name: string; start_time: string } | null
 }
 
 async function claimPushEvent(

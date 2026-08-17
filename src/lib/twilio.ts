@@ -3,6 +3,7 @@ import twilio from 'twilio'
 type SmsMessage = {
   to: string
   body: string
+  statusCallback?: string
 }
 
 let twilioClient: ReturnType<typeof twilio> | null = null
@@ -22,7 +23,7 @@ export function getTwilioClient() {
   return twilioClient
 }
 
-export async function sendSms({ to, body }: SmsMessage) {
+export async function sendSms({ to, body, statusCallback }: SmsMessage) {
   const messagingServiceSid = process.env.TWILIO_MESSAGING_SERVICE_SID
   const from = process.env.TWILIO_PHONE_NUMBER
 
@@ -34,6 +35,7 @@ export async function sendSms({ to, body }: SmsMessage) {
   return client.messages.create({
     to,
     body,
+    statusCallback: statusCallback ?? process.env.TWILIO_STATUS_CALLBACK_URL ?? 'https://turboagenda.pt/api/twilio/message-status',
     ...(messagingServiceSid ? { messagingServiceSid } : { from }),
   })
 }
