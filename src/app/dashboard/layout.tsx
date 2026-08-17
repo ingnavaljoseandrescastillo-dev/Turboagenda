@@ -4,6 +4,7 @@ import { getBusinessForUser } from '@/lib/api-helpers'
 import { DashboardPreferenceSync } from '@/components/dashboard/DashboardPreferenceSync'
 import { MobileBottomNav, Sidebar } from '@/components/dashboard/Sidebar'
 import { TopNav } from '@/components/dashboard/TopNav'
+import { PushNotificationManager } from '@/components/pwa/PushNotificationManager'
 import type { ReactNode } from 'react'
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
@@ -26,6 +27,7 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         </main>
       </div>
       <MobileBottomNav />
+      <PushNotificationManager audience="business" businessId={business?.id ?? null} />
     </div>
   )
 }

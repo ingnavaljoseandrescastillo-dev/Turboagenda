@@ -7,6 +7,7 @@ import {
   handleError,
   validateAuth,
 } from '@/lib/api-helpers'
+import { sendAdminBusinessRegisteredPush } from '@/lib/push-notifications'
 import { slugify } from '@/lib/utils'
 
 function uniqueSlug(name: string) {
@@ -73,6 +74,7 @@ export async function POST(request: NextRequest) {
     if (error) return handleError(error.message, 422)
 
     await ensureBusinessBootstrapRows(supabase, user.id, data.id)
+    await sendAdminBusinessRegisteredPush({ businessId: data.id, businessName: data.name })
     return formatResponse(data, 201)
   } catch (err) {
     return handleError(err)

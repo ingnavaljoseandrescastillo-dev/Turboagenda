@@ -27,6 +27,36 @@ self.addEventListener('fetch', (event) => {
   }
 })
 
+self.addEventListener('push', (event) => {
+  const data = event.data?.json?.() ?? {}
+  const title = data.title || 'TurboAgenda'
+  const options = {
+    body: data.body || 'Tens uma nova notificacao.',
+    icon: data.icon || '/pwa-icon-192.png',
+    badge: data.badge || '/pwa-icon-192.png',
+    data: {
+      url: data.url || '/',
+    },
+  }
+
+  event.waitUntil(self.registration.showNotification(title, options))
+})
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close()
+  const url = event.notification.data?.url || '/'
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clients) => {
+        const matchingClient = clients.find((client) => client.url.includes(url))
+        if (matchingClient) return matchingClient.focus()
+        return self.clients.openWindow(url)
+      })
+  )
+})
+
 async function staleWhileRevalidate(request) {
   const cache = await caches.open(CACHE_NAME)
   const cached = await cache.match(request)

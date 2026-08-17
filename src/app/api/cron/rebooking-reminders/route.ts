@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { processRebookingReminders } from '@/lib/rebooking-reminders'
+import { sendSubscriptionExpiryPushReminders } from '@/lib/push-notifications'
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -11,8 +12,19 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await processRebookingReminders(createAdminClient())
-    return NextResponse.json({ ok: true, result })
+    const admin = createAdminClient()
+    const [rebooking, subscriptionExpiryPush] = await Promise.all([
+      processRebookingReminders(admin),
+      sendSubscriptionExpiryPushReminders(admin),
+    ])
+
+    return NextResponse.json({
+      ok: true,
+      result: {
+        rebooking,
+        subscriptionExpiryPush,
+      },
+    })
   } catch (err) {
     console.error('[cron rebooking reminders] failed', err)
     return NextResponse.json(

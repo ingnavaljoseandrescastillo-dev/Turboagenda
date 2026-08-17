@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { PushNotificationManager } from '@/components/pwa/PushNotificationManager'
 
 export const metadata: Metadata = {
   title: {
@@ -23,5 +24,10 @@ export const metadata: Metadata = {
 }
 
 export default function AdminLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return children
+  return (
+    <>
+      {children}
+      <PushNotificationManager audience="admin" />
+    </>
+  )
 }

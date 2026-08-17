@@ -2,6 +2,7 @@ import type { NextRequest } from 'next/server'
 import { AppointmentSchema } from '@/lib/validators'
 import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@/lib/api-helpers'
 import { sendAppointmentCreatedEmails } from '@/lib/appointment-emails'
+import { sendAppointmentCreatedPush } from '@/lib/push-notifications'
 
 export async function GET() {
   try {
@@ -61,7 +62,9 @@ export async function POST(request: NextRequest) {
 
     if (error) return handleError(error.message, 422)
 
-    if (typeof data === 'string') await sendAppointmentCreatedEmails(data)
+    if (typeof data === 'string') {
+      await Promise.all([sendAppointmentCreatedEmails(data), sendAppointmentCreatedPush(data)])
+    }
 
     return formatResponse(data, 201)
   } catch (err) {
