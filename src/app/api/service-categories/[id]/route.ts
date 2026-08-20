@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
-import { ServiceSchema } from '@/lib/validators'
-import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@/lib/api-helpers'
+import { ServiceCategorySchema } from '@/lib/validators'
+import { formatResponse, getBusinessForUser, handleError, validateAuth } from '@/lib/api-helpers'
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -14,16 +14,15 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
 
     const { id } = await params
     const body = await request.json()
-    const parsed = ServiceSchema.partial().safeParse(body)
+    const parsed = ServiceCategorySchema.partial().safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
-    const serviceData = {
-      ...parsed.data,
-      service_category_id: parsed.data.service_category_id === '' ? null : parsed.data.service_category_id,
-    }
 
     const { data, error } = await supabase
-      .from('services')
-      .update(serviceData)
+      .from('service_categories')
+      .update({
+        ...parsed.data,
+        description: parsed.data.description === '' ? null : parsed.data.description,
+      })
       .eq('id', id)
       .eq('business_id', business.id)
       .select()
@@ -46,9 +45,17 @@ export async function DELETE(_req: NextRequest, { params }: Ctx) {
 
     const { id } = await params
 
-    const { data, error } = await supabase
+    const { error: serviceError } = await supabase
       .from('services')
-      .update({ is_active: false, deleted_at: new Date().toISOString() })
+      .update({ service_category_id: null })
+      .eq('business_id', business.id)
+      .eq('service_category_id', id)
+
+    if (serviceError) return handleError(serviceError.message)
+
+    const { data, error } = await supabase
+      .from('service_categories')
+      .delete()
       .eq('id', id)
       .eq('business_id', business.id)
       .select('id')

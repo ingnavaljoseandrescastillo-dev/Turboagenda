@@ -1,5 +1,8 @@
+'use client'
+
 import { formatCurrency, intlLocaleFromAppLocale, type AppLocale } from '@/lib/utils'
 import type { Service } from '@/types'
+import { useMemo, useState } from 'react'
 
 interface ServiceSelectorProps {
   services: Service[]
@@ -28,6 +31,12 @@ export function ServiceSelector({
   const selectedServices = services.filter((service) => selectedIds.includes(service.id))
   const totalDuration = selectedServices.reduce((sum, service) => sum + service.duration_minutes, 0)
   const totalPrice = selectedServices.reduce((sum, service) => sum + Number(service.price ?? 0), 0)
+  const groups = useMemo(() => groupServices(services), [services])
+  const hasCategories = groups.some((group) => group.id !== 'all' && group.id !== 'uncategorized')
+  const [activeGroup, setActiveGroup] = useState('all')
+  const visibleServices = hasCategories
+    ? groups.find((group) => group.id === activeGroup)?.services ?? services
+    : services
 
   return (
     <div className="space-y-3">
@@ -39,8 +48,27 @@ export function ServiceSelector({
           </p>
         )}
       </div>
+      {hasCategories && (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {groups.map((group) => (
+            <button
+              key={group.id}
+              type="button"
+              onClick={() => setActiveGroup(group.id)}
+              className="whitespace-nowrap rounded-full border px-3 py-2 text-xs font-semibold transition-all hover:brightness-110"
+              style={{
+                borderColor: activeGroup === group.id ? primaryColor : '#3f3f46',
+                backgroundColor: activeGroup === group.id ? `${primaryColor}24` : '#18181b',
+                color: activeGroup === group.id ? primaryColor : '#d4d4d8',
+              }}
+            >
+              {group.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="grid gap-3">
-        {services.map((service) => {
+        {visibleServices.map((service) => {
           const isSelected = selectedIds.includes(service.id)
           return (
             <button
@@ -94,4 +122,36 @@ export function ServiceSelector({
       )}
     </div>
   )
+}
+
+function groupServices(services: Service[]) {
+  const categoryMap = new Map<string, { id: string; name: string; order: number; services: Service[] }>()
+  const uncategorized: Service[] = []
+
+  for (const service of services) {
+    const category = service.service_category
+    if (!category || !service.service_category_id) {
+      uncategorized.push(service)
+      continue
+    }
+
+    const group = categoryMap.get(category.id) ?? {
+      id: category.id,
+      name: category.name,
+      order: category.display_order ?? 0,
+      services: [],
+    }
+    group.services.push(service)
+    categoryMap.set(category.id, group)
+  }
+
+  const groups = Array.from(categoryMap.values())
+    .filter((group) => group.services.length > 0)
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
+
+  if (uncategorized.length > 0) {
+    groups.push({ id: 'uncategorized', name: 'Outros', order: 9999, services: uncategorized })
+  }
+
+  return [{ id: 'all', name: 'Todos', order: -1, services }, ...groups]
 }

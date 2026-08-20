@@ -84,13 +84,27 @@ export interface Employee {
 export interface Service {
   id: string
   business_id: string
+  service_category_id?: string | null
   name: string
   description?: string
   duration_minutes: number
   price: number
+  display_order?: number
   is_active: boolean
   deleted_at?: string | null
   created_at: string
+  service_category?: ServiceCategory | null
+}
+
+export interface ServiceCategory {
+  id: string
+  business_id: string
+  name: string
+  description?: string | null
+  display_order: number
+  is_active: boolean
+  created_at: string
+  updated_at?: string
 }
 
 export interface Client {

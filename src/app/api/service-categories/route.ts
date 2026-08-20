@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server'
-import { ServiceSchema } from '@/lib/validators'
-import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@/lib/api-helpers'
+import { ServiceCategorySchema } from '@/lib/validators'
+import { formatResponse, getBusinessForUser, handleError, validateAuth } from '@/lib/api-helpers'
 
 export async function GET() {
   try {
@@ -11,10 +11,9 @@ export async function GET() {
     if (!business) return handleError('Negócio não encontrado', 404)
 
     const { data, error } = await supabase
-      .from('services')
-      .select('*, service_category:service_categories(id, name, display_order)')
+      .from('service_categories')
+      .select('*')
       .eq('business_id', business.id)
-      .is('deleted_at', null)
       .order('display_order', { ascending: true })
       .order('name')
 
@@ -34,17 +33,16 @@ export async function POST(request: NextRequest) {
     if (!business) return handleError('Negócio não encontrado', 404)
 
     const body = await request.json()
-    const parsed = ServiceSchema.safeParse(body)
+    const parsed = ServiceCategorySchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
 
-    const serviceData = {
-      ...parsed.data,
-      service_category_id: parsed.data.service_category_id || null,
-    }
-
     const { data, error } = await supabase
-      .from('services')
-      .insert({ ...serviceData, business_id: business.id })
+      .from('service_categories')
+      .insert({
+        ...parsed.data,
+        description: parsed.data.description || null,
+        business_id: business.id,
+      })
       .select()
       .single()
 

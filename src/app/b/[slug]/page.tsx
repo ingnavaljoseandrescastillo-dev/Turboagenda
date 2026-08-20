@@ -218,10 +218,11 @@ export default async function BusinessPublicPage({ params }: PageProps) {
   const [{ data: services }, { data: reviews }, { data: employees }] = await Promise.all([
     supabase
       .from('services')
-      .select('*')
+      .select('*, service_category:service_categories(id, name, display_order)')
       .eq('business_id', business.id)
       .eq('is_active', true)
       .is('deleted_at', null)
+      .order('display_order', { ascending: true })
       .order('name'),
     supabase.from('reviews').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10),
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),

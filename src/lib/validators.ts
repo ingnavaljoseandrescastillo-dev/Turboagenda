@@ -105,6 +105,15 @@ export const ServiceSchema = z.object({
   description: z.string().optional(),
   duration_minutes: z.number().int().min(5).max(480),
   price: z.number().min(0),
+  service_category_id: z.string().uuid().nullable().optional().or(z.literal('')),
+  display_order: z.number().int().min(0).max(10000).optional(),
+  is_active: z.boolean(),
+})
+
+export const ServiceCategorySchema = z.object({
+  name: z.string().trim().min(2, 'Nome deve ter pelo menos 2 caracteres').max(80),
+  description: z.string().trim().max(240).nullable().optional().or(z.literal('')),
+  display_order: z.number().int().min(0).max(10000).optional(),
   is_active: z.boolean(),
 })
 
@@ -212,6 +221,7 @@ export type AppointmentInput = z.infer<typeof AppointmentSchema>
 export type NotificationSettingsInput = z.infer<typeof NotificationSettingsSchema>
 export type ManualReminderInput = z.infer<typeof ManualReminderSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
+export type ServiceCategoryInput = z.infer<typeof ServiceCategorySchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
 export type BusinessScheduleInput = z.infer<typeof BusinessScheduleSchema>
