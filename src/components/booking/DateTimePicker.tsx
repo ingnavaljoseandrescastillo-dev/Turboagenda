@@ -21,6 +21,7 @@ import { DEFAULT_BUSINESS_TIME_ZONE, zonedDateTimeToUtcIso } from '@/lib/utils'
 interface DateTimePickerProps {
   businessId: string
   serviceId: string
+  serviceIds?: string[]
   employeeId: string
   maxBookingDays?: number
   availableMonths?: string[]
@@ -45,6 +46,7 @@ interface DateTimePickerProps {
 export function DateTimePicker({
   businessId,
   serviceId,
+  serviceIds,
   employeeId,
   maxBookingDays = 30,
   availableMonths = [],
@@ -63,10 +65,14 @@ export function DateTimePicker({
     () => [...availableMonths].filter(isValidMonthKey).sort(),
     [availableMonths]
   )
+  const bookableAvailableMonths = useMemo(
+    () => sortedAvailableMonths.filter((month) => month >= format(today, 'yyyy-MM')),
+    [sortedAvailableMonths, today]
+  )
   const explicitMonthMode = sortedAvailableMonths.length > 0
   const firstAvailableMonth = useMemo(
-    () => (explicitMonthMode ? monthKeyToDate(sortedAvailableMonths[0]) : startOfMonth(today)),
-    [explicitMonthMode, sortedAvailableMonths, today]
+    () => (explicitMonthMode ? monthKeyToDate(bookableAvailableMonths[0] ?? sortedAvailableMonths[0]) : startOfMonth(today)),
+    [bookableAvailableMonths, explicitMonthMode, sortedAvailableMonths, today]
   )
   const lastAvailableMonth = useMemo(
     () =>
@@ -79,6 +85,7 @@ export function DateTimePicker({
   const [selectedDate, setSelectedDate] = useState<Date>(today)
   const [visibleMonth, setVisibleMonth] = useState<Date>(explicitMonthMode ? firstAvailableMonth : startOfMonth(today))
   const { slots, loading, error, fetchSlots } = useAvailability()
+  const serviceIdsKey = useMemo(() => (serviceIds?.length ? serviceIds : [serviceId]).join(','), [serviceId, serviceIds])
 
   useEffect(() => {
     if (!explicitMonthMode) return
@@ -98,10 +105,11 @@ export function DateTimePicker({
     fetchSlots({
       business_id: businessId,
       service_id: serviceId,
+      service_ids: serviceIdsKey,
       employee_id: employeeId,
       date: format(selectedDate, 'yyyy-MM-dd'),
     })
-  }, [selectedDate, businessId, serviceId, employeeId, fetchSlots])
+  }, [selectedDate, businessId, serviceId, serviceIdsKey, employeeId, fetchSlots])
 
   const monthStart = startOfMonth(visibleMonth)
   const monthEnd = endOfMonth(visibleMonth)

@@ -385,10 +385,37 @@ async function loadAppointmentPushData(admin: AdminClient, appointmentId: string
     .maybeSingle()
 
   if (settingsError) console.error('[push appointment created] settings lookup failed', settingsError)
+
+  const serviceNames = await loadAppointmentServiceNames(admin, appointmentId, appointment.services?.name)
+
   return {
     ...appointment,
+    services: serviceNames ? { name: serviceNames } : appointment.services,
     business_settings: (settings as AppointmentPushData['business_settings']) ?? null,
   }
+}
+
+async function loadAppointmentServiceNames(admin: AdminClient, appointmentId: string, fallback: string | undefined) {
+  const { data, error } = await admin
+    .from('appointment_services')
+    .select('position, services(name)')
+    .eq('appointment_id', appointmentId)
+    .order('position', { ascending: true })
+
+  if (error) {
+    console.error('[push appointment created] service list lookup failed', error)
+    return fallback
+  }
+
+  const rows = (data ?? []) as unknown as Array<{ services: { name: string } | { name: string }[] | null }>
+  const names = rows
+    .map((row) => {
+      const service = Array.isArray(row.services) ? row.services[0] : row.services
+      return service?.name
+    })
+    .filter((name): name is string => Boolean(name))
+
+  return names.length > 0 ? names.join(' + ') : fallback
 }
 
 async function loadBusinessForPush(admin: AdminClient, businessId: string) {

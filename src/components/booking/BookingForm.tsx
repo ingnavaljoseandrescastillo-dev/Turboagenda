@@ -25,6 +25,7 @@ type ClientInput = z.infer<typeof ClientSchema>
 interface BookingFormProps {
   businessId: string
   serviceId: string
+  serviceIds?: string[]
   employeeId: string
   startTime: string
   timeZone?: string
@@ -49,6 +50,7 @@ interface BookingFormProps {
 export function BookingForm({
   businessId,
   serviceId,
+  serviceIds,
   employeeId,
   startTime,
   timeZone = DEFAULT_BUSINESS_TIME_ZONE,
@@ -80,6 +82,7 @@ export function BookingForm({
         body: JSON.stringify({
           business_id: businessId,
           service_id: serviceId,
+          service_ids: serviceIds?.length ? serviceIds : [serviceId],
           employee_id: employeeId,
           start_time: new Date(startTime).toISOString(),
           ...data,

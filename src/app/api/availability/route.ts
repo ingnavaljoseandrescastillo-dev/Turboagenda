@@ -3,6 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { AvailabilityQuerySchema } from '@/lib/validators'
 import { formatResponse, handleError } from '@/lib/api-helpers'
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
 function isWithinBookingWindow(date: string, maxBookingDays: number, availableMonths: string[] = []) {
   const requested = new Date(`${date}T00:00:00`)
   const today = new Date()
@@ -29,6 +31,11 @@ export async function GET(request: NextRequest) {
     }
 
     const { business_id, service_id, employee_id, date } = parsed.data
+    const serviceIds = parseServiceIds(parsed.data.service_ids, service_id)
+
+    if (!serviceIds) {
+      return handleError('Servicios invalidos', 400)
+    }
 
     const supabase = await createClient()
     const { data: business, error: businessError } = await supabase
@@ -56,6 +63,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.rpc('get_available_slots', {
       p_business_id: business_id,
       p_service_id: service_id,
+      p_service_ids: serviceIds,
       p_employee_id: employee_id,
       p_date: date,
     })
@@ -66,4 +74,17 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     return handleError(err)
   }
+}
+
+function parseServiceIds(value: string | undefined, fallback: string) {
+  const ids = value
+    ? value.split(',').map((id) => id.trim()).filter(Boolean)
+    : [fallback]
+
+  const uniqueIds = Array.from(new Set(ids))
+  if (uniqueIds.length === 0 || uniqueIds.length > 12 || uniqueIds.some((id) => !UUID_RE.test(id))) {
+    return null
+  }
+
+  return uniqueIds
 }

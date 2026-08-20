@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button'
 import type { Business, BusinessSettings, Employee, Service } from '@/types'
 
 type PublicLocale = 'pt' | 'en' | 'es'
+type BookingStep = 'services' | 'employee' | 'datetime' | 'details'
 
 const bookingCopy = {
   pt: {
@@ -151,11 +152,20 @@ export function BookClient({
   const locale = normalizePublicLocale(business.public_language ?? business.default_language)
   const copy = bookingCopy[locale]
   const currency = business.currency ?? 'EUR'
+  const hasSingleEmployee = employees.length === 1
+  const stepKeys: BookingStep[] = hasSingleEmployee
+    ? ['services', 'datetime', 'details']
+    : ['services', 'employee', 'datetime', 'details']
+  const stepLabels = hasSingleEmployee
+    ? [copy.steps[0], copy.steps[2], copy.steps[3]]
+    : copy.steps
   const [step, setStep] = useState(initialService ? 1 : 0)
   const [completed, setCompleted] = useState(false)
-  const [selectedService, setSelectedService] = useState<string | null>(initialService)
-  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(null)
+  const [selectedServices, setSelectedServices] = useState<string[]>(initialService ? [initialService] : [])
+  const [selectedEmployee, setSelectedEmployee] = useState<string | null>(hasSingleEmployee ? employees[0].id : null)
   const [selectedDatetime, setSelectedDatetime] = useState<string | null>(null)
+  const currentStep = stepKeys[step] ?? 'services'
+  const primaryServiceId = selectedServices[0] ?? null
 
   if (completed) {
     return (
@@ -177,10 +187,17 @@ export function BookClient({
   }
 
   function canAdvance() {
-    if (step === 0) return !!selectedService
-    if (step === 1) return !!selectedEmployee
-    if (step === 2) return !!selectedDatetime
+    if (currentStep === 'services') return selectedServices.length > 0
+    if (currentStep === 'employee') return !!selectedEmployee
+    if (currentStep === 'datetime') return !!selectedDatetime
     return false
+  }
+
+  function toggleService(id: string) {
+    setSelectedDatetime(null)
+    setSelectedServices((current) =>
+      current.includes(id) ? current.filter((serviceId) => serviceId !== id) : [...current, id]
+    )
   }
 
   return (
@@ -204,11 +221,11 @@ export function BookClient({
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            {step === 0 ? business.name : copy.steps[step - 1]}
+            {step === 0 ? business.name : stepLabels[step - 1]}
           </button>
 
           <div className="flex gap-1.5 mb-4">
-            {copy.steps.map((_, i) => (
+            {stepLabels.map((_, i) => (
               <div
                 key={i}
                 className="h-1.5 flex-1 rounded-full transition-colors"
@@ -217,30 +234,29 @@ export function BookClient({
             ))}
           </div>
           <p className="text-xs text-zinc-500">
-            {copy.step} {step + 1} {copy.of} {copy.steps.length}: {copy.steps[step]}
+            {copy.step} {step + 1} {copy.of} {stepLabels.length}: {stepLabels[step]}
           </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-black/35 p-4 shadow-2xl shadow-black/20 backdrop-blur md:p-6">
-          {step === 0 && (
+          {currentStep === 'services' && (
             services.length === 0 ? (
               <p className="text-sm text-zinc-500">{copy.noServices}</p>
             ) : (
               <ServiceSelector
                 services={services}
-                selected={selectedService}
+                selected={selectedServices}
                 primaryColor={theme.primary}
                 currency={currency}
                 locale={locale}
                 title={copy.serviceTitle}
-                onSelect={(id) => {
-                  setSelectedService(id)
-                  setStep(1)
-                }}
+                multiple
+                summaryLabel="Total"
+                onSelect={toggleService}
               />
             )
           )}
-          {step === 1 && (
+          {currentStep === 'employee' && (
             employees.length === 0 ? (
               <p className="text-sm text-zinc-500">{copy.noEmployees}</p>
             ) : (
@@ -250,16 +266,17 @@ export function BookClient({
                 primaryColor={theme.primary}
                 title={copy.employeeTitle}
                 onSelect={(id) => {
+                  setSelectedDatetime(null)
                   setSelectedEmployee(id)
-                  setStep(2)
                 }}
               />
             )
           )}
-          {step === 2 && selectedService && selectedEmployee && (
+          {currentStep === 'datetime' && primaryServiceId && selectedEmployee && (
             <DateTimePicker
               businessId={business.id}
-              serviceId={selectedService}
+              serviceId={primaryServiceId}
+              serviceIds={selectedServices}
               employeeId={selectedEmployee}
               maxBookingDays={settings?.max_booking_days ?? 30}
               availableMonths={settings?.available_months ?? []}
@@ -272,10 +289,11 @@ export function BookClient({
               onSelect={(dt) => setSelectedDatetime(dt)}
             />
           )}
-          {step === 3 && selectedService && selectedEmployee && selectedDatetime && (
+          {currentStep === 'details' && primaryServiceId && selectedEmployee && selectedDatetime && (
             <BookingForm
               businessId={business.id}
-              serviceId={selectedService}
+              serviceId={primaryServiceId}
+              serviceIds={selectedServices}
               employeeId={selectedEmployee}
               startTime={selectedDatetime}
               timeZone={timeZone}
@@ -286,7 +304,7 @@ export function BookClient({
             />
           )}
 
-          {step < 3 && (
+          {step < stepKeys.length - 1 && (
             <Button
               disabled={!canAdvance()}
               onClick={() => setStep(step + 1)}

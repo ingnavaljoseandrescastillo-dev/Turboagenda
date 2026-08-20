@@ -5,6 +5,7 @@ import { useState, useCallback } from 'react'
 interface AvailabilityParams {
   business_id: string
   service_id: string
+  service_ids?: string
   employee_id: string
   date: string
 }

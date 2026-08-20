@@ -58,6 +58,7 @@ export const RegisterSchema = z.object({
 export const AppointmentSchema = z.object({
   business_id: z.string().uuid(),
   service_id: z.string().uuid(),
+  service_ids: z.array(z.string().uuid()).min(1).max(12).optional(),
   employee_id: z.string().uuid(),
   client_name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
   client_email: z.string().email('Email invalido').optional().or(z.literal('')),
@@ -110,6 +111,7 @@ export const ServiceSchema = z.object({
 export const AvailabilityQuerySchema = z.object({
   business_id: z.string().uuid(),
   service_id: z.string().uuid(),
+  service_ids: z.string().optional(),
   employee_id: z.string().uuid(),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Formato de data inválido (YYYY-MM-DD)'),
 })

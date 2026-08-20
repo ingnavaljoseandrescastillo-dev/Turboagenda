@@ -48,9 +48,12 @@ export async function POST(request: NextRequest) {
     if (businessError) return handleError(businessError.message, 500)
     if (business?.is_paused) return handleError('Este negocio no esta aceptando reservas ahora mismo', 422)
 
+    const serviceIds = Array.from(new Set(parsed.data.service_ids?.length ? parsed.data.service_ids : [parsed.data.service_id]))
+
     const { data, error } = await db.rpc('create_public_appointment', {
       p_business_id: parsed.data.business_id,
-      p_service_id: parsed.data.service_id,
+      p_service_id: serviceIds[0],
+      p_service_ids: serviceIds,
       p_employee_id: parsed.data.employee_id,
       p_client_name: parsed.data.client_name,
       p_client_email: parsed.data.client_email || null,
