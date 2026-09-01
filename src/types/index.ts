@@ -47,6 +47,9 @@ export interface BusinessSettings {
   whatsapp_rebooking_reminder_enabled?: boolean
   whatsapp_rebooking_reminder_delay_days?: number
   whatsapp_rebooking_reminder_message?: string
+  deposit_required_enabled?: boolean
+  deposit_percent?: number
+  deposit_mbway_phone?: string | null
 }
 
 export interface TimeRange {
@@ -130,6 +133,14 @@ export interface Appointment {
   end_time: string
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   notes?: string
+  deposit_required?: boolean
+  deposit_percent?: number | null
+  deposit_amount?: number | null
+  deposit_currency?: string | null
+  payment_method?: string | null
+  payment_status?: 'not_required' | 'proof_submitted' | 'approved' | 'rejected' | null
+  payment_proof_path?: string | null
+  payment_submitted_at?: string | null
   created_at: string
   // joined fields
   service?: Service

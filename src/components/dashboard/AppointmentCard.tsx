@@ -46,6 +46,18 @@ export function AppointmentCard({ appointment, showActions }: AppointmentCardPro
     }
   }
 
+  async function openPaymentProof() {
+    setError(null)
+    try {
+      const res = await fetch(`/api/appointments/${appointment.id}/payment-proof`)
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Nao foi possivel abrir o comprovativo.')
+      window.open(json.data.url, '_blank', 'noopener,noreferrer')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Nao foi possivel abrir o comprovativo.')
+    }
+  }
+
   return (
     <div className="p-4 hover:bg-zinc-800/30 transition">
       <div className="flex items-center gap-4">
@@ -71,6 +83,15 @@ export function AppointmentCard({ appointment, showActions }: AppointmentCardPro
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: empColor }} />
               <span className="text-[10px] text-zinc-500">{appointment.employee.name}</span>
             </div>
+          )}
+          {appointment.payment_status === 'proof_submitted' && (
+            <button
+              type="button"
+              onClick={openPaymentProof}
+              className="mt-2 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-200 transition-colors hover:bg-amber-500/20"
+            >
+              Ver comprovativo MB WAY
+            </button>
           )}
         </div>
 
@@ -107,7 +128,7 @@ export function AppointmentCard({ appointment, showActions }: AppointmentCardPro
           )}
           {appointment.status === 'pending' && !showActions && (
             <span className="px-2.5 py-1.5 bg-amber-500/10 text-amber-400 rounded-lg text-xs font-semibold">
-              Pendente
+              {appointment.payment_status === 'proof_submitted' ? 'Revisar pago' : 'Pendente'}
             </span>
           )}
           {appointment.status === 'confirmed' && (

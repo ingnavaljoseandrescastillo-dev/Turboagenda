@@ -159,6 +159,15 @@ export const BusinessScheduleSchema = z.object({
   path: ['closing_time'],
 })
 
+export const PaymentSettingsSchema = z.object({
+  deposit_required_enabled: z.boolean(),
+  deposit_percent: z.number().int().min(1).max(100),
+  deposit_mbway_phone: z.string().trim().max(40).optional().or(z.literal('')),
+}).refine((value) => !value.deposit_required_enabled || Boolean(value.deposit_mbway_phone?.trim()), {
+  message: 'Informe o numero MB WAY para ativar o sinal',
+  path: ['deposit_mbway_phone'],
+})
+
 export const BusinessCreateSchema = z.object({
   name: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
   default_language: LocaleSchema.optional(),
@@ -225,6 +234,7 @@ export type ServiceCategoryInput = z.infer<typeof ServiceCategorySchema>
 export type AvailabilityQuery = z.infer<typeof AvailabilityQuerySchema>
 export type BusinessSettingsInput = z.infer<typeof BusinessSettingsSchema>
 export type BusinessScheduleInput = z.infer<typeof BusinessScheduleSchema>
+export type PaymentSettingsInput = z.infer<typeof PaymentSettingsSchema>
 export type BusinessCreateInput = z.infer<typeof BusinessCreateSchema>
 export type FinanceEntryInput = z.infer<typeof FinanceEntrySchema>
 export type AppointmentCollectionInput = z.infer<typeof AppointmentCollectionSchema>

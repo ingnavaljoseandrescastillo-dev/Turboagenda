@@ -14,6 +14,16 @@ const ClientSchema = z.object({
   client_email: z.string().email('Email invalido').optional().or(z.literal('')),
   client_phone: z.string().optional(),
   client_birthdate: z.string().optional(),
+  payment_proof: z
+    .custom<FileList>()
+    .optional()
+    .refine((files) => !files?.[0] || files[0].size <= 8 * 1024 * 1024, 'O comprovativo nao pode superar 8 MB')
+    .refine(
+      (files) =>
+        !files?.[0] ||
+        ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'].includes(files[0].type),
+      'Use JPG, PNG, WEBP ou PDF'
+    ),
   accepted_terms: z.boolean().refine((value) => value, 'Tem de aceitar os termos e a politica de privacidade'),
 }).refine((value) => Boolean(value.client_email || value.client_phone), {
   message: 'Informe email ou telefone para contacto',
@@ -31,6 +41,11 @@ interface BookingFormProps {
   timeZone?: string
   primaryColor?: string
   onPrimaryColor?: string
+  totalAmount?: number
+  currency?: string
+  depositRequired?: boolean
+  depositPercent?: number
+  depositMbwayPhone?: string | null
   labels?: {
     title: string
     appointmentFor: string
@@ -56,6 +71,11 @@ export function BookingForm({
   timeZone = DEFAULT_BUSINESS_TIME_ZONE,
   primaryColor = '#10b981',
   onPrimaryColor = '#09090b',
+  totalAmount = 0,
+  currency = 'EUR',
+  depositRequired = false,
+  depositPercent = 30,
+  depositMbwayPhone,
   labels = defaultLabels,
   onSuccess,
 }: BookingFormProps) {
@@ -71,22 +91,31 @@ export function BookingForm({
   })
 
   async function onSubmit(formData: ClientInput) {
-    const { accepted_terms: acceptedTerms, ...data } = formData
+    const { accepted_terms: acceptedTerms, payment_proof: paymentProof, ...data } = formData
     if (!acceptedTerms) return
+    const proofFile = paymentProof?.[0]
+    if (depositRequired && !proofFile) {
+      setServerError('Carregue o comprovativo MB WAY para bloquear o horario.')
+      return
+    }
 
     setServerError(null)
     try {
+      const appointmentPayload = {
+        business_id: businessId,
+        service_id: serviceId,
+        service_ids: serviceIds?.length ? serviceIds : [serviceId],
+        employee_id: employeeId,
+        start_time: new Date(startTime).toISOString(),
+        ...data,
+      }
+      const payload = new FormData()
+      payload.append('appointment', JSON.stringify(appointmentPayload))
+      if (proofFile) payload.append('payment_proof', proofFile)
+
       const res = await fetch('/api/appointments', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          business_id: businessId,
-          service_id: serviceId,
-          service_ids: serviceIds?.length ? serviceIds : [serviceId],
-          employee_id: employeeId,
-          start_time: new Date(startTime).toISOString(),
-          ...data,
-        }),
+        body: payload,
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? labels.createError)
@@ -105,6 +134,19 @@ export function BookingForm({
           {labels.appointmentFor} {formatDateTime(startTime, timeZone)}
         </p>
       </div>
+
+      {depositRequired && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
+          <p className="text-sm font-semibold text-amber-100">Sinal por MB WAY para bloquear o horario</p>
+          <p className="mt-2 text-sm leading-6 text-amber-50/85">
+            Transfira {formatMoney(calculateDeposit(totalAmount, depositPercent), currency)} por MB WAY para{' '}
+            <span className="font-bold text-white">{depositMbwayPhone}</span> e carregue o comprovativo abaixo.
+          </p>
+          <p className="mt-2 text-xs leading-5 text-amber-100/70">
+            Total estimado: {formatMoney(totalAmount, currency)}. Sinal: {depositPercent}%.
+          </p>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <Input
@@ -134,6 +176,24 @@ export function BookingForm({
           error={errors.client_birthdate?.message}
           {...register('client_birthdate')}
         />
+
+        {depositRequired && (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-zinc-300">Comprovativo MB WAY</span>
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,application/pdf"
+              className="w-full rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-2 text-sm text-zinc-100 file:mr-3 file:rounded-md file:border-0 file:bg-zinc-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-zinc-100"
+              {...register('payment_proof')}
+            />
+            <span className="text-xs text-zinc-500">
+              A reserva so bloqueia o horario depois de carregar este comprovativo.
+            </span>
+            {errors.payment_proof?.message && (
+              <span className="text-xs text-red-400">{errors.payment_proof.message}</span>
+            )}
+          </label>
+        )}
 
         <label className="flex items-start gap-3 rounded-xl border border-zinc-800 bg-zinc-900/50 p-3 text-xs leading-5 text-zinc-400">
           <input
@@ -196,4 +256,15 @@ const defaultLabels = {
   legalConsentError: 'Tem de aceitar os termos e a politica de privacidade para confirmar.',
   submit: 'Confirmar agendamento',
   createError: 'Erro ao criar agendamento',
+}
+
+function calculateDeposit(total: number, percent: number) {
+  return Math.max(0, Math.round(total * percent) / 100)
+}
+
+function formatMoney(value: number, currency: string) {
+  return new Intl.NumberFormat('pt-PT', {
+    style: 'currency',
+    currency: currency || 'EUR',
+  }).format(value)
 }

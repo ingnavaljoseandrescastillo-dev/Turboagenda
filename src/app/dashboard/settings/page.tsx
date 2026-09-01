@@ -8,12 +8,13 @@ import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n/translations'
 
-type SettingsTab = 'profile' | 'public' | 'preferences' | 'notifications'
+type SettingsTab = 'profile' | 'public' | 'preferences' | 'payment' | 'notifications'
 
 const settingsTabs: { id: SettingsTab; label: string; description: string }[] = [
   { id: 'profile', label: 'Perfil', description: 'Datos basicos del negocio' },
   { id: 'public', label: 'Pagina publica', description: 'Imagenes, galeria y colores' },
   { id: 'preferences', label: 'Preferencias', description: 'Idioma y moneda' },
+  { id: 'payment', label: 'Pagos', description: 'Sinal por MB WAY' },
   { id: 'notifications', label: 'Notificaciones', description: 'Email, SMS y WhatsApp' },
 ]
 
@@ -23,6 +24,7 @@ const preferenceCopy = {
       profile: { label: 'Perfil', description: 'Dados básicos do negócio' },
       public: { label: 'Página pública', description: 'Imagens, galeria e cores' },
       preferences: { label: 'Preferências', description: 'Idioma e moeda' },
+      payment: { label: 'Pagamentos', description: 'Sinal por MB WAY' },
       notifications: { label: 'Notificações', description: 'Email, SMS e WhatsApp' },
     },
     languageOptions: [
@@ -53,6 +55,7 @@ const preferenceCopy = {
       profile: { label: 'Perfil', description: 'Datos básicos del negocio' },
       public: { label: 'Página pública', description: 'Imágenes, galería y colores' },
       preferences: { label: 'Preferencias', description: 'Idioma y moneda' },
+      payment: { label: 'Pagos', description: 'Señal por MB WAY' },
       notifications: { label: 'Notificaciones', description: 'Email, SMS y WhatsApp' },
     },
     languageOptions: [
@@ -83,6 +86,7 @@ const preferenceCopy = {
       profile: { label: 'Profile', description: 'Basic business details' },
       public: { label: 'Public page', description: 'Images, gallery and colors' },
       preferences: { label: 'Preferences', description: 'Language and currency' },
+      payment: { label: 'Payments', description: 'MB WAY deposit' },
       notifications: { label: 'Notifications', description: 'Email, SMS and WhatsApp' },
     },
     languageOptions: [
@@ -134,11 +138,14 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savingNotifications, setSavingNotifications] = useState(false)
+  const [savingPayment, setSavingPayment] = useState(false)
   const [uploadingImage, setUploadingImage] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
   const [notificationSuccess, setNotificationSuccess] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState('trial')
   const [smsTrialOverrideUntil, setSmsTrialOverrideUntil] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
@@ -180,6 +187,11 @@ export default function SettingsPage() {
     whatsapp_rebooking_reminder_delay_days: 21,
     whatsapp_rebooking_reminder_message:
       'Hola {{client_name}}, esperamos que hayas disfrutado tu visita en {{business_name}}. Puedes volver a reservar aqui: {{public_url}}',
+  })
+  const [payment, setPayment] = useState({
+    deposit_required_enabled: false,
+    deposit_percent: 30,
+    deposit_mbway_phone: '',
   })
 
   useEffect(() => {
@@ -228,6 +240,11 @@ export default function SettingsPage() {
         })
         setLocale(dashboardLanguage)
         if (settings) {
+          setPayment({
+            deposit_required_enabled: settings.deposit_required_enabled ?? false,
+            deposit_percent: settings.deposit_percent ?? 30,
+            deposit_mbway_phone: settings.deposit_mbway_phone ?? '',
+          })
           setNotifications({
             email_notify_client_on_booking: settings.email_notify_client_on_booking ?? true,
             email_notify_business_on_booking: settings.email_notify_business_on_booking ?? true,
@@ -365,6 +382,31 @@ export default function SettingsPage() {
     }
   }
 
+  async function handlePaymentSave(e: React.FormEvent) {
+    e.preventDefault()
+    setSavingPayment(true)
+    setPaymentSuccess(false)
+    setPaymentError(null)
+    try {
+      const res = await fetch('/api/payment-settings', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payment),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        console.error('[Settings] payment save failed', json.error)
+        throw new Error(json.error ?? 'Nao foi possivel guardar os pagamentos.')
+      }
+      setPaymentSuccess(true)
+      setTimeout(() => setPaymentSuccess(false), 3000)
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'Nao foi possivel guardar os pagamentos.')
+    } finally {
+      setSavingPayment(false)
+    }
+  }
+
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
   const smsAvailable = isSmsAvailable(subscriptionPlan, smsTrialOverrideUntil)
   const whatsappAvailable = subscriptionPlan === 'plus'
@@ -381,7 +423,7 @@ export default function SettingsPage() {
         <p className="text-sm text-zinc-500 mt-1">{copy.subtitle}</p>
       </div>
 
-      <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 sm:grid-cols-4">
+      <div className="grid gap-2 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-1 sm:grid-cols-5">
         {visibleTabs.map((tab) => (
           <button
             key={tab.id}
@@ -708,6 +750,74 @@ export default function SettingsPage() {
         </form>
       </Card>
 
+      <Card className={activeTab === 'payment' ? '' : 'hidden'}>
+        <form onSubmit={handlePaymentSave} className="space-y-5">
+          <div>
+            <h3 className="text-lg font-semibold text-zinc-100">Sinal por MB WAY</h3>
+            <p className="mt-1 text-sm text-zinc-500">
+              Pide un anticipo antes de bloquear el horario en la agenda publica.
+            </p>
+          </div>
+
+          <ToggleRow
+            label="Exigir comprovativo antes de bloquear horario"
+            description="El cliente vera el numero MB WAY, transferira el porcentaje indicado y subira el comprobante."
+            checked={payment.deposit_required_enabled}
+            onChange={(value) => setPayment((current) => ({ ...current, deposit_required_enabled: value }))}
+          />
+
+          <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+            <Input
+              label="Numero MB WAY"
+              type="tel"
+              placeholder="+351 912 345 678"
+              helper="Este numero aparece en la reserva publica cuando el anticipo esta activo."
+              value={payment.deposit_mbway_phone}
+              onChange={(event) => setPayment((current) => ({ ...current, deposit_mbway_phone: event.target.value }))}
+            />
+            <Input
+              label="Porcentaje de sinal"
+              type="number"
+              min={1}
+              max={100}
+              value={payment.deposit_percent}
+              helper="30% recomendado"
+              onChange={(event) =>
+                setPayment((current) => ({
+                  ...current,
+                  deposit_percent: Math.max(1, Math.min(100, Number(event.target.value) || 30)),
+                }))
+              }
+            />
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <p className="text-sm font-semibold text-zinc-100">Como funcionara para el cliente</p>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <InfoBlock title="1. Elige la cita" text="Selecciona servicios, profesional y horario como siempre." />
+              <InfoBlock title="2. Paga el sinal" text="Ve el importe exacto y el numero MB WAY del negocio." />
+              <InfoBlock title="3. Sube comprobante" text="Solo despues de subirlo se crea la cita y se bloquea el horario." />
+            </div>
+          </div>
+
+          {paymentSuccess && (
+            <p className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-400">
+              Configuracion de pagos guardada.
+            </p>
+          )}
+
+          {paymentError && (
+            <p className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-sm text-red-400">
+              {paymentError}
+            </p>
+          )}
+
+          <Button type="submit" loading={savingPayment}>
+            Guardar pagos
+          </Button>
+        </form>
+      </Card>
+
       <Card className={activeTab === 'notifications' ? '' : 'hidden'}>
         <form onSubmit={handleNotificationSave} className="space-y-4">
           <div>
@@ -973,6 +1083,15 @@ function SelectCard({
         {options.find((option) => option.value === value)?.helper}
       </span>
     </label>
+  )
+}
+
+function InfoBlock({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-zinc-800 bg-zinc-900 p-3">
+      <p className="text-xs font-semibold uppercase text-zinc-400">{title}</p>
+      <p className="mt-1 text-sm text-zinc-500">{text}</p>
+    </div>
   )
 }
 

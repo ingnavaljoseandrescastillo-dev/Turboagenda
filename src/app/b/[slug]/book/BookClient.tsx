@@ -17,6 +17,8 @@ const bookingCopy = {
     steps: ['Servico', 'Profissional', 'Data e hora', 'Dados'],
     completeTitle: 'Agendamento confirmado!',
     completeSubtitle: 'Recebera a confirmacao por email ou SMS, conforme os dados informados.',
+    depositCompleteTitle: 'Pedido de reserva recebido!',
+    depositCompleteSubtitle: 'O horario ficou bloqueado. O negocio vai validar o comprovativo MB WAY.',
     backToProfile: 'Voltar ao perfil',
     onlineBooking: 'Reserva online',
     intro: 'Escolha o servico, profissional e horario. Confirme os seus dados no final.',
@@ -55,6 +57,8 @@ const bookingCopy = {
     steps: ['Servicio', 'Profesional', 'Fecha y hora', 'Datos'],
     completeTitle: 'Reserva confirmada!',
     completeSubtitle: 'Recibiras la confirmacion por email o SMS, segun los datos informados.',
+    depositCompleteTitle: 'Solicitud de reserva recibida!',
+    depositCompleteSubtitle: 'El horario quedo bloqueado. El negocio revisara el comprobante MB WAY.',
     backToProfile: 'Volver al perfil',
     onlineBooking: 'Reserva online',
     intro: 'Elige el servicio, profesional y horario. Confirmas tus datos al final.',
@@ -93,6 +97,8 @@ const bookingCopy = {
     steps: ['Service', 'Professional', 'Date and time', 'Details'],
     completeTitle: 'Booking confirmed!',
     completeSubtitle: 'You will receive confirmation by email or SMS, depending on the details provided.',
+    depositCompleteTitle: 'Booking request received!',
+    depositCompleteSubtitle: 'The time slot is blocked. The business will review the MB WAY payment proof.',
     backToProfile: 'Back to profile',
     onlineBooking: 'Online booking',
     intro: 'Choose the service, professional, and time. Confirm your details at the end.',
@@ -166,6 +172,9 @@ export function BookClient({
   const [selectedDatetime, setSelectedDatetime] = useState<string | null>(null)
   const currentStep = stepKeys[step] ?? 'services'
   const primaryServiceId = selectedServices[0] ?? null
+  const selectedServiceItems = services.filter((service) => selectedServices.includes(service.id))
+  const selectedTotal = selectedServiceItems.reduce((sum, service) => sum + Number(service.price ?? 0), 0)
+  const depositRequired = Boolean(settings?.deposit_required_enabled && settings.deposit_mbway_phone)
 
   if (completed) {
     return (
@@ -176,8 +185,12 @@ export function BookClient({
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-zinc-100">{copy.completeTitle}</h2>
-          <p className="text-zinc-500">{copy.completeSubtitle}</p>
+          <h2 className="text-2xl font-bold text-zinc-100">
+            {depositRequired ? copy.depositCompleteTitle : copy.completeTitle}
+          </h2>
+          <p className="text-zinc-500">
+            {depositRequired ? copy.depositCompleteSubtitle : copy.completeSubtitle}
+          </p>
           <Button onClick={() => router.push(`/b/${slug}`)} variant="secondary">
             {copy.backToProfile}
           </Button>
@@ -300,6 +313,11 @@ export function BookClient({
               primaryColor={theme.primary}
               onPrimaryColor={theme.onPrimary}
               labels={copy.form}
+              totalAmount={selectedTotal}
+              currency={currency}
+              depositRequired={depositRequired}
+              depositPercent={settings?.deposit_percent ?? 30}
+              depositMbwayPhone={settings?.deposit_mbway_phone}
               onSuccess={() => setCompleted(true)}
             />
           )}
