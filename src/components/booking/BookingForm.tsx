@@ -1,12 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { DEFAULT_BUSINESS_TIME_ZONE, formatDateTime } from '@/lib/utils'
 
 const ClientSchema = z.object({
@@ -59,7 +59,7 @@ interface BookingFormProps {
     submit: string
     createError: string
   }
-  onSuccess: () => void
+  onSuccess: (depositApplied: boolean) => void
 }
 
 export function BookingForm({
@@ -80,21 +80,55 @@ export function BookingForm({
   onSuccess,
 }: BookingFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
+  const [clientStatus, setClientStatus] = useState<'unknown' | 'checking' | 'new' | 'returning'>('unknown')
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<ClientInput>({
     resolver: zodResolver(ClientSchema),
     defaultValues: { accepted_terms: false },
   })
 
+  const watchedEmail = useWatch({ control, name: 'client_email' })
+  const watchedPhone = useWatch({ control, name: 'client_phone' })
+  const hasContactForLookup = hasLookupContact(watchedEmail, watchedPhone)
+  const effectiveClientStatus = depositRequired && hasContactForLookup ? clientStatus : 'unknown'
+  const depositApplies = depositRequired && effectiveClientStatus !== 'returning'
+
+  useEffect(() => {
+    if (!depositRequired || !hasContactForLookup) return
+
+    let cancelled = false
+    const timeout = window.setTimeout(() => {
+      setClientStatus('checking')
+      void lookupCompletedAppointment(businessId, watchedEmail, watchedPhone)
+        .then((hasCompleted) => {
+          if (!cancelled) setClientStatus(hasCompleted ? 'returning' : 'new')
+        })
+        .catch(() => {
+          if (!cancelled) setClientStatus('unknown')
+        })
+    }, 500)
+
+    return () => {
+      cancelled = true
+      window.clearTimeout(timeout)
+    }
+  }, [businessId, depositRequired, hasContactForLookup, watchedEmail, watchedPhone])
+
   async function onSubmit(formData: ClientInput) {
     const { accepted_terms: acceptedTerms, payment_proof: paymentProof, ...data } = formData
     if (!acceptedTerms) return
     const proofFile = paymentProof?.[0]
-    if (depositRequired && !proofFile) {
+    const hasCompletedAppointment = depositRequired
+      ? await lookupCompletedAppointment(businessId, data.client_email, data.client_phone)
+      : false
+    const depositAppliesOnSubmit = depositRequired && !hasCompletedAppointment
+
+    if (depositAppliesOnSubmit && !proofFile) {
       setServerError('Carregue o comprovativo MB WAY para bloquear o horario.')
       return
     }
@@ -111,7 +145,7 @@ export function BookingForm({
       }
       const payload = new FormData()
       payload.append('appointment', JSON.stringify(appointmentPayload))
-      if (proofFile) payload.append('payment_proof', proofFile)
+      if (depositAppliesOnSubmit && proofFile) payload.append('payment_proof', proofFile)
 
       const res = await fetch('/api/appointments', {
         method: 'POST',
@@ -119,7 +153,7 @@ export function BookingForm({
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? labels.createError)
-      onSuccess()
+      onSuccess(depositAppliesOnSubmit)
     } catch (err) {
       setServerError(err instanceof Error ? err.message : labels.createError)
     }
@@ -136,15 +170,33 @@ export function BookingForm({
       </div>
 
       {depositRequired && (
-        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
-          <p className="text-sm font-semibold text-amber-100">Sinal por MB WAY para bloquear o horario</p>
-          <p className="mt-2 text-sm leading-6 text-amber-50/85">
-            Transfira {formatMoney(calculateDeposit(totalAmount, depositPercent), currency)} por MB WAY para{' '}
-            <span className="font-bold text-white">{depositMbwayPhone}</span> e carregue o comprovativo abaixo.
+        <div
+          className={`rounded-xl border p-4 ${
+            effectiveClientStatus === 'returning'
+              ? 'border-emerald-500/25 bg-emerald-500/10'
+              : 'border-amber-500/30 bg-amber-500/10'
+          }`}
+        >
+          <p className={effectiveClientStatus === 'returning' ? 'text-sm font-semibold text-emerald-100' : 'text-sm font-semibold text-amber-100'}>
+            Sinal MB WAY para clientes novos
           </p>
-          <p className="mt-2 text-xs leading-5 text-amber-100/70">
-            Total estimado: {formatMoney(totalAmount, currency)}. Sinal: {depositPercent}%.
-          </p>
+          {effectiveClientStatus === 'returning' ? (
+            <p className="mt-2 text-sm leading-6 text-emerald-50/85">
+              Encontramos uma cita culminada com estes dados. Pode confirmar sem carregar comprovativo.
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-sm leading-6 text-amber-50/85">
+                Clientes novos transferem {formatMoney(calculateDeposit(totalAmount, depositPercent), currency)} por MB WAY para{' '}
+                <span className="font-bold text-white">{depositMbwayPhone}</span> e carregam o comprovativo abaixo.
+              </p>
+              <p className="mt-2 text-xs leading-5 text-amber-100/70">
+                Total estimado: {formatMoney(totalAmount, currency)}. Sinal: {depositPercent}%. Se ja veio antes,
+                use o mesmo email ou telefone para dispensar o sinal.
+                {effectiveClientStatus === 'checking' ? ' A verificar o seu historico...' : ''}
+              </p>
+            </>
+          )}
         </div>
       )}
 
@@ -177,7 +229,7 @@ export function BookingForm({
           {...register('client_birthdate')}
         />
 
-        {depositRequired && (
+        {depositApplies && (
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-zinc-300">Comprovativo MB WAY</span>
             <input
@@ -267,4 +319,20 @@ function formatMoney(value: number, currency: string) {
     style: 'currency',
     currency: currency || 'EUR',
   }).format(value)
+}
+
+function hasLookupContact(email?: string, phone?: string) {
+  return Boolean(email?.includes('@') || (phone?.replace(/\D/g, '').length ?? 0) >= 6)
+}
+
+async function lookupCompletedAppointment(businessId: string, email?: string, phone?: string) {
+  if (!hasLookupContact(email, phone)) return false
+  const params = new URLSearchParams({ business_id: businessId })
+  if (email) params.set('email', email)
+  if (phone) params.set('phone', phone)
+
+  const res = await fetch(`/api/public-client-status?${params.toString()}`)
+  if (!res.ok) return false
+  const json = await res.json()
+  return Boolean(json.data?.has_completed_appointment)
 }

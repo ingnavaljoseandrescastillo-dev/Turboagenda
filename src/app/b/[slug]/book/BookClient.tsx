@@ -167,6 +167,7 @@ export function BookClient({
     : copy.steps
   const [step, setStep] = useState(initialService ? 1 : 0)
   const [completed, setCompleted] = useState(false)
+  const [completedWithDeposit, setCompletedWithDeposit] = useState(false)
   const [selectedServices, setSelectedServices] = useState<string[]>(initialService ? [initialService] : [])
   const [selectedEmployee, setSelectedEmployee] = useState<string | null>(hasSingleEmployee ? employees[0].id : null)
   const [selectedDatetime, setSelectedDatetime] = useState<string | null>(null)
@@ -186,10 +187,10 @@ export function BookClient({
             </svg>
           </div>
           <h2 className="text-2xl font-bold text-zinc-100">
-            {depositRequired ? copy.depositCompleteTitle : copy.completeTitle}
+            {completedWithDeposit ? copy.depositCompleteTitle : copy.completeTitle}
           </h2>
           <p className="text-zinc-500">
-            {depositRequired ? copy.depositCompleteSubtitle : copy.completeSubtitle}
+            {completedWithDeposit ? copy.depositCompleteSubtitle : copy.completeSubtitle}
           </p>
           <Button onClick={() => router.push(`/b/${slug}`)} variant="secondary">
             {copy.backToProfile}
@@ -318,7 +319,10 @@ export function BookClient({
               depositRequired={depositRequired}
               depositPercent={settings?.deposit_percent ?? 30}
               depositMbwayPhone={settings?.deposit_mbway_phone}
-              onSuccess={() => setCompleted(true)}
+              onSuccess={(depositApplied) => {
+                setCompletedWithDeposit(depositApplied)
+                setCompleted(true)
+              }}
             />
           )}
 

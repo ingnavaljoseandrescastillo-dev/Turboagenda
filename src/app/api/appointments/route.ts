@@ -59,12 +59,25 @@ export async function POST(request: NextRequest) {
     const settings = Array.isArray(business?.business_settings)
       ? business.business_settings[0]
       : business?.business_settings
-    const depositRequired = Boolean(settings?.deposit_required_enabled && settings.deposit_mbway_phone)
+    const { data: hasCompletedAppointment, error: statusError } = await db.rpc(
+      'has_completed_public_client_appointment',
+      {
+        p_business_id: parsed.data.business_id,
+        p_client_email: parsed.data.client_email || null,
+        p_client_phone: parsed.data.client_phone ?? null,
+      }
+    )
+
+    if (statusError) return handleError(statusError.message, 500)
+
+    const depositRequired = Boolean(
+      settings?.deposit_required_enabled && settings.deposit_mbway_phone && !hasCompletedAppointment
+    )
     const proofFile = formData?.get('payment_proof')
     if (depositRequired && !(proofFile instanceof File)) {
       return handleError('Carregue o comprovativo MB WAY para bloquear o horario.', 400)
     }
-    if (proofFile instanceof File) {
+    if (depositRequired && proofFile instanceof File) {
       if (!ALLOWED_PROOF_TYPES.has(proofFile.type)) return handleError('Use JPG, PNG, WEBP ou PDF.', 400)
       if (proofFile.size > MAX_PROOF_FILE_SIZE) return handleError('O comprovativo nao pode superar 8 MB.', 400)
 

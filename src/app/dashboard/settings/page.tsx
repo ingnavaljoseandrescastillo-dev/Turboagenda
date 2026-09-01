@@ -755,13 +755,13 @@ export default function SettingsPage() {
           <div>
             <h3 className="text-lg font-semibold text-zinc-100">Sinal por MB WAY</h3>
             <p className="mt-1 text-sm text-zinc-500">
-              Pide un anticipo antes de bloquear el horario en la agenda publica.
+              Pide un anticipo solo a clientes nuevos antes de bloquear el horario en la agenda publica.
             </p>
           </div>
 
           <ToggleRow
-            label="Exigir comprovativo antes de bloquear horario"
-            description="El cliente vera el numero MB WAY, transferira el porcentaje indicado y subira el comprobante."
+            label="Exigir comprovativo a clientes nuevos"
+            description="Solo se aplica si el cliente nunca culmino una cita en este negocio usando ese email o telefono."
             checked={payment.deposit_required_enabled}
             onChange={(value) => setPayment((current) => ({ ...current, deposit_required_enabled: value }))}
           />
@@ -795,7 +795,7 @@ export default function SettingsPage() {
             <p className="text-sm font-semibold text-zinc-100">Como funcionara para el cliente</p>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <InfoBlock title="1. Elige la cita" text="Selecciona servicios, profesional y horario como siempre." />
-              <InfoBlock title="2. Paga el sinal" text="Ve el importe exacto y el numero MB WAY del negocio." />
+              <InfoBlock title="2. Se verifica el historial" text="Si ya culmino una cita, no se pide comprobante." />
               <InfoBlock title="3. Sube comprobante" text="Solo despues de subirlo se crea la cita y se bloquea el horario." />
             </div>
           </div>
