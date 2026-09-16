@@ -1,0 +1,2 @@
+export const PUBLIC_BUSINESS_COLUMNS = 'id,slug,name,default_language,public_language,currency,description,phone,address,cover_image_url,logo_image_url,gallery_images,theme_primary_color,theme_background_color,theme_text_color,theme_background_image_url,is_paused,created_at' as const
+export const PUBLIC_SETTINGS_COLUMNS = 'id,business_id,opening_time,closing_time,slot_duration_minutes,working_days,max_booking_days,available_months,working_schedule,time_zone,deposit_required_enabled,deposit_percent,deposit_mbway_phone' as const

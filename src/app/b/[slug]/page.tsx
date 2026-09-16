@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient as createClient } from '@/lib/supabase/admin'
+import { PUBLIC_BUSINESS_COLUMNS } from '@/lib/public-business'
 import { Logo } from '@/components/ui/Logo'
 import { ServiceGrid } from '@/components/public/ServiceGrid'
 import { ReviewsList } from '@/components/public/ReviewsList'
@@ -208,7 +209,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
 
   const { data: business } = await supabase
     .from('businesses')
-    .select('*')
+    .select(PUBLIC_BUSINESS_COLUMNS)
     .eq('slug', slug)
     .single()
 
@@ -228,7 +229,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
   ])
 
-  const biz = business as Business
+  const biz = business as unknown as Business
   const svcs = (services ?? []) as Service[]
   const revs = (reviews ?? []) as Review[]
   const emps = (employees ?? []) as Employee[]

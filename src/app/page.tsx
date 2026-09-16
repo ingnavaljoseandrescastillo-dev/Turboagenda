@@ -12,9 +12,6 @@ export default function HomePage() {
   const basePlanSalesHref = `https://wa.me/351938037175?text=${encodeURIComponent(
     'Olá, quero ativar o Plano Base do TurboAgenda para o meu negócio.',
   )}`
-  const proWaitlistHref = `https://wa.me/351938037175?text=${encodeURIComponent(
-    'Olá, quero entrar na lista de espera do Plano Pro do TurboAgenda.',
-  )}`
 
   return (
     <div className="relative min-h-screen overflow-x-hidden bg-zinc-950 text-zinc-100">
@@ -142,7 +139,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="mx-auto grid max-w-4xl gap-4 md:grid-cols-2">
+          <div className="mx-auto max-w-lg">
             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-7 backdrop-blur">
               <div className="mb-2 text-sm font-medium text-zinc-400">{p.basic.name}</div>
               <div className="mb-1 flex items-baseline gap-2">
@@ -175,40 +172,6 @@ export default function HomePage() {
               </ul>
             </div>
 
-            <div className="relative rounded-2xl border border-zinc-800 bg-gradient-to-br from-zinc-900/60 to-zinc-900/30 p-7 backdrop-blur">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-zinc-700 px-3 py-1 text-[10px] font-bold tracking-wider text-zinc-300">
-                {p.comingSoon}
-              </div>
-              <div className="mb-2 text-sm font-medium text-amber-400">Plan Pro</div>
-              <div className="mb-1 flex items-baseline gap-2">
-                <span className="text-4xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>
-                  Em breve
-                </span>
-              </div>
-              <div className="mb-5 rounded-xl border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
-                Estamos a preparar funcionalidades premium para negocios que quieran crescer com mais automatizacao,
-                controlo e operacao.
-              </div>
-              <a
-                href={proWaitlistHref}
-                rel="noreferrer"
-                target="_blank"
-                className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl bg-zinc-800 py-2.5 text-sm font-semibold text-zinc-200 transition hover:bg-zinc-700"
-              >
-                Quero entrar na lista
-              </a>
-              <p className="mb-6 text-center text-xs leading-5 text-zinc-500">
-                Falamos contigo quando abrirmos o plano premium.
-              </p>
-              <ul className="space-y-2.5 text-xs">
-                {p.pro.features.map((feature) => (
-                  <li key={feature} className="flex items-start gap-2 text-zinc-300">
-                    <span className="mt-0.5 flex-shrink-0 text-amber-400">+</span>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
           </div>
         </section>
 
@@ -218,8 +181,9 @@ export default function HomePage() {
               <Logo size="sm" />
               <span className="ml-2 text-xs">2026 · turboagenda.pt</span>
             </div>
-            <div className="flex gap-5 text-xs">
+            <div className="flex flex-wrap justify-center gap-5 text-xs">
               <Link href="/privacidade" className="hover:text-zinc-300">{t.footer.privacy}</Link>
+              <Link href="/cookies" className="hover:text-zinc-300">Cookies</Link>
               <Link href="/termos" className="hover:text-zinc-300">{t.footer.terms}</Link>
               <a className="cursor-pointer hover:text-zinc-300">{t.footer.contact}</a>
             </div>

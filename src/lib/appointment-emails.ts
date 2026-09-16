@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { getEmailFrom, getResend } from '@/lib/resend'
 import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
 
@@ -137,7 +137,7 @@ async function sendAppointmentEmails(appointmentId: string, kind: AppointmentEma
 }
 
 async function loadAppointmentEmailData(appointmentId: string) {
-  const supabase = await createClient()
+  const supabase = createAdminClient()
   const { data, error } = await supabase.rpc('get_appointment_email_payload', {
     p_appointment_id: appointmentId,
   })

@@ -9,8 +9,9 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
-export function LoginForm() {
+export function LoginForm({ googleEnabled = false, authError = false }: { googleEnabled?: boolean; authError?: boolean }) {
   const { login } = useAuth()
   const { t } = useLanguage()
   const l = t.login
@@ -64,10 +65,13 @@ export function LoginForm() {
           {serverError}
         </p>
       )}
+      {authError && !serverError && <p role="alert" className="text-sm text-red-400">{l.error}</p>}
 
       <Button type="submit" loading={isSubmitting} className="w-full mt-2">
         {l.submit}
       </Button>
+
+      {googleEnabled && <GoogleSignInButton disabled={isSubmitting} />}
 
       <p className="text-center text-sm text-zinc-500">
         {l.noAccount}{' '}

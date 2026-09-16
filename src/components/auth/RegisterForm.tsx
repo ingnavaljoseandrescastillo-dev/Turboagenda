@@ -1,6 +1,6 @@
 'use client'
 
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import { z } from 'zod'
@@ -10,6 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { useState } from 'react'
+import { GoogleSignInButton } from '@/components/auth/GoogleSignInButton'
 
 const RegisterWithTermsSchema = RegisterSchema.extend({
   acceptedTerms: z.boolean().refine((value) => value, 'Tem de aceitar os termos e a politica de privacidade'),
@@ -17,7 +18,7 @@ const RegisterWithTermsSchema = RegisterSchema.extend({
 
 type RegisterWithTermsInput = RegisterInput & { acceptedTerms: boolean }
 
-export function RegisterForm() {
+export function RegisterForm({ googleEnabled = false }: { googleEnabled?: boolean }) {
   const { register: registerUser } = useAuth()
   const { t } = useLanguage()
   const r = t.register
@@ -26,12 +27,14 @@ export function RegisterForm() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<RegisterWithTermsInput>({
     resolver: zodResolver(RegisterWithTermsSchema),
     defaultValues: { acceptedTerms: false },
   })
+  const acceptedTerms = useWatch({ control, name: 'acceptedTerms' })
 
   async function onSubmit(data: RegisterWithTermsInput) {
     const { acceptedTerms, ...registrationData } = data
@@ -124,6 +127,8 @@ export function RegisterForm() {
       <Button type="submit" loading={isSubmitting} className="w-full mt-2">
         {r.submit}
       </Button>
+
+      {googleEnabled && <GoogleSignInButton disabled={isSubmitting} acceptedTerms={acceptedTerms} />}
 
       <p className="text-center text-sm text-zinc-500">
         {r.hasAccount}{' '}

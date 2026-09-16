@@ -4,15 +4,16 @@ import { validateAuth, getBusinessForUser, formatResponse, handleError } from '@
 import { validatePlatformAdmin } from '@/lib/admin'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { getVapidPublicKey } from '@/lib/push-notifications'
+import { isAllowedPushEndpoint } from '@/lib/push-endpoint'
 
 const PushSubscriptionSchema = z.object({
   audience: z.enum(['business', 'admin']),
   businessId: z.string().uuid().nullable().optional(),
   subscription: z.object({
-    endpoint: z.string().url(),
+    endpoint: z.string().url().refine(isAllowedPushEndpoint, 'Fornecedor push invalido'),
     keys: z.object({
-      p256dh: z.string().min(10),
-      auth: z.string().min(10),
+      p256dh: z.string().max(100).regex(/^[A-Za-z0-9_-]+={0,2}$/).refine(value => Buffer.from(value, 'base64url').length === 65),
+      auth: z.string().max(30).regex(/^[A-Za-z0-9_-]+={0,2}$/).refine(value => Buffer.from(value, 'base64url').length === 16),
     }),
   }),
 })
@@ -51,8 +52,7 @@ export async function POST(request: NextRequest) {
       allowedBusinessId = business.id
     }
 
-    const adminDb = createAdminClient()
-    const { error } = await adminDb.from('push_subscriptions').upsert(
+    const { error } = await supabase.from('push_subscriptions').upsert(
       {
         user_id: user.id,
         business_id: allowedBusinessId,

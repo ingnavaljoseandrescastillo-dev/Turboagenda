@@ -1,5 +1,5 @@
 import type { NextRequest } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient as createClient } from '@/lib/supabase/admin'
 import { AvailabilityQuerySchema } from '@/lib/validators'
 import { formatResponse, handleError } from '@/lib/api-helpers'
 

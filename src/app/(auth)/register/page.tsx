@@ -1,5 +1,6 @@
 import { RegisterForm } from '@/components/auth/RegisterForm'
+import { isGoogleAuthEnabled } from '@/lib/google-auth'
 
-export default function RegisterPage() {
-  return <RegisterForm />
+export default async function RegisterPage() {
+  return <RegisterForm googleEnabled={await isGoogleAuthEnabled()} />
 }

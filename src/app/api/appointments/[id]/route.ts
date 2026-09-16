@@ -5,6 +5,7 @@ import { sendAppointmentCancelledEmail } from '@/lib/appointment-emails'
 
 const AppointmentPatchSchema = z.object({
   status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).optional(),
+  payment_status: z.enum(['approved', 'rejected']).optional(),
   notes: z.string().nullable().optional(),
   start_time: z.string().datetime().optional(),
   end_time: z.string().datetime().optional(),
@@ -29,25 +30,27 @@ export async function PATCH(request: NextRequest, { params }: Ctx) {
     const parsed = AppointmentPatchSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
 
-    const shouldNotifyCancellation = parsed.data.status === 'cancelled'
-    const { data: existing, error: existingError } = shouldNotifyCancellation
-      ? await supabase
+    const shouldNotifyCancellation = parsed.data.status === 'cancelled' || parsed.data.payment_status === 'rejected'
+    const { data: existing, error: existingError } = await supabase
           .from('appointments')
-          .select('status')
+          .select('status, payment_status, deposit_required')
           .eq('id', id)
           .eq('business_id', business.id)
           .maybeSingle()
-      : { data: null, error: null }
 
     if (existingError) return handleError(existingError.message, 422)
+    if (!existing) return handleError('Cita nao encontrada', 404)
+    if (parsed.data.payment_status && (!existing.deposit_required || existing.payment_status !== 'proof_submitted')) return handleError('Comprovativo nao esta pendente de revisao.', 409)
+    if (parsed.data.status === 'confirmed' && existing.deposit_required && existing.payment_status !== 'approved' && parsed.data.payment_status !== 'approved') return handleError('Reveja e aprove o pagamento antes de confirmar.', 422)
+    if (parsed.data.payment_status === 'rejected') parsed.data.status = 'cancelled'
 
-    const { data, error } = await supabase
+    let update = supabase
       .from('appointments')
       .update(parsed.data)
       .eq('id', id)
       .eq('business_id', business.id)
-      .select()
-      .single()
+    update = existing.payment_status === null ? update.is('payment_status', null) : update.eq('payment_status', existing.payment_status)
+    const { data, error } = await update.select().single()
 
     if (error) return handleError(error.message, 422)
 

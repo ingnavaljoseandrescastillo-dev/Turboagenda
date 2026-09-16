@@ -25,13 +25,15 @@ export function AppointmentCard({ appointment, showActions }: AppointmentCardPro
   const empColor = appointment.employee ? hashColor(appointment.employee.name) : '#34d399'
 
   async function updateStatus(status: 'confirmed' | 'cancelled') {
+    const reviewing = appointment.payment_status === 'proof_submitted'
+    if (reviewing && !window.confirm(status === 'confirmed' ? 'Confirmou a rececao do sinal na sua conta MB WAY? Um comprovativo nao garante o pagamento.' : 'Rejeitar o comprovativo e cancelar a reserva?')) return
     setLoadingStatus(status)
     setError(null)
     try {
       const res = await fetch(`/api/appointments/${appointment.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, ...(reviewing ? { payment_status: status === 'confirmed' ? 'approved' : 'rejected' } : {}) }),
       })
       const json = await res.json()
       if (!res.ok) {

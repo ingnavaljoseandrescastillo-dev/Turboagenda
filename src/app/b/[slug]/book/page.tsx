@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient as createClient } from '@/lib/supabase/admin'
+import { PUBLIC_BUSINESS_COLUMNS, PUBLIC_SETTINGS_COLUMNS } from '@/lib/public-business'
 import { BookClient } from './BookClient'
 import type { Business, BusinessSettings, Employee, Service } from '@/types'
 
@@ -15,7 +16,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
 
   const { data: business } = await supabase
     .from('businesses')
-    .select('*')
+    .select(PUBLIC_BUSINESS_COLUMNS)
     .eq('slug', slug)
     .maybeSingle()
 
@@ -32,13 +33,13 @@ export default async function BookPage({ params, searchParams }: PageProps) {
       .order('display_order', { ascending: true })
       .order('name'),
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
-    supabase.from('business_settings').select('*').eq('business_id', business.id).maybeSingle(),
+    supabase.from('business_settings').select(PUBLIC_SETTINGS_COLUMNS).eq('business_id', business.id).maybeSingle(),
   ])
 
   return (
     <BookClient
       slug={slug}
-      business={business as Business}
+      business={business as unknown as Business}
       settings={settings as BusinessSettings | null}
       services={(services ?? []) as Service[]}
       employees={(employees ?? []) as Employee[]}

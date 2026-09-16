@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { getEmailFrom, getResend } from '@/lib/resend'
 import { getBusinessPublicUrl } from '@/lib/client-management'
+import { isRebookingMarketingEnabled } from '@/lib/marketing-policy'
 
 type AdminClient = SupabaseClient
 
@@ -76,6 +77,7 @@ export async function processRebookingReminders(admin: AdminClient): Promise<Reb
     failed: 0,
   }
 
+  if (!isRebookingMarketingEnabled()) return result
   const { data: settingsRows, error: settingsError } = await admin
     .from('business_settings')
     .select(

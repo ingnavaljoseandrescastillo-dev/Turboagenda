@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { PwaRuntime } from '@/components/pwa/PwaRuntime'
+import { CookieNotice } from '@/components/legal/CookieNotice'
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://turboagenda.pt'),
@@ -48,6 +49,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <LanguageProvider>
           <PwaRuntime />
           {children}
+          <CookieNotice />
         </LanguageProvider>
       </body>
     </html>

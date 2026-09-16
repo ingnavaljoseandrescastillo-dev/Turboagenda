@@ -1,7 +1,11 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isTrustedMutation } from '@/lib/request-origin'
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/api/') && !isTrustedMutation(request.method, request.url, request.headers)) {
+    return NextResponse.json({ data: null, error: 'Pedido de origem nao autorizada.' }, { status: 403 })
+  }
   let supabaseResponse = NextResponse.next({ request })
 
   const supabase = createServerClient(

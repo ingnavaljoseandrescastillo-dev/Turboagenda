@@ -4,6 +4,7 @@ import { formatResponse, getBusinessForUser, handleError, validateAuth } from '@
 import { getBusinessPublicUrl, loadCommunicationSettings } from '@/lib/client-management'
 import { getEmailFrom, getResend } from '@/lib/resend'
 import { formatDateTime } from '@/lib/utils'
+import { isRebookingMarketingEnabled } from '@/lib/marketing-policy'
 
 type Ctx = { params: Promise<{ id: string }> }
 type ReminderChannel = 'email' | 'whatsapp'
@@ -25,6 +26,7 @@ export async function POST(request: NextRequest, { params }: Ctx) {
   try {
     const { user, supabase, unauthorized } = await validateAuth()
     if (unauthorized || !user) return handleError('Nao autenticado', 401)
+    if (!isRebookingMarketingEnabled()) return handleError('Mensagens promocionais suspensas ate existir consentimento e opcao de cancelamento.', 403)
 
     const business = await getBusinessForUser(supabase, user.id)
     if (!business) return handleError('Nenhum negocio encontrado. Crie o negocio inicial no onboarding.', 404)

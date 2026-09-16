@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_BUSINESS_TIME_ZONE, formatDateTime } from '@/lib/utils'
 
 const ClientSchema = z.object({
@@ -17,7 +17,7 @@ const ClientSchema = z.object({
   payment_proof: z
     .custom<FileList>()
     .optional()
-    .refine((files) => !files?.[0] || files[0].size <= 8 * 1024 * 1024, 'O comprovativo nao pode superar 8 MB')
+    .refine((files) => !files?.[0] || files[0].size <= 4 * 1024 * 1024, 'O comprovativo nao pode superar 4 MB')
     .refine(
       (files) =>
         !files?.[0] ||
@@ -80,6 +80,10 @@ export function BookingForm({
   onSuccess,
 }: BookingFormProps) {
   const [serverError, setServerError] = useState<string | null>(null)
+  const requestId = useRef<string | null>(null)
+  const [code, setCode] = useState('')
+  const [codeSent, setCodeSent] = useState(false)
+  const [verifying, setVerifying] = useState(false)
   const [clientStatus, setClientStatus] = useState<'unknown' | 'checking' | 'new' | 'returning'>('unknown')
 
   const {
@@ -149,6 +153,7 @@ export function BookingForm({
 
       const res = await fetch('/api/appointments', {
         method: 'POST',
+        headers: { 'Idempotency-Key': requestId.current ??= crypto.randomUUID() },
         body: payload,
       })
       const json = await res.json()
@@ -192,7 +197,7 @@ export function BookingForm({
               </p>
               <p className="mt-2 text-xs leading-5 text-amber-100/70">
                 Total estimado: {formatMoney(totalAmount, currency)}. Sinal: {depositPercent}%. Se ja veio antes,
-                use o mesmo email ou telefone para dispensar o sinal.
+                verifique o mesmo email ou telefone com um codigo para dispensar o sinal.
                 {effectiveClientStatus === 'checking' ? ' A verificar o seu historico...' : ''}
               </p>
             </>
@@ -228,6 +233,30 @@ export function BookingForm({
           error={errors.client_birthdate?.message}
           {...register('client_birthdate')}
         />
+
+        {depositRequired && effectiveClientStatus !== 'returning' && (
+          <div className="space-y-2">
+            <Button type="button" disabled={!hasContactForLookup || verifying} onClick={async () => {
+              setVerifying(true)
+              setServerError(null)
+              try {
+                const response = await fetch('/api/client-verification', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business_id: businessId, email: watchedEmail || undefined, phone: watchedPhone || undefined, ...(codeSent ? { code } : {}) }) })
+                const result = await response.json()
+                if (!response.ok) throw new Error(result.error)
+                if (!codeSent) setCodeSent(true)
+                else {
+                  const returning = await lookupCompletedAppointment(businessId, watchedEmail, watchedPhone)
+                  setClientStatus(returning ? 'returning' : 'new')
+                  setCodeSent(false)
+                  setCode('')
+                  if (!returning) setServerError('Contacto verificado. Ainda nao existe uma marcacao concluida com este contacto.')
+                }
+              } catch (error) { setServerError(error instanceof Error ? error.message : 'Erro de verificacao') }
+              finally { setVerifying(false) }
+            }}>{verifying ? 'A verificar...' : codeSent ? 'Validar codigo' : 'Ja sou cliente: verificar contacto'}</Button>
+            {codeSent && <Input label="Codigo recebido por email ou SMS" inputMode="numeric" autoComplete="one-time-code" maxLength={6} value={code} onChange={event => setCode(event.target.value.replace(/\D/g, ''))} />}
+          </div>
+        )}
 
         {depositApplies && (
           <label className="flex flex-col gap-1.5">
@@ -327,11 +356,7 @@ function hasLookupContact(email?: string, phone?: string) {
 
 async function lookupCompletedAppointment(businessId: string, email?: string, phone?: string) {
   if (!hasLookupContact(email, phone)) return false
-  const params = new URLSearchParams({ business_id: businessId })
-  if (email) params.set('email', email)
-  if (phone) params.set('phone', phone)
-
-  const res = await fetch(`/api/public-client-status?${params.toString()}`)
+  const res = await fetch('/api/public-client-status', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ business_id: businessId, email, phone }) })
   if (!res.ok) return false
   const json = await res.json()
   return Boolean(json.data?.has_completed_appointment)

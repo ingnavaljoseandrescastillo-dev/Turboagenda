@@ -42,7 +42,7 @@ const sections = [
     title: '5. Partilha de dados e fornecedores',
     body: [
       'Podemos recorrer a fornecedores tecnicos para alojamento, base de dados, autenticacao, email, seguranca, suporte e ferramentas de comunicacao. Estes fornecedores apenas devem tratar dados na medida necessaria para prestar esses servicos.',
-      'A app usa Supabase para funcionalidades como autenticacao, base de dados e sessoes. Quando o utilizador abre links externos, por exemplo WhatsApp, passa a aplicar-se tambem a politica de privacidade desses terceiros.',
+      'Usamos Supabase para autenticacao, base de dados e ficheiros; Vercel para alojamento; Resend para email; Twilio para SMS; e servicos push do navegador para notificacoes autorizadas. Google e utilizado para autenticacao quando ativada e para fontes. Ao abrir links externos aplicam-se tambem as politicas desses terceiros.',
       'Nao vendemos dados pessoais. Dados podem ser divulgados a autoridades competentes quando exista obrigacao legal ou ordem valida.',
     ],
   },
@@ -57,13 +57,13 @@ const sections = [
     body: [
       'Dados de conta e negocio sao conservados enquanto a conta estiver ativa e durante o periodo adicional necessario para cumprimento legal, faturacao, seguranca, resolucao de disputas ou defesa de direitos.',
       'Dados de marcacoes e clientes sao conservados enquanto forem necessarios para a gestao do negocio na plataforma, sem prejuizo de pedidos de apagamento validos ou obrigacoes legais aplicaveis.',
-      'Registos tecnicos e de seguranca tendem a ser conservados por periodos limitados, normalmente ate 90 dias, salvo necessidade de investigacao de incidentes, cumprimento legal ou defesa de direitos.',
+      'Os contadores de protecao contra abuso usam identificadores derivados por hash e sao eliminados apos dois dias de inatividade durante o processamento de novos pedidos. Outros registos tecnicos seguem os prazos dos fornecedores e as necessidades de seguranca; nao garantimos um prazo unico para todos os registos.',
     ],
   },
   {
     title: '8. Cookies e tecnologias semelhantes',
     body: [
-      'Neste momento, o TurboAgenda deve usar apenas cookies ou armazenamento tecnico necessario para login, seguranca, sessao e funcionamento da aplicacao. Estes cookies essenciais nao exigem consentimento previo.',
+      'O codigo atual da aplicacao usa cookies e armazenamento tecnico para login, seguranca, sessao e preferencias. Consulte a Politica de Cookies em /cookies para conhecer as finalidades e como gerir estes dados no navegador.',
       'Se forem adicionados cookies de analitica, marketing, publicidade, mapas, chat externo ou outras tecnologias nao essenciais, sera necessario obter consentimento previo, livre e informado, permitindo aceitar, recusar ou alterar preferencias.',
     ],
   },
@@ -83,7 +83,7 @@ const sections = [
   {
     title: '11. Contacto',
     body: [
-      'Contacto para privacidade e exercicio de direitos: a completar antes da publicacao final. Ate la, qualquer pedido deve ser enviado pelo canal de contacto disponibilizado no website ou diretamente ao negocio responsavel pela marcacao, quando o pedido disser respeito a dados tratados por esse negocio.',
+      'Contacto para privacidade e exercicio de direitos: ingnavaljoseandrescastillo@gmail.com. Pode tambem contactar diretamente o negocio responsavel pela marcacao quando o pedido disser respeito aos dados tratados por esse negocio.',
     ],
   },
 ]

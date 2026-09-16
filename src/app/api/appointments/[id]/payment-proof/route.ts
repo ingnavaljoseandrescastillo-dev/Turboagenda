@@ -27,7 +27,7 @@ export async function GET(_request: Request, { params }: Ctx) {
     const admin = createAdminClient()
     const { data, error: signedError } = await admin.storage
       .from(PAYMENT_PROOFS_BUCKET)
-      .createSignedUrl(appointment.payment_proof_path, 300)
+      .createSignedUrl(appointment.payment_proof_path, 300, { download: true })
 
     if (signedError) return handleError(signedError.message, 422)
     return formatResponse({ url: data.signedUrl })

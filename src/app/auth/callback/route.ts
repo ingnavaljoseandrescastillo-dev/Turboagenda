@@ -3,12 +3,13 @@ import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { ensureBusinessBootstrapRows } from '@/lib/api-helpers'
 import { slugify } from '@/lib/utils'
+import { getAuthRedirectPath } from '@/lib/auth-redirect'
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const requestedNext = searchParams.get('next')
-  const nextPath = requestedNext?.startsWith('/') ? requestedNext : '/dashboard'
+  const nextPath = getAuthRedirectPath(requestedNext)
 
   if (code) {
     const cookieStore = await cookies()
@@ -43,12 +44,17 @@ export async function GET(request: Request) {
 
         if (existingError) {
           console.error('[auth/callback] existing business lookup failed', existingError)
+          return NextResponse.redirect(`${origin}/dashboard`)
         }
 
         if (existing) {
           await ensureBusinessBootstrapRows(supabase, user.id, existing.id)
         } else {
           const meta = user.user_metadata as { businessName?: string; phone?: string }
+          // Google accounts complete business details in the existing onboarding flow.
+          if (typeof meta.businessName !== 'string' || !meta.businessName.trim()) {
+            return NextResponse.redirect(`${origin}/dashboard/onboarding`)
+          }
           const businessName = meta.businessName ?? 'Meu Negocio'
           const slug = `${slugify(businessName)}-${Math.random().toString(36).slice(2, 6)}`
 

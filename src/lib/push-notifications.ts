@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import webpush from 'web-push'
+import { isAllowedPushEndpoint } from '@/lib/push-endpoint'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { formatDateTime, formatCurrency, normalizeTimeZone } from '@/lib/utils'
 
@@ -341,6 +342,10 @@ async function sendPushToSubscriptions(
   const result = { subscriptions: subscriptions.length, sent: 0, failed: 0, skipped: 0 }
 
   for (const subscription of subscriptions) {
+    if (!isAllowedPushEndpoint(subscription.endpoint)) {
+      result.skipped += 1
+      continue
+    }
     try {
       await webpush.sendNotification(
         {
@@ -350,7 +355,8 @@ async function sendPushToSubscriptions(
             auth: subscription.auth,
           },
         },
-        JSON.stringify(payload)
+        JSON.stringify(payload),
+        { timeout: 10000, TTL: 3600 }
       )
       result.sent += 1
     } catch (err) {

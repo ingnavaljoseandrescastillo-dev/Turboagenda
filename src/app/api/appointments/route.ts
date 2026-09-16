@@ -4,9 +4,12 @@ import { formatResponse, handleError, validateAuth, getBusinessForUser } from '@
 import { sendAppointmentCreatedEmails } from '@/lib/appointment-emails'
 import { sendAppointmentCreatedPush } from '@/lib/push-notifications'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { allowRequest, validPaymentProof } from '@/lib/request-security'
+import { verifiedContact } from '@/lib/client-verification'
+import { z } from 'zod'
 
 const PAYMENT_PROOFS_BUCKET = 'payment-proofs'
-const MAX_PROOF_FILE_SIZE = 8 * 1024 * 1024
+const MAX_PROOF_FILE_SIZE = 4 * 1024 * 1024
 const ALLOWED_PROOF_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 
 export async function GET() {
@@ -35,7 +38,10 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   let uploadedProofPath: string | null = null
+  let committed = false
   try {
+    if (!await allowRequest(request, 'booking', 10)) return handleError('Demasiados pedidos. Tente novamente mais tarde.', 429)
+    if (Number(request.headers.get('content-length')) > 4.4 * 1024 * 1024) return handleError('Ficheiro demasiado grande.', 413)
     const contentType = request.headers.get('content-type') ?? ''
     const formData = contentType.includes('multipart/form-data') ? await request.formData() : null
     const body = formData ? JSON.parse(String(formData.get('appointment') ?? '{}')) : await request.json()
@@ -44,8 +50,7 @@ export async function POST(request: NextRequest) {
       return handleError(parsed.error.issues[0]?.message ?? 'Dados inválidos', 400)
     }
 
-    const { createClient } = await import('@/lib/supabase/server')
-    const db = await createClient()
+    const db = createAdminClient()
 
     const { data: business, error: businessError } = await db
       .from('businesses')
@@ -59,12 +64,13 @@ export async function POST(request: NextRequest) {
     const settings = Array.isArray(business?.business_settings)
       ? business.business_settings[0]
       : business?.business_settings
+    const verified = verifiedContact(request, parsed.data.business_id, parsed.data.client_email, parsed.data.client_phone)
     const { data: hasCompletedAppointment, error: statusError } = await db.rpc(
       'has_completed_public_client_appointment',
       {
         p_business_id: parsed.data.business_id,
-        p_client_email: parsed.data.client_email || null,
-        p_client_phone: parsed.data.client_phone ?? null,
+        p_client_email: verified?.email || null,
+        p_client_phone: verified?.phone || null,
       }
     )
 
@@ -79,7 +85,8 @@ export async function POST(request: NextRequest) {
     }
     if (depositRequired && proofFile instanceof File) {
       if (!ALLOWED_PROOF_TYPES.has(proofFile.type)) return handleError('Use JPG, PNG, WEBP ou PDF.', 400)
-      if (proofFile.size > MAX_PROOF_FILE_SIZE) return handleError('O comprovativo nao pode superar 8 MB.', 400)
+      if (proofFile.size > MAX_PROOF_FILE_SIZE) return handleError('O comprovativo nao pode superar 4 MB.', 400)
+      if (!await validPaymentProof(proofFile)) return handleError('Comprovativo invalido.', 400)
 
       const admin = createAdminClient()
       uploadedProofPath = `${parsed.data.business_id}/${crypto.randomUUID()}.${extensionFromType(proofFile.type)}`
@@ -95,7 +102,10 @@ export async function POST(request: NextRequest) {
 
     const serviceIds = Array.from(new Set(parsed.data.service_ids?.length ? parsed.data.service_ids : [parsed.data.service_id]))
 
-    const { data, error } = await db.rpc('create_public_appointment', {
+    const { data, error } = await db.rpc('create_verified_public_appointment', {
+      p_request_id: z.string().uuid().parse(request.headers.get('idempotency-key') || crypto.randomUUID()),
+      p_verified_email: verified?.email || null,
+      p_verified_phone: verified?.phone || null,
       p_business_id: parsed.data.business_id,
       p_service_id: serviceIds[0],
       p_service_ids: serviceIds,
@@ -116,13 +126,19 @@ export async function POST(request: NextRequest) {
       return handleError(error.message, 422)
     }
 
-    if (typeof data === 'string') {
-      await Promise.all([sendAppointmentCreatedEmails(data), sendAppointmentCreatedPush(data)])
+    committed = data?.created === true
+    if (committed && typeof data?.id === 'string') {
+      await Promise.all([sendAppointmentCreatedEmails(data.id), sendAppointmentCreatedPush(data.id)])
     }
 
-    return formatResponse(data, 201)
+    return formatResponse(data.id, data.created ? 201 : 200)
   } catch (err) {
-    return handleError(err)
+    console.error('[booking] failed', err instanceof Error ? err.message : 'unknown')
+    return handleError('Nao foi possivel concluir a reserva. Tente novamente.', 500)
+  } finally {
+    if (uploadedProofPath && !committed) {
+      await createAdminClient().storage.from(PAYMENT_PROOFS_BUCKET).remove([uploadedProofPath]).catch(() => undefined)
+    }
   }
 }
 
