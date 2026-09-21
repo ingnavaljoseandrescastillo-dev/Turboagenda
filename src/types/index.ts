@@ -99,6 +99,19 @@ export interface Service {
   service_category?: ServiceCategory | null
 }
 
+export interface ServiceDiscountCampaign {
+  id: string
+  business_id: string
+  name: string
+  discount_percent: number
+  starts_on: string
+  ends_on: string
+  is_active: boolean
+  service_ids: string[]
+  created_at: string
+  updated_at: string
+}
+
 export interface ServiceCategory {
   id: string
   business_id: string
@@ -145,6 +158,7 @@ export interface Appointment {
   // joined fields
   service?: Service
   employee?: Employee
+  appointment_services?: { price: number }[]
 }
 
 export interface Review {

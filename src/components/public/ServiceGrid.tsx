@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { formatCurrency, intlLocaleFromAppLocale, type AppLocale } from '@/lib/utils'
-import type { Service } from '@/types'
+import type { Service, ServiceDiscountCampaign } from '@/types'
+import { campaignForService, campaignPrice } from '@/lib/campaigns'
 
 interface ServiceGridProps {
   services: Service[]
+  campaigns?: ServiceDiscountCampaign[]
+  today?: string
   slug: string
   primaryColor?: string
   currency?: string
@@ -19,6 +22,8 @@ interface ServiceGridProps {
 
 export function ServiceGrid({
   services,
+  campaigns = [],
+  today = '',
   slug,
   primaryColor = '#10b981',
   currency = 'EUR',
@@ -61,7 +66,9 @@ export function ServiceGrid({
         </div>
       )}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {visibleServices.map((service) => (
+        {visibleServices.map((service) => {
+          const campaign = campaignForService(service.id, today, campaigns)
+          return (
           <div
             key={service.id}
             className="group rounded-2xl border bg-zinc-900/50 p-5 transition-all hover:brightness-110"
@@ -80,8 +87,11 @@ export function ServiceGrid({
                 </div>
               </div>
               <div className="ml-3 flex-shrink-0 text-right">
+                {campaign && <p className="text-xs font-semibold text-amber-300">-{campaign.discount_percent}% · {campaign.name}</p>}
+                {campaign && <p className="text-xs text-amber-200/80">Para citas até {campaign.ends_on}</p>}
+                {campaign && <p className="text-xs text-zinc-500 line-through">{formatCurrency(service.price, currency, intlLocaleFromAppLocale(locale))}</p>}
                 <p className="text-lg font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif", color: primaryColor }}>
-                  {formatCurrency(service.price, currency, intlLocaleFromAppLocale(locale))}
+                  {formatCurrency(campaign ? campaignPrice(service, today, campaigns) : service.price, currency, intlLocaleFromAppLocale(locale))}
                 </p>
                 <Link
                   href={`/b/${slug}/book?service=${service.id}`}
@@ -93,7 +103,7 @@ export function ServiceGrid({
               </div>
             </div>
           </div>
-        ))}
+        )})}
       </div>
     </div>
   )

@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select'
 import { Dialog } from '@/components/ui/Dialog'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Service, ServiceCategory } from '@/types'
+import { CampaignManager } from '@/components/dashboard/CampaignManager'
 
 type ServiceFormValues = z.infer<typeof ServiceSchema>
 type CategoryFormValues = z.infer<typeof ServiceCategorySchema>
@@ -302,6 +303,7 @@ export default function ServicesPage() {
 
   return (
     <div className="space-y-5 max-w-3xl">
+      <CampaignManager services={services} currency={currency} />
       <div className="bg-emerald-500/10 border border-emerald-500/30 rounded-2xl p-4 flex items-center gap-3">
         <span className="text-xl">+</span>
         <div className="flex-1 min-w-0">

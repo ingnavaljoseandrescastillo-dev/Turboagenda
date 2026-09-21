@@ -1,11 +1,13 @@
 'use client'
 
 import { formatCurrency, intlLocaleFromAppLocale, type AppLocale } from '@/lib/utils'
-import type { Service } from '@/types'
+import type { Service, ServiceDiscountCampaign } from '@/types'
 import { useMemo, useState } from 'react'
 
 interface ServiceSelectorProps {
   services: Service[]
+  campaigns?: ServiceDiscountCampaign[]
+  today?: string
   selected: string | string[] | null
   onSelect: (id: string) => void
   primaryColor?: string
@@ -18,6 +20,8 @@ interface ServiceSelectorProps {
 
 export function ServiceSelector({
   services,
+  campaigns = [],
+  today = '',
   selected,
   onSelect,
   primaryColor = '#10b981',
@@ -70,6 +74,7 @@ export function ServiceSelector({
       <div className="grid gap-3">
         {visibleServices.map((service) => {
           const isSelected = selectedIds.includes(service.id)
+          const upcoming = campaigns.find((campaign) => campaign.is_active && campaign.ends_on >= today && campaign.service_ids.includes(service.id))
           return (
             <button
               key={service.id}
@@ -88,6 +93,11 @@ export function ServiceSelector({
                     <p className="mt-0.5 text-sm text-zinc-500">{service.description}</p>
                   )}
                   <p className="mt-1 text-xs text-zinc-500">{service.duration_minutes} min</p>
+                  {upcoming && (
+                    <p className="mt-1 text-xs text-amber-300">
+                      -{upcoming.discount_percent}% para citas de {upcoming.starts_on} a {upcoming.ends_on}
+                    </p>
+                  )}
                 </div>
                 <div className="ml-4 flex flex-shrink-0 items-center gap-3">
                   <p className="text-lg font-bold" style={{ color: primaryColor }}>

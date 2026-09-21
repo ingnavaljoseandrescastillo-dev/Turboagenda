@@ -8,6 +8,9 @@ import { DateTimePicker } from '@/components/booking/DateTimePicker'
 import { BookingForm } from '@/components/booking/BookingForm'
 import { Button } from '@/components/ui/Button'
 import type { Business, BusinessSettings, Employee, Service } from '@/types'
+import type { ServiceDiscountCampaign } from '@/types'
+import { businessDate, campaignPrice } from '@/lib/campaigns'
+import { formatCurrency } from '@/lib/utils'
 
 type PublicLocale = 'pt' | 'en' | 'es'
 type BookingStep = 'services' | 'employee' | 'datetime' | 'details'
@@ -140,6 +143,7 @@ interface BookClientProps {
   business: Business
   settings: BusinessSettings | null
   services: Service[]
+  campaigns: ServiceDiscountCampaign[]
   employees: Employee[]
   initialService: string | null
 }
@@ -149,6 +153,7 @@ export function BookClient({
   business,
   settings,
   services,
+  campaigns,
   employees,
   initialService,
 }: BookClientProps) {
@@ -174,7 +179,11 @@ export function BookClient({
   const currentStep = stepKeys[step] ?? 'services'
   const primaryServiceId = selectedServices[0] ?? null
   const selectedServiceItems = services.filter((service) => selectedServices.includes(service.id))
-  const selectedTotal = selectedServiceItems.reduce((sum, service) => sum + Number(service.price ?? 0), 0)
+  const appointmentDay = selectedDatetime ? businessDate(selectedDatetime, timeZone) : null
+  const selectedTotal = selectedServiceItems.reduce(
+    (sum, service) => sum + (appointmentDay ? campaignPrice(service, appointmentDay, campaigns) : Number(service.price ?? 0)),
+    0
+  )
   const depositRequired = Boolean(settings?.deposit_required_enabled && settings.deposit_mbway_phone)
 
   if (completed) {
@@ -259,6 +268,8 @@ export function BookClient({
             ) : (
               <ServiceSelector
                 services={services}
+                campaigns={campaigns}
+                today={businessDate(new Date(), timeZone)}
                 selected={selectedServices}
                 primaryColor={theme.primary}
                 currency={currency}
@@ -304,7 +315,11 @@ export function BookClient({
             />
           )}
           {currentStep === 'details' && primaryServiceId && selectedEmployee && selectedDatetime && (
-            <BookingForm
+            <div>
+              <p className="mb-4 rounded-lg border border-emerald-500/25 bg-emerald-500/10 p-3 text-sm text-zinc-100">
+                Total para esta data: <strong>{formatCurrency(selectedTotal, currency)}</strong>
+              </p>
+              <BookingForm
               businessId={business.id}
               serviceId={primaryServiceId}
               serviceIds={selectedServices}
@@ -324,6 +339,7 @@ export function BookClient({
                 setCompleted(true)
               }}
             />
+            </div>
           )}
 
           {step < stepKeys.length - 1 && (

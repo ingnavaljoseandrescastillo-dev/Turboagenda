@@ -6,6 +6,8 @@ import { ServiceGrid } from '@/components/public/ServiceGrid'
 import { ReviewsList } from '@/components/public/ReviewsList'
 import Link from 'next/link'
 import type { Business, Employee, Review, Service } from '@/types'
+import type { ServiceDiscountCampaign } from '@/types'
+import { businessDate } from '@/lib/campaigns'
 
 type PublicLocale = 'pt' | 'en' | 'es'
 
@@ -216,7 +218,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
   if (!business) notFound()
   if (business.is_paused) notFound()
 
-  const [{ data: services }, { data: reviews }, { data: employees }] = await Promise.all([
+  const [{ data: services }, { data: reviews }, { data: employees }, { data: campaigns }, { data: settings }] = await Promise.all([
     supabase
       .from('services')
       .select('*, service_category:service_categories(id, name, display_order)')
@@ -227,6 +229,8 @@ export default async function BusinessPublicPage({ params }: PageProps) {
       .order('name'),
     supabase.from('reviews').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(10),
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
+    supabase.from('service_discount_campaigns').select('*').eq('business_id', business.id).eq('is_active', true),
+    supabase.from('business_settings').select('time_zone').eq('business_id', business.id).maybeSingle(),
   ])
 
   const biz = business as unknown as Business
@@ -241,6 +245,7 @@ export default async function BusinessPublicPage({ params }: PageProps) {
   const locale = normalizePublicLocale(biz.public_language ?? biz.default_language)
   const copy = publicCopy[locale]
   const currency = biz.currency ?? 'EUR'
+  const today = businessDate(new Date(), settings?.time_zone ?? 'Europe/Lisbon')
 
   return (
     <div className="min-h-screen text-zinc-100" style={{ ...pageBackground(theme), color: theme.text }}>
@@ -324,6 +329,8 @@ export default async function BusinessPublicPage({ params }: PageProps) {
           <section id="servicos">
             <ServiceGrid
               services={svcs}
+              campaigns={(campaigns ?? []) as ServiceDiscountCampaign[]}
+              today={today}
               slug={slug}
               primaryColor={theme.primary}
               currency={currency}

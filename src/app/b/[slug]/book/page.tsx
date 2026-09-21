@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import { createAdminClient as createClient } from '@/lib/supabase/admin'
 import { PUBLIC_BUSINESS_COLUMNS, PUBLIC_SETTINGS_COLUMNS } from '@/lib/public-business'
 import { BookClient } from './BookClient'
-import type { Business, BusinessSettings, Employee, Service } from '@/types'
+import type { Business, BusinessSettings, Employee, Service, ServiceDiscountCampaign } from '@/types'
 
 interface PageProps {
   params: Promise<{ slug: string }>
@@ -23,7 +23,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
   if (!business) notFound()
   if (business.is_paused) notFound()
 
-  const [{ data: services }, { data: employees }, { data: settings }] = await Promise.all([
+  const [{ data: services }, { data: employees }, { data: settings }, { data: campaigns }] = await Promise.all([
     supabase
       .from('services')
       .select('*, service_category:service_categories(id, name, display_order)')
@@ -34,6 +34,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
       .order('name'),
     supabase.from('employees').select('*').eq('business_id', business.id).eq('is_active', true).order('name'),
     supabase.from('business_settings').select(PUBLIC_SETTINGS_COLUMNS).eq('business_id', business.id).maybeSingle(),
+    supabase.from('service_discount_campaigns').select('*').eq('business_id', business.id).eq('is_active', true),
   ])
 
   return (
@@ -42,6 +43,7 @@ export default async function BookPage({ params, searchParams }: PageProps) {
       business={business as unknown as Business}
       settings={settings as BusinessSettings | null}
       services={(services ?? []) as Service[]}
+      campaigns={(campaigns ?? []) as ServiceDiscountCampaign[]}
       employees={(employees ?? []) as Employee[]}
       initialService={service ?? null}
     />
