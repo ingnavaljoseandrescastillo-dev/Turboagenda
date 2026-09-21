@@ -795,6 +795,9 @@ function moneyInput(cents: number) {
 }
 
 function servicePriceCents(appointment: Appointment) {
+  if (appointment.appointment_services?.length) {
+    return appointment.appointment_services.reduce((sum, item) => sum + Math.round(Number(item.price) * 100), 0)
+  }
   return Math.round(Number(appointment.service?.price ?? 0) * 100)
 }
 

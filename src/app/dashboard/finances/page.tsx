@@ -31,7 +31,7 @@ export default async function FinancesPage() {
 
   const { data: appointments, error: appointmentsError } = await supabase
     .from('appointments')
-    .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
+    .select('*, service:services(name, duration_minutes, price), employee:employees(name), appointment_services(price)')
     .eq('business_id', business.id)
     .lt('end_time', new Date().toISOString())
     .neq('status', 'cancelled')
