@@ -25,13 +25,14 @@ export function formatResponse<T>(data: T, status = 200) {
 }
 
 export function handleError(error: unknown, status = 500) {
-  const message =
+  const internalMessage =
     typeof error === 'string'
       ? error
       : error instanceof Error
         ? error.message
         : 'Erro interno do servidor'
   console.error('[API Error]', error)
+  const message = status >= 500 ? 'Erro interno do servidor' : internalMessage
   return NextResponse.json({ data: null, error: message }, { status })
 }
 

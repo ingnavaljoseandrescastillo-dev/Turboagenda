@@ -32,7 +32,11 @@ export async function POST(request: NextRequest) {
     if (!email && (!phone || !/^\+3519\d{8}$/.test(phone))) return NextResponse.json({ error: 'Informe um email ou telemovel portugues valido.' }, { status: 400 })
     const { data: settings } = await createAdminClient().from('business_settings').select('deposit_required_enabled').eq('business_id', business).maybeSingle()
     if (!settings?.deposit_required_enabled) return NextResponse.json({ error: 'Verificacao indisponivel.' }, { status: 400 })
-    if (!await consumeLimit(`otp-send:${email || phone}`, 3, 3600) || !await consumeLimit('otp-global', 100, 3600)) return NextResponse.json({ error: 'Aguarde antes de pedir outro codigo.' }, { status: 429 })
+    if (
+      !await consumeLimit(`otp-send:${email || phone}`, 3, 3600) ||
+      !await consumeLimit(`otp-business:${business}`, 100, 3600) ||
+      !await consumeLimit('otp-global', 500, 3600)
+    ) return NextResponse.json({ error: 'Aguarde antes de pedir outro codigo.' }, { status: 429 })
     const otp = String(randomInt(100000, 1000000))
     const nonce = randomUUID()
     if (email) {

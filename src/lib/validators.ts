@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { isValidTimeZone } from '@/lib/utils'
+import { AccountPasswordSchema } from '@/lib/password-policy'
 
 const HexColorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Color invalido')
 const TimeZoneSchema = z.string().min(3).max(64).refine(isValidTimeZone, 'Zona horaria invalida')
@@ -40,8 +41,8 @@ export const ForgotPasswordSchema = z.object({
 
 export const ResetPasswordSchema = z
   .object({
-    password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
-    confirmPassword: z.string().min(6, 'Confirme a nova senha'),
+    password: AccountPasswordSchema,
+    confirmPassword: AccountPasswordSchema,
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'As senhas nao coincidem',
@@ -50,7 +51,7 @@ export const ResetPasswordSchema = z
 
 export const RegisterSchema = z.object({
   email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'Senha deve ter pelo menos 6 caracteres'),
+  password: AccountPasswordSchema,
   businessName: z.string().min(2, 'Nome do negócio deve ter pelo menos 2 caracteres'),
   phone: z.string().min(9, 'Telefone inválido'),
 })
