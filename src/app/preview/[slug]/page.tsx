@@ -110,24 +110,6 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
           {biz.address && <p className="mt-5 text-xs font-semibold uppercase tracking-widest text-[#8f7b70]">⌖ {biz.address}</p>}
         </section>
 
-        {gallery.length > 0 && (
-          <section className="py-8" aria-label="Galeria de fotografias">
-            <div className="mb-5 flex items-end justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-[.22em]" style={{ color: accent }}>Momentos</p>
-                <h2 className="mt-2 text-3xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Galeria</h2>
-              </div>
-              <span className="text-xs text-[#8f7b70]">Deslize para ver →</span>
-            </div>
-            <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:px-0">
-              {gallery.map((image, index) => (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img key={`${image}-${index}`} src={image} alt={`Fotografia ${index + 1} de ${biz.name}`} className="aspect-[3/4] w-[75%] shrink-0 snap-center rounded-3xl object-cover sm:w-[32%]" />
-              ))}
-            </div>
-          </section>
-        )}
-
         <section id="servicos" className="py-8">
           <p className="text-xs font-bold uppercase tracking-[.22em]" style={{ color: accent }}>Feito para si</p>
           <h2 className="mt-2 text-3xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Serviços em destaque</h2>
@@ -151,6 +133,24 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
           </div>
           <p className="mt-6 text-center text-xs text-[#9d887b]">Os descontos mostrados valem para reservas nas datas indicadas pela campanha. A reserva continua na página atual.</p>
         </section>
+
+        {gallery.length > 0 && (
+          <section className="py-8" aria-label="Galeria de fotografias">
+            <div className="mb-5 flex items-end justify-between">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[.22em]" style={{ color: accent }}>Momentos</p>
+                <h2 className="mt-2 text-3xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Galeria</h2>
+              </div>
+              <span className="text-xs text-[#8f7b70]">Deslize para ver →</span>
+            </div>
+            <div className="-mx-5 flex snap-x snap-mandatory gap-3 overflow-x-auto px-5 pb-4 sm:mx-0 sm:px-0">
+              {gallery.map((image, index) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={`${image}-${index}`} src={image} alt={`Fotografia ${index + 1} de ${biz.name}`} className="aspect-[3/4] w-[75%] shrink-0 snap-center rounded-3xl object-cover sm:w-[32%]" />
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   )
