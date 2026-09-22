@@ -4,6 +4,7 @@ import { getBusinessPublicUrl } from '@/lib/client-management'
 import { sendMessageFailurePush, type MessageFailureEvent } from '@/lib/push-notifications'
 import { normalizeSmsPhone, sendSms } from '@/lib/twilio'
 import { formatDateTime, normalizeTimeZone } from '@/lib/utils'
+import { smsReminderAllowance } from '@/lib/sms-reminder-access'
 
 type AdminClient = SupabaseClient
 
@@ -71,6 +72,7 @@ type ReminderSubscription = {
   business_id: string
   plan: 'trial' | 'basic' | 'plus'
   status: string
+  trial_ends_at: string | null
 }
 
 type ExistingEvent = {
@@ -85,7 +87,6 @@ type SmsUsageEvent = {
 const HOUR_MS = 60 * 60 * 1000
 const MINUTE_MS = 60 * 1000
 const REMINDER_EVENT = 'appointment_reminder_24h'
-const SMS_MONTHLY_LIMIT = 150
 
 function getReminderWindow(now: Date, options: AppointmentReminderOptions) {
   if (typeof options.targetHours === 'number' && typeof options.windowMinutes === 'number') {
@@ -176,7 +177,7 @@ export async function processAppointmentReminderEmails(
       .limit(10000),
     admin
       .from('subscriptions')
-      .select('business_id, plan, status')
+      .select('business_id, plan, status, trial_ends_at')
       .in('business_id', businessIds),
   ])
 
@@ -211,11 +212,28 @@ export async function processAppointmentReminderEmails(
     ((subscriptionRows ?? []) as ReminderSubscription[]).map((row) => [row.business_id, row])
   )
 
+  // Trial credits are for the entire trial, not renewed at the start of a month.
+  const trialSmsUsage = new Map<string, number>()
+  const trialBusinessIds = businessIds.filter((id) =>
+    smsReminderAllowance(subscriptions.get(id), settings.get(id)?.sms_trial_override_until, now).period === 'trial'
+  )
+  await Promise.all(trialBusinessIds.map(async (businessId) => {
+    const { count, error } = await admin.from('notification_events')
+      .select('id', { count: 'exact', head: true })
+      .eq('business_id', businessId)
+      .eq('channel', 'sms')
+      .eq('event_type', REMINDER_EVENT)
+      .in('status', ['queued', 'sent'])
+    if (error) throw new Error(error.message)
+    trialSmsUsage.set(businessId, count ?? 0)
+  }))
+
   for (const appointment of appointments) {
     const business = businesses.get(appointment.business_id)
     const businessSettings = settings.get(appointment.business_id)
     const subscription = subscriptions.get(appointment.business_id)
-    const smsAvailable = isSmsAvailable(subscription, businessSettings?.sms_trial_override_until)
+    const smsAllowance = smsReminderAllowance(subscription, businessSettings?.sms_trial_override_until, now)
+    const usage = smsAllowance.period === 'trial' ? trialSmsUsage : smsUsage
 
     if (!business) {
       result.skipped += 1
@@ -277,9 +295,9 @@ export async function processAppointmentReminderEmails(
     const smsPhone = normalizeSmsPhone(appointment.client_phone)
     if (
       businessSettings?.sms_reminder_24h_enabled &&
-      smsAvailable &&
+      smsAllowance.available &&
       smsPhone &&
-      (smsUsage.get(appointment.business_id) ?? 0) < SMS_MONTHLY_LIMIT &&
+      (usage.get(appointment.business_id) ?? 0) < smsAllowance.limit &&
       !alreadyHandled.has(`${appointment.id}:sms`)
     ) {
       result.due += 1
@@ -317,7 +335,7 @@ export async function processAppointmentReminderEmails(
           result.failed += 1
           await sendMessageFailurePush(admin, event, { notifyBusiness: true })
         }
-        if (sent.ok) smsUsage.set(appointment.business_id, (smsUsage.get(appointment.business_id) ?? 0) + 1)
+        if (sent.ok) usage.set(appointment.business_id, (usage.get(appointment.business_id) ?? 0) + 1)
       }
     }
 
@@ -552,11 +570,6 @@ function countByBusiness(items: SmsUsageEvent[]) {
 
 function getMonthStart(now: Date) {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
-}
-
-function isSmsAvailable(subscription: ReminderSubscription | undefined, overrideUntil?: string | null) {
-  if (subscription?.plan === 'basic' || subscription?.plan === 'plus') return true
-  return Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now())
 }
 
 function clientKey(businessId: string, email: string) {
