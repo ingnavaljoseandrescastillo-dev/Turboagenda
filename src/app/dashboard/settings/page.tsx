@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n/translations'
+import { smsReminderAllowance, TRIAL_SMS_TOTAL_LIMIT, PAID_SMS_MONTHLY_LIMIT } from '@/lib/sms-reminder-access'
 
 type SettingsTab = 'profile' | 'public' | 'preferences' | 'payment' | 'notifications'
 
@@ -147,6 +148,8 @@ export default function SettingsPage() {
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [paymentError, setPaymentError] = useState<string | null>(null)
   const [subscriptionPlan, setSubscriptionPlan] = useState('trial')
+  const [subscriptionStatus, setSubscriptionStatus] = useState<string | null>(null)
+  const [trialEndsAt, setTrialEndsAt] = useState<string | null>(null)
   const [smsTrialOverrideUntil, setSmsTrialOverrideUntil] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile')
   const [form, setForm] = useState({
@@ -214,9 +217,11 @@ export default function SettingsPage() {
         const b = json.data.business
         const settings = json.data.settings
         const plan = json.data.subscription?.plan ?? 'trial'
-        const smsAvailable = isSmsAvailable(plan, settings?.sms_trial_override_until)
+        const smsAvailable = smsReminderAllowance(json.data.subscription, settings?.sms_trial_override_until).available
         const whatsappAvailable = plan === 'plus'
         setSubscriptionPlan(plan)
+        setSubscriptionStatus(json.data.subscription?.status ?? null)
+        setTrialEndsAt(json.data.subscription?.trial_ends_at ?? null)
         setSmsTrialOverrideUntil(settings?.sms_trial_override_until ?? null)
         const dashboardLanguage = normalizeLocale(b.dashboard_language ?? b.default_language)
         const publicLanguage = normalizeLocale(b.public_language ?? b.default_language)
@@ -410,7 +415,10 @@ export default function SettingsPage() {
   }
 
   if (loading) return <div className="text-zinc-500 text-sm">{common.loading}</div>
-  const smsAvailable = isSmsAvailable(subscriptionPlan, smsTrialOverrideUntil)
+  const smsAvailable = smsReminderAllowance(
+    { plan: subscriptionPlan, status: subscriptionStatus, trial_ends_at: trialEndsAt },
+    smsTrialOverrideUntil
+  ).available
   const whatsappAvailable = subscriptionPlan === 'plus'
   const preferencesText = preferenceCopy[form.dashboard_language] ?? preferenceCopy.pt
   const visibleTabs = settingsTabs.map((tab) => ({
@@ -918,22 +926,22 @@ export default function SettingsPage() {
             <div>
               <h4 className="text-sm font-semibold text-zinc-100">SMS</h4>
               <p className="mt-1 text-xs text-zinc-500">
-                Envia recordatorios transaccionales por Twilio solo a clientes con telefono valido. Se activa al pasar a Basic o Plus.
+                Envia lembretes de marcação por SMS apenas a clientes com telefone válido. No período de teste há uma quota para experimentar.
               </p>
             </div>
             <ToggleRow
               label="Recordatorio SMS 1 o 2 dias antes"
               description={
                 smsAvailable
-                  ? 'Envia un SMS antes de la cita. Requiere consentimiento del cliente y saldo/configuracion activa en Twilio.'
-                  : 'El trial informa esta funcion, pero no envia SMS. Activa Basic para usar 150 SMS/mes.'
+                  ? 'Envia um SMS antes da marcação. Requer consentimento do cliente e serviço Twilio ativo.'
+                  : 'Disponível durante o período de teste ativo e nos planos Basic e Plus.'
               }
               checked={smsAvailable && notifications.sms_reminder_24h_enabled}
               disabled={!smsAvailable}
               onChange={(value) => setNotifications((current) => ({ ...current, sms_reminder_24h_enabled: value }))}
             />
             <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
-              Usa este canal para avisos de citas, no marketing. Basic incluye 150 SMS/mes por negocio; en trial queda bloqueado.
+              Apenas para lembretes de marcação, não para marketing. Teste: {TRIAL_SMS_TOTAL_LIMIT} SMS no total durante o período ativo. Basic/Plus: até {PAID_SMS_MONTHLY_LIMIT} SMS por mês.
             </p>
           </div>
 
@@ -1150,11 +1158,6 @@ function readableTextColor(hex: string) {
   const g = parseInt(normalized.slice(2, 4), 16)
   const b = parseInt(normalized.slice(4, 6), 16)
   return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#09090b' : '#ffffff'
-}
-
-function isSmsAvailable(plan: string, overrideUntil?: string | null) {
-  if (plan === 'basic' || plan === 'plus') return true
-  return Boolean(overrideUntil && new Date(overrideUntil).getTime() > Date.now())
 }
 
 function ToggleRow({

@@ -7,6 +7,7 @@ import {
   handleError,
   validateAuth,
 } from '@/lib/api-helpers'
+import { smsReminderAllowance } from '@/lib/sms-reminder-access'
 
 export async function GET() {
   try {
@@ -17,7 +18,8 @@ export async function GET() {
     if (!business) return handleError('Nenhum negocio encontrado. Crie o negocio inicial no onboarding.', 404)
 
     await ensureBusinessBootstrapRows(supabase, user.id, business.id)
-    const plan = await getSubscriptionPlan(supabase, business.id)
+    const subscription = await getSubscription(supabase, business.id)
+    const plan = subscription?.plan ?? 'trial'
 
     const { data, error } = await supabase
       .from('business_settings')
@@ -30,7 +32,7 @@ export async function GET() {
 
     if (error) return handleError(error.message, 422)
     const settings = (data ?? {}) as Record<string, unknown> & { whatsapp_enabled?: boolean }
-    const smsAvailable = isSmsAvailable(plan, settings.sms_trial_override_until)
+    const smsAvailable = smsReminderAllowance(subscription, settings.sms_trial_override_until as string | null).available
     const whatsappAvailable = plan === 'plus'
     return formatResponse({
       ...settings,
@@ -56,17 +58,18 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const parsed = NotificationSettingsSchema.safeParse(body)
     if (!parsed.success) return handleError(parsed.error.issues[0]?.message ?? 'Dados invalidos', 400)
-    const plan = await getSubscriptionPlan(supabase, business.id)
+    const subscription = await getSubscription(supabase, business.id)
+    const plan = subscription?.plan ?? 'trial'
     const { data: settingsForAccess, error: settingsAccessError } = await supabase
       .from('business_settings')
       .select('sms_trial_override_until')
       .eq('business_id', business.id)
       .maybeSingle()
     if (settingsAccessError) return handleError(settingsAccessError.message, 422)
-    const smsAvailable = isSmsAvailable(plan, settingsForAccess?.sms_trial_override_until)
+    const smsAvailable = smsReminderAllowance(subscription, settingsForAccess?.sms_trial_override_until).available
     const whatsappAvailable = plan === 'plus'
     if (!smsAvailable && parsed.data.sms_reminder_24h_enabled) {
-      return handleError('SMS se activa al pasar al Plan Basic. El trial solo muestra la opcion.', 403)
+      return handleError('Os SMS estão disponíveis durante o período de teste ou nos planos Basic e Plus.', 403)
     }
     if (!whatsappAvailable && parsed.data.whatsapp_enabled) {
       return handleError('WhatsApp esta disponible solo en el Plan Plus. El Plan Basic mantiene recordatorios por email.', 403)
@@ -102,22 +105,16 @@ export async function PATCH(request: NextRequest) {
   }
 }
 
-async function getSubscriptionPlan(
+async function getSubscription(
   supabase: Awaited<ReturnType<typeof validateAuth>>['supabase'],
   businessId: string
 ) {
   const { data, error } = await supabase
     .from('subscriptions')
-    .select('plan')
+    .select('plan, status, trial_ends_at')
     .eq('business_id', businessId)
     .maybeSingle()
 
   if (error) throw new Error(error.message)
-  return data?.plan ?? 'trial'
-}
-
-function isSmsAvailable(plan: string, overrideUntil: unknown) {
-  if (plan === 'basic' || plan === 'plus') return true
-  if (typeof overrideUntil !== 'string') return false
-  return new Date(overrideUntil).getTime() > Date.now()
+  return data
 }
