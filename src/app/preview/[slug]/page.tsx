@@ -2,7 +2,8 @@ import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PUBLIC_BUSINESS_COLUMNS } from '@/lib/public-business'
 import { formatCurrency } from '@/lib/utils'
-import type { Business, Service } from '@/types'
+import { businessDate, campaignForService, campaignPrice } from '@/lib/campaigns'
+import type { Business, Service, ServiceDiscountCampaign } from '@/types'
 
 interface PreviewPageProps {
   params: Promise<{ slug: string }>
@@ -24,18 +25,19 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
 
   if (!business || business.is_paused) notFound()
 
-  const { data: services } = await supabase
-    .from('services')
-    .select('id,name,description,price,duration_minutes')
-    .eq('business_id', business.id)
-    .eq('is_active', true)
-    .is('deleted_at', null)
-    .order('display_order', { ascending: true })
-    .order('name')
-    .limit(6)
+  const [{ data: services }, { data: campaigns }, { data: settings }] = await Promise.all([
+    supabase.from('services').select('id,name,description,price,duration_minutes')
+      .eq('business_id', business.id).eq('is_active', true).is('deleted_at', null)
+      .order('display_order', { ascending: true }).order('name').limit(6),
+    supabase.from('service_discount_campaigns').select('*')
+      .eq('business_id', business.id).eq('is_active', true),
+    supabase.from('business_settings').select('time_zone').eq('business_id', business.id).maybeSingle(),
+  ])
 
   const biz = business as unknown as Business
   const items = (services ?? []) as Service[]
+  const activeCampaigns = (campaigns ?? []) as ServiceDiscountCampaign[]
+  const today = businessDate(new Date(), settings?.time_zone ?? 'Europe/Lisbon')
   const gallery = (biz.gallery_images ?? []).filter(Boolean)
   const accent = biz.theme_primary_color ?? '#8a6f5b'
   const description = biz.description?.trim() || 'Um espaço dedicado a cuidar de si, com atenção a cada detalhe.'
@@ -79,7 +81,7 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
               {biz.address || 'Beleza com atenção a cada detalhe'}
             </p>
             <a
-              href="#sobre"
+              href={`/b/${slug}/book`}
               className="mx-auto mt-8 flex w-full max-w-[410px] items-center justify-between rounded-full border border-white/70 bg-white/90 px-5 py-4 text-left shadow-[0_15px_35px_rgba(41,30,25,.18)] transition-transform hover:-translate-y-0.5"
             >
               <span className="flex items-center gap-3">
@@ -88,11 +90,11 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
                   <img src={biz.logo_image_url} alt="" className="h-11 w-11 rounded-full object-cover" />
                 )}
                 <span>
-                  <strong className="block text-sm text-[#43332d]">Conheça o espaço</strong>
-                  <span className="block text-xs text-[#826c60]">Serviços, fotos e informações</span>
+                  <strong className="block text-sm text-[#43332d]">Agendar a minha visita</strong>
+                  <span className="block text-xs text-[#826c60]">Escolha o serviço e o horário</span>
                 </span>
               </span>
-              <span className="text-xl text-[#826c60]">↓</span>
+              <span className="text-xl text-[#826c60]">→</span>
             </a>
           </div>
         </div>
@@ -131,18 +133,23 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
           <h2 className="mt-2 text-3xl font-bold" style={{ fontFamily: "'Bricolage Grotesque', sans-serif" }}>Serviços em destaque</h2>
           <p className="mt-2 text-sm text-[#826f63]">Explore alguns dos cuidados disponíveis.</p>
           <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {items.map((service) => (
-              <div key={service.id} className="rounded-3xl border border-[#dccfc4] bg-[#fbf8f5] p-5 shadow-[0_10px_30px_rgba(70,51,42,.05)]">
+            {items.map((service) => {
+              const campaign = campaignForService(service.id, today, activeCampaigns)
+              return <div key={service.id} className="rounded-3xl border border-[#dccfc4] bg-[#fbf8f5] p-5 shadow-[0_10px_30px_rgba(70,51,42,.05)]">
                 <div className="flex items-start justify-between gap-4">
                   <h3 className="text-lg font-bold text-[#42332d]">{service.name}</h3>
-                  <span className="shrink-0 font-bold" style={{ color: accent }}>{formatCurrency(Number(service.price), biz.currency)}</span>
+                  <span className="shrink-0 text-right font-bold" style={{ color: accent }}>
+                    {campaign && <span className="block text-xs font-normal text-[#9d887b] line-through">{formatCurrency(Number(service.price), biz.currency)}</span>}
+                    {formatCurrency(campaignPrice(service, today, activeCampaigns), biz.currency)}
+                  </span>
                 </div>
+                {campaign && <p className="mt-1 text-xs font-bold" style={{ color: accent }}>−{campaign.discount_percent}% · {campaign.name}</p>}
                 {service.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#826f63]">{service.description}</p>}
                 <p className="mt-4 text-xs font-semibold uppercase tracking-wide text-[#9d887b]">{service.duration_minutes} min</p>
               </div>
-            ))}
+            })}
           </div>
-          <p className="mt-6 text-center text-xs text-[#9d887b]">Os preços e serviços acima são ilustrativos da apresentação visual; a reserva continua na página atual.</p>
+          <p className="mt-6 text-center text-xs text-[#9d887b]">Os descontos mostrados valem para reservas nas datas indicadas pela campanha. A reserva continua na página atual.</p>
         </section>
       </div>
     </main>
