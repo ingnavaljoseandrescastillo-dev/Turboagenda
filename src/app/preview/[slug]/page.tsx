@@ -28,7 +28,7 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
   const [{ data: services }, { data: campaigns }, { data: settings }] = await Promise.all([
     supabase.from('services').select('id,name,description,price,duration_minutes')
       .eq('business_id', business.id).eq('is_active', true).is('deleted_at', null)
-      .order('display_order', { ascending: true }).order('name').limit(6),
+      .order('display_order', { ascending: true }).order('name'),
     supabase.from('service_discount_campaigns').select('*')
       .eq('business_id', business.id).eq('is_active', true),
     supabase.from('business_settings').select('time_zone').eq('business_id', business.id).maybeSingle(),
@@ -38,15 +38,26 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
   const items = (services ?? []) as Service[]
   const activeCampaigns = (campaigns ?? []) as ServiceDiscountCampaign[]
   const today = businessDate(new Date(), settings?.time_zone ?? 'Europe/Lisbon')
+  return <MobileBusinessLanding slug={slug} biz={biz} items={items} activeCampaigns={activeCampaigns} today={today} preview />
+}
+
+export function MobileBusinessLanding({ slug, biz, items, activeCampaigns, today, preview = false }: {
+  slug: string
+  biz: Business
+  items: Service[]
+  activeCampaigns: ServiceDiscountCampaign[]
+  today: string
+  preview?: boolean
+}) {
   const gallery = (biz.gallery_images ?? []).filter(Boolean)
   const accent = biz.theme_primary_color ?? '#8a6f5b'
   const description = biz.description?.trim() || 'Um espaço dedicado a cuidar de si, com atenção a cada detalhe.'
 
   return (
     <main className="min-h-screen bg-[#f1ebe5] text-[#352b28]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-      <div className="fixed inset-x-0 top-0 z-30 bg-[#2e2523] px-4 py-2 text-center text-[11px] font-semibold tracking-wide text-white">
+      {preview && <div className="fixed inset-x-0 top-0 z-30 bg-[#2e2523] px-4 py-2 text-center text-[11px] font-semibold tracking-wide text-white">
         Protótipo visual · Esta página ainda não está ativa para os clientes
-      </div>
+      </div>}
 
       <section className="relative mx-auto min-h-[760px] max-w-[1100px] overflow-hidden sm:min-h-[820px]" style={{ minHeight: '92svh' }}>
         {biz.cover_image_url ? (
@@ -68,7 +79,7 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
             {biz.logo_image_url && (
               // The business logo is already a public, owner-uploaded asset.
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={biz.logo_image_url} alt={`Logo ${biz.name}`} className="h-12 w-12 rounded-full border-2 border-white/80 bg-white object-cover shadow-lg" />
+              <img src={biz.logo_image_url} alt={`Logo ${biz.name}`} className="h-24 w-24 rounded-full border-2 border-white/80 bg-white object-contain p-1 shadow-lg sm:h-28 sm:w-28" />
             )}
           </div>
 
@@ -87,7 +98,7 @@ export default async function MobileBusinessPreview({ params }: PreviewPageProps
               <span className="flex items-center gap-3">
                 {biz.logo_image_url && (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={biz.logo_image_url} alt="" className="h-11 w-11 rounded-full object-cover" />
+                  <img src={biz.logo_image_url} alt="" className="h-16 w-16 shrink-0 rounded-full bg-white object-contain p-1" />
                 )}
                 <span>
                   <strong className="block text-sm text-[#43332d]">Agendar a minha visita</strong>

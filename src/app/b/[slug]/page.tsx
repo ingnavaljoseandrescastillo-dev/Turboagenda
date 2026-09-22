@@ -8,6 +8,7 @@ import Link from 'next/link'
 import type { Business, Employee, Review, Service } from '@/types'
 import type { ServiceDiscountCampaign } from '@/types'
 import { businessDate } from '@/lib/campaigns'
+import { MobileBusinessLanding } from '@/app/preview/[slug]/page'
 
 type PublicLocale = 'pt' | 'en' | 'es'
 
@@ -246,6 +247,10 @@ export default async function BusinessPublicPage({ params }: PageProps) {
   const copy = publicCopy[locale]
   const currency = biz.currency ?? 'EUR'
   const today = businessDate(new Date(), settings?.time_zone ?? 'Europe/Lisbon')
+
+  if (biz.public_mobile_layout_enabled) {
+    return <MobileBusinessLanding slug={slug} biz={biz} items={svcs} activeCampaigns={(campaigns ?? []) as ServiceDiscountCampaign[]} today={today} />
+  }
 
   return (
     <div className="min-h-screen text-zinc-100" style={{ ...pageBackground(theme), color: theme.text }}>

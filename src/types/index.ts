@@ -13,6 +13,7 @@ export interface Business {
   cover_image_url?: string
   logo_image_url?: string
   gallery_images?: string[]
+  public_mobile_layout_enabled?: boolean
   theme_primary_color?: string
   theme_background_color?: string
   theme_text_color?: string
