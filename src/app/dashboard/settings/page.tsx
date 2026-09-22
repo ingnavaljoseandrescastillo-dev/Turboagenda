@@ -163,6 +163,7 @@ export default function SettingsPage() {
     cover_image_url: '',
     logo_image_url: '',
     gallery_images: ['', '', '', ''],
+    public_mobile_layout_enabled: false,
     theme_primary_color: '#10b981',
     theme_background_color: '#09090b',
     theme_text_color: '#f4f4f5',
@@ -233,6 +234,7 @@ export default function SettingsPage() {
           cover_image_url: b.cover_image_url ?? '',
           logo_image_url: b.logo_image_url ?? '',
           gallery_images: normalizeGalleryImages(b.gallery_images),
+          public_mobile_layout_enabled: b.public_mobile_layout_enabled ?? false,
           theme_primary_color: b.theme_primary_color ?? '#10b981',
           theme_background_color: b.theme_background_color ?? '#09090b',
           theme_text_color: b.theme_text_color ?? '#f4f4f5',
@@ -507,6 +509,22 @@ export default function SettingsPage() {
             <p className="text-sm text-zinc-500 mt-1">
               {copy.publicPageDesc}
             </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-800 bg-zinc-950 p-4">
+            <h4 className="font-semibold text-zinc-100">Novo visual da página pública</h4>
+            <p className="mt-1 text-sm text-zinc-400">Capa grande no telemóvel, apresentação, serviços e galeria no final. As reservas continuam a funcionar como antes.</p>
+            <a href={`/preview/${form.slug}`} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm font-semibold text-emerald-400 underline">Ver pré-visualização</a>
+            <label className="mt-4 flex cursor-pointer items-center gap-3 text-sm text-zinc-200">
+              <input
+                type="checkbox"
+                checked={form.public_mobile_layout_enabled}
+                onChange={(event) => setForm((current) => ({ ...current, public_mobile_layout_enabled: event.target.checked }))}
+                className="h-5 w-5 accent-emerald-500"
+              />
+              Ativar o novo visual para os meus clientes
+            </label>
+            <p className="mt-2 text-xs text-zinc-500">Só será aplicado ao seu negócio depois de guardar. Pode voltar ao visual anterior quando quiser.</p>
           </div>
 
           <div className="grid gap-4 lg:grid-cols-[1fr_0.9fr]">

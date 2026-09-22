@@ -139,6 +139,7 @@ export const BusinessSettingsSchema = z.object({
   cover_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   logo_image_url: z.string().url('URL invalida').or(z.literal('')).optional(),
   gallery_images: z.array(z.string().url('URL invalida').or(z.literal(''))).max(12).optional(),
+  public_mobile_layout_enabled: z.boolean().optional(),
   theme_primary_color: HexColorSchema.optional(),
   theme_background_color: HexColorSchema.optional(),
   theme_text_color: HexColorSchema.optional(),
