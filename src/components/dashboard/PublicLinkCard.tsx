@@ -11,10 +11,9 @@ const PUBLIC_ORIGIN = 'https://turboagenda.pt'
 export function PublicLinkCard({ slug }: PublicLinkCardProps) {
   const [copied, setCopied] = useState(false)
   const publicUrl = `${PUBLIC_ORIGIN}/b/${slug}`
-  const bookingUrl = `${publicUrl}/book`
 
   async function copyLink() {
-    await navigator.clipboard.writeText(bookingUrl)
+    await navigator.clipboard.writeText(publicUrl)
     setCopied(true)
     window.setTimeout(() => setCopied(false), 2200)
   }
@@ -25,7 +24,7 @@ export function PublicLinkCard({ slug }: PublicLinkCardProps) {
         <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-wide text-emerald-300">Link publico</p>
           <h2 className="mt-1 text-lg font-bold text-zinc-100">Comparte tu agenda con clientes</h2>
-          <p className="mt-1 truncate text-sm text-zinc-400">{bookingUrl}</p>
+          <p className="mt-1 truncate text-sm text-zinc-400">{publicUrl}</p>
         </div>
         <div className="flex flex-shrink-0 gap-2">
           <a
