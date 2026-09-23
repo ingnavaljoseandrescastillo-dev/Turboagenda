@@ -135,6 +135,7 @@ export default function ServicesPage() {
   const [editingCategory, setEditingCategory] = useState<ServiceCategory | null>(null)
   const [deletingCategory, setDeletingCategory] = useState<ServiceCategory | null>(null)
   const [currency, setCurrency] = useState('EUR')
+  const [reordering, setReordering] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -301,6 +302,73 @@ export default function ServicesPage() {
     }
   }
 
+  async function saveDisplayOrder(
+    items: Array<{ id: string }>,
+    endpoint: 'services' | 'service-categories'
+  ) {
+    const responses = await Promise.all(items.map((item, display_order) =>
+      fetch(`/api/${endpoint}/${item.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_order }),
+      })
+    ))
+    const failed = responses.find((response) => !response.ok)
+    if (failed) {
+      const payload = await failed.json().catch(() => null)
+      throw new Error(payload?.error ?? 'Não foi possível guardar a nova ordem.')
+    }
+  }
+
+  async function moveCategory(categoryId: string, direction: -1 | 1) {
+    const index = categories.findIndex((category) => category.id === categoryId)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= categories.length || reordering) return
+
+    const reordered = [...categories]
+    ;[reordered[index], reordered[target]] = [reordered[target], reordered[index]]
+    const normalized = reordered.map((category, display_order) => ({ ...category, display_order }))
+    setCategories(normalized)
+    setReordering(true)
+    setError(null)
+    try {
+      await saveDisplayOrder(normalized, 'service-categories')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : common.error)
+      await load()
+    } finally {
+      setReordering(false)
+    }
+  }
+
+  async function moveService(service: Service, direction: -1 | 1) {
+    if (reordering) return
+    const categoryId = service.service_category_id ?? null
+    const siblings = services.filter((item) => (item.service_category_id ?? null) === categoryId)
+    const index = siblings.findIndex((item) => item.id === service.id)
+    const target = index + direction
+    if (index < 0 || target < 0 || target >= siblings.length) return
+
+    const reordered = [...siblings]
+    ;[reordered[index], reordered[target]] = [reordered[target], reordered[index]]
+    const normalized = reordered.map((item, display_order) => ({ ...item, display_order }))
+    const positions = new Map(normalized.map((item) => [item.id, item.display_order]))
+    setServices((current) => current.map((item) => (
+      positions.has(item.id) ? { ...item, display_order: positions.get(item.id) } : item
+    )))
+    setReordering(true)
+    setError(null)
+    try {
+      await saveDisplayOrder(normalized, 'services')
+      await load()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : common.error)
+      await load()
+    } finally {
+      setReordering(false)
+    }
+  }
+
   return (
     <div className="space-y-5 max-w-3xl">
       <CampaignManager services={services} currency={currency} />
@@ -328,7 +396,7 @@ export default function ServicesPage() {
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <div className="text-sm font-semibold text-zinc-100">Categorias de servicos</div>
-            <div className="text-xs text-zinc-500">Crie solapas como Destaques, Maos, Pes ou Promocoes.</div>
+            <div className="text-xs text-zinc-500">Crie separadores e use as setas para escolher a ordem em que aparecem.</div>
           </div>
           <Button size="sm" variant="secondary" onClick={() => setShowCategoryCreate(true)}>Nova categoria</Button>
         </div>
@@ -338,7 +406,7 @@ export default function ServicesPage() {
           </div>
         ) : (
           <div className="flex gap-2 overflow-x-auto pb-1">
-            {categories.map((category) => (
+            {categories.map((category, index) => (
               <div key={category.id} className="min-w-44 rounded-xl border border-zinc-800 bg-zinc-950/60 p-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -347,7 +415,23 @@ export default function ServicesPage() {
                   </div>
                   <span className={`mt-1 h-2 w-2 rounded-full ${category.is_active ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
                 </div>
-                <div className="mt-3 flex gap-2">
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    disabled={index === 0 || reordering}
+                    onClick={() => void moveCategory(category.id, -1)}
+                    title="Mover categoria para a esquerda"
+                    aria-label={`Mover ${category.name} para a esquerda`}
+                  >←</button>
+                  <button
+                    type="button"
+                    className="rounded-md border border-zinc-700 px-2 py-1 text-xs text-zinc-300 disabled:cursor-not-allowed disabled:opacity-30"
+                    disabled={index === categories.length - 1 || reordering}
+                    onClick={() => void moveCategory(category.id, 1)}
+                    title="Mover categoria para a direita"
+                    aria-label={`Mover ${category.name} para a direita`}
+                  >→</button>
                   <button className="text-xs text-zinc-400 hover:text-white" onClick={() => setEditingCategory(category)}>Editar</button>
                   <button className="text-xs text-red-400 hover:text-red-300" onClick={() => setDeletingCategory(category)}>Eliminar</button>
                 </div>
@@ -371,7 +455,10 @@ export default function ServicesPage() {
         </div>
       ) : (
         <div className="grid md:grid-cols-2 gap-3">
-          {services.map((service) => (
+          {services.map((service) => {
+            const siblings = services.filter((item) => (item.service_category_id ?? null) === (service.service_category_id ?? null))
+            const siblingIndex = siblings.findIndex((item) => item.id === service.id)
+            return (
             <div key={service.id} className="group p-5 bg-zinc-900/50 border border-zinc-800 rounded-2xl hover:border-emerald-500/30 transition">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
@@ -384,6 +471,22 @@ export default function ServicesPage() {
                   </div>
                 </div>
                 <div className="flex gap-1 ml-3">
+                  <button
+                    type="button"
+                    onClick={() => void moveService(service, -1)}
+                    disabled={siblingIndex === 0 || reordering}
+                    className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+                    title="Subir serviço"
+                    aria-label={`Subir ${service.name}`}
+                  >↑</button>
+                  <button
+                    type="button"
+                    onClick={() => void moveService(service, 1)}
+                    disabled={siblingIndex === siblings.length - 1 || reordering}
+                    className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-zinc-800 hover:text-white disabled:cursor-not-allowed disabled:opacity-25"
+                    title="Descer serviço"
+                    aria-label={`Descer ${service.name}`}
+                  >↓</button>
                   <button
                     onClick={() => setEditing(service)}
                     className="p-1.5 hover:bg-zinc-800 rounded text-zinc-400 hover:text-white transition text-xs"
@@ -405,7 +508,7 @@ export default function ServicesPage() {
                 {service.is_active ? common.active : common.inactive}
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
 
