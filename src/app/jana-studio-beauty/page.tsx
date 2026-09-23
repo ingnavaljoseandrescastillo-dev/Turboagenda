@@ -1,8 +1,8 @@
 import Image from 'next/image'
 
 export const metadata = {
-  title: 'Jana Studio Beauty | Protótipo TurboAgenda',
-  description: 'Pré-visualização da página pública de Jana Studio Beauty.',
+  title: 'Jana Studio Beauty | Paços de Ferreira',
+  description: 'Nail designer em Paços de Ferreira. Conheça os serviços de Jana Studio Beauty.',
   robots: { index: false, follow: false },
 }
 
@@ -18,10 +18,6 @@ const services = [
 export default function JanaStudioBeautyShowcase() {
   return (
     <main className="min-h-screen bg-[#f7eee8] text-[#281d19]" style={{ fontFamily: "'Outfit', sans-serif" }}>
-      <div className="fixed inset-x-0 top-0 z-40 bg-[#2d211d] px-4 py-2 text-center text-[10px] font-bold uppercase tracking-[.14em] text-white sm:text-xs">
-        Protótipo TurboAgenda · ainda não está ativo para clientes
-      </div>
-
       <section className="relative mx-auto min-h-[760px] max-w-[1100px] overflow-hidden" style={{ minHeight: '94svh' }}>
         <Image
           src="/showcase/jana-studio-beauty/hero.jpeg"
@@ -33,7 +29,7 @@ export default function JanaStudioBeautyShowcase() {
         />
         <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(32,23,19,.20)_0%,rgba(32,23,19,.04)_34%,rgba(32,23,19,.58)_70%,#f7eee8_100%)]" />
 
-        <div className="relative z-10 flex min-h-[760px] flex-col justify-between px-5 pb-16 pt-20 sm:px-10" style={{ minHeight: '94svh' }}>
+        <div className="relative z-10 flex min-h-[760px] flex-col justify-between px-5 pb-16 pt-8 sm:px-10" style={{ minHeight: '94svh' }}>
           <div className="flex items-start justify-between gap-4">
             <span className="mt-1 rounded-full border border-white/70 bg-white/20 px-4 py-2 text-[10px] font-bold uppercase tracking-[.18em] text-white shadow-sm backdrop-blur-md">
               Nail designer
@@ -103,7 +99,7 @@ export default function JanaStudioBeautyShowcase() {
               </article>
             ))}
           </div>
-          <button type="button" className="mt-7 w-full rounded-full bg-[#b45e59] px-6 py-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(180,94,89,.25)]" title="Botão ilustrativo do protótipo">
+          <button type="button" className="mt-7 w-full rounded-full bg-[#b45e59] px-6 py-4 text-sm font-bold text-white shadow-[0_12px_30px_rgba(180,94,89,.25)]" title="Consultar horários disponíveis">
             Ver horários disponíveis
           </button>
         </section>

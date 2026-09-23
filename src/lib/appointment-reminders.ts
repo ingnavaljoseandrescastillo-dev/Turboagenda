@@ -212,28 +212,12 @@ export async function processAppointmentReminderEmails(
     ((subscriptionRows ?? []) as ReminderSubscription[]).map((row) => [row.business_id, row])
   )
 
-  // Trial credits are for the entire trial, not renewed at the start of a month.
-  const trialSmsUsage = new Map<string, number>()
-  const trialBusinessIds = businessIds.filter((id) =>
-    smsReminderAllowance(subscriptions.get(id), settings.get(id)?.sms_trial_override_until, now).period === 'trial'
-  )
-  await Promise.all(trialBusinessIds.map(async (businessId) => {
-    const { count, error } = await admin.from('notification_events')
-      .select('id', { count: 'exact', head: true })
-      .eq('business_id', businessId)
-      .eq('channel', 'sms')
-      .eq('event_type', REMINDER_EVENT)
-      .in('status', ['queued', 'sent'])
-    if (error) throw new Error(error.message)
-    trialSmsUsage.set(businessId, count ?? 0)
-  }))
-
   for (const appointment of appointments) {
     const business = businesses.get(appointment.business_id)
     const businessSettings = settings.get(appointment.business_id)
     const subscription = subscriptions.get(appointment.business_id)
     const smsAllowance = smsReminderAllowance(subscription, businessSettings?.sms_trial_override_until, now)
-    const usage = smsAllowance.period === 'trial' ? trialSmsUsage : smsUsage
+    const usage = smsUsage
 
     if (!business) {
       result.skipped += 1

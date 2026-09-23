@@ -133,7 +133,7 @@ export default function HomePage() {
             <div className="mt-4 inline-flex flex-wrap items-center justify-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-xs font-medium text-emerald-200">
               <span>30 dias gratis</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
-              <span>20 SMS de lembrete durante o teste</span>
+              <span>50 SMS de lembrete por mês durante o teste</span>
               <span className="hidden text-emerald-500/60 sm:inline">•</span>
               <span>Depois 17.99 EUR por mes</span>
             </div>
@@ -149,7 +149,7 @@ export default function HomePage() {
                 <span className="text-xs text-zinc-500">/ mes</span>
               </div>
               <div className="mb-5 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-200">
-                30 dias grátis para testar a agenda, com 20 SMS de lembrete no total. Ao ativar Basic, inclui 150 SMS/mês.
+                30 dias grátis para testar a agenda, com até 50 SMS de lembrete por mês. Ao ativar Basic, inclui 150 SMS/mês.
               </div>
               <a
                 href={basePlanSalesHref}

@@ -4,9 +4,9 @@ import { smsReminderAllowance } from '../src/lib/sms-reminder-access.ts'
 
 const now = new Date('2026-09-22T12:00:00Z')
 
-test('active trials receive a fixed lifetime SMS allowance', () => {
+test('active trials receive a monthly SMS allowance', () => {
   const access = smsReminderAllowance({ plan: 'trial', status: 'trial', trial_ends_at: '2026-10-01T00:00:00Z' }, null, now)
-  assert.deepEqual(access, { available: true, limit: 20, period: 'trial' })
+  assert.deepEqual(access, { available: true, limit: 50, period: 'month' })
 })
 
 test('expired trials cannot keep sending SMS', () => {

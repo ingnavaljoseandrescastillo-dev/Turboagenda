@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/Input'
 import { Card } from '@/components/ui/Card'
 import { useLanguage } from '@/contexts/LanguageContext'
 import type { Locale } from '@/i18n/translations'
-import { smsReminderAllowance, TRIAL_SMS_TOTAL_LIMIT, PAID_SMS_MONTHLY_LIMIT } from '@/lib/sms-reminder-access'
+import { smsReminderAllowance, TRIAL_SMS_MONTHLY_LIMIT, PAID_SMS_MONTHLY_LIMIT } from '@/lib/sms-reminder-access'
 
 type SettingsTab = 'profile' | 'public' | 'preferences' | 'payment' | 'notifications'
 
@@ -941,7 +941,7 @@ export default function SettingsPage() {
               onChange={(value) => setNotifications((current) => ({ ...current, sms_reminder_24h_enabled: value }))}
             />
             <p className="rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2 text-xs text-zinc-500">
-              Apenas para lembretes de marcação, não para marketing. Teste: {TRIAL_SMS_TOTAL_LIMIT} SMS no total durante o período ativo. Basic/Plus: até {PAID_SMS_MONTHLY_LIMIT} SMS por mês.
+              Apenas para lembretes de marcação, não para marketing. Teste: até {TRIAL_SMS_MONTHLY_LIMIT} SMS por mês durante o período ativo. Basic/Plus: até {PAID_SMS_MONTHLY_LIMIT} SMS por mês.
             </p>
           </div>
 

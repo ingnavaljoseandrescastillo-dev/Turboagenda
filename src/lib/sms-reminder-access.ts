@@ -1,4 +1,4 @@
-export const TRIAL_SMS_TOTAL_LIMIT = 20
+export const TRIAL_SMS_MONTHLY_LIMIT = 50
 export const PAID_SMS_MONTHLY_LIMIT = 150
 
 type SmsSubscription = {
@@ -27,8 +27,8 @@ export function smsReminderAllowance(
     subscription.trial_ends_at &&
     new Date(subscription.trial_ends_at).getTime() > now.getTime()
   ) {
-    return { available: true, limit: TRIAL_SMS_TOTAL_LIMIT, period: 'trial' as const }
+    return { available: true, limit: TRIAL_SMS_MONTHLY_LIMIT, period: 'month' as const }
   }
 
-  return { available: false, limit: 0, period: 'trial' as const }
+  return { available: false, limit: 0, period: 'month' as const }
 }
