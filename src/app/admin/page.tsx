@@ -74,10 +74,16 @@ function billingDate(business: BusinessWithSubscription) {
   return subscription?.status === 'trial' ? subscription.trial_ends_at : subscription?.current_period_end
 }
 
-function isOverdue(business: BusinessWithSubscription) {
+function isExpiredTrial(business: BusinessWithSubscription) {
+  const subscription = business.subscriptions
+  const days = daysUntil(subscription?.trial_ends_at)
+  return Boolean(subscription?.status === 'trial' && days !== null && days < 0)
+}
+
+function isPaymentOverdue(business: BusinessWithSubscription) {
   const days = daysUntil(billingDate(business))
   const status = business.subscriptions?.status
-  return Boolean(status && ['trial', 'active', 'past_due'].includes(status) && days !== null && days < 0)
+  return Boolean(status && ['active', 'past_due'].includes(status) && days !== null && days < 0)
 }
 
 function normalizePhone(value?: string | null) {
@@ -86,7 +92,8 @@ function normalizePhone(value?: string | null) {
 
 function statusTone(business: BusinessWithSubscription) {
   if (business.is_paused) return 'bg-red-500/10 text-red-200 border-red-500/20'
-  if (isOverdue(business) || business.subscriptions?.status === 'past_due') {
+  if (isExpiredTrial(business)) return 'bg-zinc-800 text-zinc-300 border-zinc-700'
+  if (isPaymentOverdue(business) || business.subscriptions?.status === 'past_due') {
     return 'bg-amber-500/10 text-amber-200 border-amber-500/20'
   }
   if (business.subscriptions?.status === 'active') return 'bg-emerald-500/10 text-emerald-200 border-emerald-500/20'
@@ -95,7 +102,8 @@ function statusTone(business: BusinessWithSubscription) {
 
 function statusLabel(business: BusinessWithSubscription) {
   if (business.is_paused) return 'Pausado'
-  if (isOverdue(business)) return 'Vencido'
+  if (isExpiredTrial(business)) return 'Trial vencido'
+  if (isPaymentOverdue(business)) return 'Cobro vencido'
   return business.subscriptions?.status ?? 'trial'
 }
 
@@ -156,11 +164,16 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
       (statusFilter === 'paused'
         ? business.is_paused
         : statusFilter === 'overdue'
-          ? isOverdue(business)
+          ? isPaymentOverdue(business)
+          : statusFilter === 'expired_trial'
+            ? isExpiredTrial(business)
+            : statusFilter === 'trial'
+              ? subscription?.status === 'trial' && !isExpiredTrial(business)
           : subscription?.status === statusFilter)
     const matchesPlan = planFilter === 'all' || subscription?.plan === planFilter
+    const visibleInMainList = statusFilter !== 'all' || Boolean(query) || !isExpiredTrial(business)
 
-    return matchesQuery && matchesStatus && matchesPlan
+    return matchesQuery && matchesStatus && matchesPlan && visibleInMainList
   })
 
   const now = new Date()
@@ -174,15 +187,19 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
     .filter((payment) => (payment.status ?? 'paid') === 'paid')
   const paidBusinesses = businesses.filter((business) => business.subscriptions?.status === 'active')
   const activeSubscriptions = paidBusinesses.length
-  const trialSubscriptions = businesses.filter((business) => business.subscriptions?.status === 'trial').length
+  const activeTrialBusinesses = businesses.filter((business) => (
+    business.subscriptions?.status === 'trial' && !isExpiredTrial(business)
+  ))
+  const expiredTrialBusinesses = businesses.filter(isExpiredTrial)
+  const trialSubscriptions = activeTrialBusinesses.length
   const paused = businesses.filter((business) => business.is_paused).length
-  const overdueBusinesses = businesses.filter(isOverdue)
+  const overdueBusinesses = businesses.filter(isPaymentOverdue)
   const expiringTrialBusinesses = businesses.filter((business) => {
     const days = daysUntil(business.subscriptions?.trial_ends_at)
     return business.subscriptions?.status === 'trial' && days !== null && days >= 0 && days <= 7
   })
   const inactiveSetupBusinesses = businesses.filter(
-    (business) => business.services.length === 0 || business.employees.length === 0
+    (business) => !isExpiredTrial(business) && (business.services.length === 0 || business.employees.length === 0)
   )
   const newThisWeek = businesses.filter((business) => new Date(business.created_at) >= weekStart).length
   const upcomingAppointments = businesses.reduce((sum, business) => {
@@ -212,8 +229,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
   ]
   const secondaryMetrics = [
     { label: 'Negocios', value: businesses.length },
-    { label: 'Trials', value: trialSubscriptions },
-    { label: 'Vencidos', value: overdueBusinesses.length },
+    { label: 'Trials activos', value: trialSubscriptions },
+    { label: 'Cobros vencidos', value: overdueBusinesses.length },
+    { label: 'Trials vencidos', value: expiredTrialBusinesses.length },
     { label: 'Pausados', value: paused },
     { label: 'Citas futuras', value: upcomingAppointments },
     { label: 'ARPA', value: formatCurrency(arpaCents / 100) },
@@ -263,17 +281,18 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
           ))}
         </section>
 
-        <section className="grid gap-3 md:grid-cols-3">
+        <section className="grid gap-3 md:grid-cols-4">
           <QuickLink href="/admin?status=overdue" label="Cobros vencidos" value={overdueBusinesses.length} />
           <QuickLink href="/admin?status=trial" label="Trials activos" value={trialSubscriptions} />
           <QuickLink href="/admin?status=paused" label="Negocios pausados" value={paused} />
+          <QuickLink href="/admin?status=expired_trial" label="Histórico de trials" value={expiredTrialBusinesses.length} />
         </section>
 
         <section className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
           <div className="flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-bold text-amber-100">Necesitan atencion</h2>
-              <p className="text-xs text-amber-100/60">Prioridad para revisar desde el telefono.</p>
+              <h2 className="font-bold text-amber-100">Necesitan atención</h2>
+              <p className="text-xs text-amber-100/60">Solo asuntos que requieren una acción ahora.</p>
             </div>
             <Link href="/admin?status=overdue" className="text-xs font-semibold text-amber-100 hover:text-white">
               Ver vencidos
@@ -291,11 +310,32 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
           </div>
         </section>
 
+        <details className="group rounded-2xl border border-zinc-800 bg-zinc-900/55">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 p-4 marker:content-none">
+            <div>
+              <h2 className="font-bold text-zinc-200">Histórico de trials vencidos</h2>
+              <p className="text-xs text-zinc-500">Pruebas finalizadas. No aparecen en alertas ni en la lista principal.</p>
+            </div>
+            <span className="flex items-center gap-2 text-xs font-semibold text-zinc-400">
+              {expiredTrialBusinesses.length} negocios
+              <span className="text-lg transition-transform group-open:rotate-180">⌄</span>
+            </span>
+          </summary>
+          <div className="grid gap-2 border-t border-zinc-800 p-4 md:grid-cols-3">
+            {expiredTrialBusinesses.map((business) => (
+              <HistoricalTrialCard key={business.id} business={business} />
+            ))}
+            {expiredTrialBusinesses.length === 0 && (
+              <p className="text-sm text-zinc-500">No hay trials vencidos.</p>
+            )}
+          </div>
+        </details>
+
         <section className="rounded-2xl border border-zinc-800 bg-zinc-900">
           <div className="space-y-4 border-b border-zinc-800 p-4">
             <div>
               <h2 className="font-bold text-zinc-100">Negocios</h2>
-              <p className="text-sm text-zinc-500">Busca, llama, abre ficha y registra cobros sin salir del movil.</p>
+              <p className="text-sm text-zinc-500">Negocios activos y en seguimiento. Los trials vencidos quedan en el histórico.</p>
             </div>
             <form className="grid gap-2 md:grid-cols-[1fr_170px_170px_auto]" action="/admin">
               <input
@@ -310,8 +350,9 @@ export default async function AdminPage({ searchParams }: { searchParams?: Promi
                 className="h-11 rounded-xl border border-zinc-700 bg-zinc-950 px-3 text-sm text-zinc-100"
               >
                 <option value="all">Todos estados</option>
-                <option value="overdue">Vencidos</option>
-                <option value="trial">Trial</option>
+                <option value="overdue">Cobro vencido</option>
+                <option value="trial">Trial activo</option>
+                <option value="expired_trial">Trial vencido</option>
                 <option value="active">Activo</option>
                 <option value="past_due">Pago pendiente</option>
                 <option value="cancelled">Cancelado</option>
@@ -406,6 +447,26 @@ function CompactBusinessCard({ business }: { business: BusinessWithSubscription 
   )
 }
 
+function HistoricalTrialCard({ business }: { business: BusinessWithSubscription }) {
+  return (
+    <Link
+      href={`/admin/businesses/${business.id}`}
+      className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-3 transition-colors hover:border-zinc-600"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold text-zinc-200">{business.name}</p>
+          <p className="mt-1 text-xs text-zinc-600">Finalizó el {formatDate(business.subscriptions?.trial_ends_at)}</p>
+        </div>
+        <span className="shrink-0 rounded-full border border-zinc-700 bg-zinc-800 px-2 py-1 text-[10px] font-semibold text-zinc-400">
+          Histórico
+        </span>
+      </div>
+      <p className="mt-2 text-xs text-zinc-600">Abrir ficha para reactivar o consultar datos.</p>
+    </Link>
+  )
+}
+
 function MobileBusinessCard({ business }: { business: BusinessWithSubscription }) {
   const subscription = business.subscriptions
   const plan = subscription?.plan ?? 'trial'
@@ -437,7 +498,7 @@ function MobileBusinessCard({ business }: { business: BusinessWithSubscription }
       <div className="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 text-xs text-zinc-400">
         <div className="flex justify-between gap-3">
           <span>{status === 'trial' ? 'Trial' : 'Periodo'}</span>
-          <span className={isOverdue(business) ? 'font-semibold text-red-300' : 'text-zinc-200'}>
+          <span className={isPaymentOverdue(business) ? 'font-semibold text-red-300' : 'text-zinc-200'}>
             {formatDueText(billingDate(business))}
           </span>
         </div>
@@ -542,7 +603,7 @@ function DesktopBusinessRow({ business }: { business: BusinessWithSubscription }
       </td>
       <td className="px-4 py-4 text-xs text-zinc-400">
         <div>Alta: {formatDate(business.created_at)}</div>
-        <div className={isOverdue(business) ? 'text-red-300' : ''}>
+        <div className={isPaymentOverdue(business) ? 'text-red-300' : ''}>
           {status === 'trial' ? 'Trial' : 'Pagado'}: {formatDate(dueDate)}
         </div>
         <div>{formatDueText(dueDate)}</div>
