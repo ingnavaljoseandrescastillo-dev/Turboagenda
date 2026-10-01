@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         service_id: serviceIds[0],
         employee_id: parsed.data.employee_id,
         client_name: parsed.data.client_name,
-        client_email: parsed.data.client_email,
+        client_email: parsed.data.client_email || null,
         client_phone: parsed.data.client_phone || null,
         client_birthdate: parsed.data.client_birthdate || null,
         start_time: start.toISOString(),
@@ -104,18 +104,20 @@ export async function POST(request: NextRequest) {
       return handleError(junctionError.message, 422)
     }
 
-    const { error: clientError } = await db.from('clients').upsert(
-      {
-        business_id: business.id,
-        name: parsed.data.client_name,
-        email: parsed.data.client_email,
-        phone: parsed.data.client_phone || null,
-        birthdate: parsed.data.client_birthdate || null,
-        last_appointment_at: start.toISOString(),
-      },
-      { onConflict: 'business_id,email' }
-    )
-    if (clientError) console.error('[internal appointment] client sync failed', clientError.message)
+    if (parsed.data.client_email) {
+      const { error: clientError } = await db.from('clients').upsert(
+        {
+          business_id: business.id,
+          name: parsed.data.client_name,
+          email: parsed.data.client_email,
+          phone: parsed.data.client_phone || null,
+          birthdate: parsed.data.client_birthdate || null,
+          last_appointment_at: start.toISOString(),
+        },
+        { onConflict: 'business_id,email' }
+      )
+      if (clientError) console.error('[internal appointment] client sync failed', clientError.message)
+    }
 
     await sendAppointmentCreatedEmails(appointment.id).catch((error) => {
       console.error('[internal appointment] email failed', error instanceof Error ? error.message : error)

@@ -161,6 +161,10 @@ function InternalAppointmentDialog({
       setError('Escolha serviço, profissional e horário.')
       return
     }
+    if (!email.trim() && !phone.trim()) {
+      setError('Informe o telefone ou o email do cliente.')
+      return
+    }
     setSaving(true)
     try {
       const response = await fetch('/api/appointments/internal', {
@@ -258,15 +262,15 @@ function InternalAppointmentDialog({
           <Field label="Cliente guardado (opcional)">
             <select value={clientId} onChange={(event) => selectClient(event.target.value)} className={inputClass}>
               <option value="">Introduzir novo cliente</option>
-              {clients.map((client) => <option key={client.id} value={client.id}>{client.name} · {client.email}</option>)}
+              {clients.map((client) => <option key={client.id} value={client.id}>{client.name} · {client.email || client.phone || 'Sem contacto'}</option>)}
             </select>
           </Field>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Nome do cliente"><input required minLength={2} value={name} onChange={(event) => setName(event.target.value)} className={inputClass} /></Field>
-          <Field label="Email"><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></Field>
-          <Field label="Telefone"><input value={phone} onChange={(event) => setPhone(event.target.value)} className={inputClass} /></Field>
+          <Field label="Email (opcional)"><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} className={inputClass} /></Field>
+          <Field label="Telefone (obrigatório se não indicar email)"><input value={phone} onChange={(event) => setPhone(event.target.value)} className={inputClass} /></Field>
           <Field label="Data de nascimento (opcional)"><input type="date" value={birthdate} onChange={(event) => setBirthdate(event.target.value)} className={inputClass} /></Field>
         </div>
         <Field label="Notas (opcional)"><textarea rows={3} maxLength={2000} value={notes} onChange={(event) => setNotes(event.target.value)} className={inputClass} /></Field>

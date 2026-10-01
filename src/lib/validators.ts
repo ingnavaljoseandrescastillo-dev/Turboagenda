@@ -74,8 +74,9 @@ export const AppointmentSchema = AppointmentBaseSchema.refine((value) => Boolean
   path: ['client_phone'],
 })
 
-export const InternalAppointmentSchema = AppointmentBaseSchema.omit({ business_id: true }).extend({
-  client_email: z.string().trim().email('Email invalido').max(254),
+export const InternalAppointmentSchema = AppointmentBaseSchema.omit({ business_id: true }).refine((value) => Boolean(value.client_email || value.client_phone), {
+  message: 'Informe email ou telefone para contacto',
+  path: ['client_phone'],
 })
 
 export const NotificationSettingsSchema = z.object({
