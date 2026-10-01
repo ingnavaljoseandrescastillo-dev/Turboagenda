@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { getBusinessForUser } from '@/lib/api-helpers'
 import { redirect } from 'next/navigation'
-import { AppointmentCard } from '@/components/dashboard/AppointmentCard'
-import { Calendar } from '@/components/dashboard/Calendar'
+import { DashboardAgenda } from '@/components/dashboard/DashboardAgenda'
 import { PublicLinkCard } from '@/components/dashboard/PublicLinkCard'
-import { startOfDay, endOfDay } from 'date-fns'
-import type { Appointment } from '@/types'
+import { addMonths, startOfMonth, subMonths } from 'date-fns'
+import { normalizeTimeZone } from '@/lib/utils'
+import type { Appointment, Client, Employee, Service } from '@/types'
 
 async function getDashboardData() {
   const supabase = await createClient()
@@ -15,34 +15,72 @@ async function getDashboardData() {
   const business = await getBusinessForUser(supabase, user.id)
   if (!business) redirect('/dashboard/onboarding')
 
-  const todayStart = startOfDay(new Date()).toISOString()
-  const todayEnd = endOfDay(new Date()).toISOString()
+  const rangeStart = startOfMonth(subMonths(new Date(), 1)).toISOString()
+  const rangeEnd = startOfMonth(addMonths(new Date(), 13)).toISOString()
+  const [appointmentsResult, servicesResult, employeesResult, clientsResult, settingsResult] = await Promise.all([
+    supabase
+      .from('appointments')
+      .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
+      .eq('business_id', business.id)
+      .gte('start_time', rangeStart)
+      .lt('start_time', rangeEnd)
+      .order('start_time')
+      .limit(1000),
+    supabase
+      .from('services')
+      .select('id, name, duration_minutes, price')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .is('deleted_at', null)
+      .order('display_order')
+      .order('name'),
+    supabase
+      .from('employees')
+      .select('id, name')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .order('name'),
+    supabase
+      .from('clients')
+      .select('id, name, email, phone, birthdate')
+      .eq('business_id', business.id)
+      .order('name')
+      .limit(500),
+    supabase
+      .from('business_settings')
+      .select('time_zone')
+      .eq('business_id', business.id)
+      .maybeSingle(),
+  ])
 
-  const { data } = await supabase
-    .from('appointments')
-    .select('*, service:services(name, duration_minutes, price), employee:employees(name)')
-    .eq('business_id', business.id)
-    .gte('start_time', todayStart)
-    .lte('start_time', todayEnd)
-    .order('start_time')
+  for (const result of [appointmentsResult, servicesResult, employeesResult, clientsResult, settingsResult]) {
+    if (result.error) throw new Error(result.error.message)
+  }
 
-  const appts = (data ?? []) as Appointment[]
+  const appts = (appointmentsResult.data ?? []) as Appointment[]
   const visibleAppointments = appts.filter((appointment) => appointment.status !== 'cancelled')
+  const timeZone = normalizeTimeZone(settingsResult.data?.time_zone)
+  const todayKey = dateKey(new Date(), timeZone)
+  const todayAppointments = appts.filter((appointment) => dateKey(new Date(appointment.start_time), timeZone) === todayKey)
 
   return {
     business,
     appointments: visibleAppointments,
+    services: (servicesResult.data ?? []) as Pick<Service, 'id' | 'name' | 'duration_minutes' | 'price'>[],
+    employees: (employeesResult.data ?? []) as Pick<Employee, 'id' | 'name'>[],
+    clients: (clientsResult.data ?? []) as Pick<Client, 'id' | 'name' | 'email' | 'phone' | 'birthdate'>[],
+    timeZone,
     metrics: {
-      total: appts.length,
-      pending: appts.filter((a) => a.status === 'pending').length,
-      confirmed: appts.filter((a) => a.status === 'confirmed' || a.status === 'completed').length,
-      cancelled: appts.filter((a) => a.status === 'cancelled').length,
+      total: todayAppointments.length,
+      pending: todayAppointments.filter((a) => a.status === 'pending').length,
+      confirmed: todayAppointments.filter((a) => a.status === 'confirmed' || a.status === 'completed').length,
+      cancelled: todayAppointments.filter((a) => a.status === 'cancelled').length,
     },
   }
 }
 
 export default async function DashboardPage() {
-  const { business, appointments, metrics } = await getDashboardData()
+  const { business, appointments, services, employees, clients, timeZone, metrics } = await getDashboardData()
 
   const kpiCards = metrics ? [
     { label: 'Marcações hoje', value: String(metrics.total), icon: '📅' },
@@ -72,34 +110,20 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Appointment list */}
-        <div className="xl:col-span-2">
-          <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-zinc-800 flex items-center justify-between">
-              <h3 className="font-semibold text-sm">Marcações de hoje</h3>
-              <span className="text-xs text-zinc-500">{appointments.length} total</span>
-            </div>
-            {appointments.length === 0 ? (
-              <div className="p-10 text-center">
-                <div className="text-3xl mb-3">📅</div>
-                <p className="text-zinc-500 text-sm">Sem marcações para hoje</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-zinc-800">
-                {appointments.map((a) => (
-                  <AppointmentCard key={a.id} appointment={a} showActions />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Calendar */}
-        <div className="bg-zinc-900/50 border border-zinc-800 rounded-2xl p-5">
-          <Calendar appointments={appointments} />
-        </div>
-      </div>
+      <DashboardAgenda
+        businessId={business.id}
+        appointments={appointments}
+        services={services}
+        employees={employees}
+        clients={clients}
+        timeZone={timeZone}
+      />
     </div>
   )
+}
+
+function dateKey(date: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date)
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
 }

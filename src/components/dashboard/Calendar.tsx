@@ -9,9 +9,11 @@ import type { Appointment } from '@/types'
 interface CalendarProps {
   appointments?: Appointment[]
   onDayClick?: (date: Date) => void
+  selected?: Date
+  timeZone?: string
 }
 
-export function Calendar({ appointments = [], onDayClick }: CalendarProps) {
+export function Calendar({ appointments = [], onDayClick, selected, timeZone = 'Europe/Lisbon' }: CalendarProps) {
   const [current, setCurrent] = useState(new Date())
 
   const monthStart = startOfMonth(current)
@@ -21,7 +23,8 @@ export function Calendar({ appointments = [], onDayClick }: CalendarProps) {
   const days = eachDayOfInterval({ start: calStart, end: calEnd })
 
   function hasAppointment(day: Date) {
-    return appointments.some((a) => isSameDay(parseISO(a.start_time), day))
+    const key = format(day, 'yyyy-MM-dd')
+    return appointments.some((a) => appointmentDateKey(a.start_time, timeZone) === key)
   }
 
   return (
@@ -60,6 +63,7 @@ export function Calendar({ appointments = [], onDayClick }: CalendarProps) {
         {days.map((day) => {
           const inMonth = isSameMonth(day, current)
           const today = isToday(day)
+          const chosen = selected ? isSameDay(selected, day) : false
           const hasAppt = hasAppointment(day)
           return (
             <button
@@ -68,12 +72,13 @@ export function Calendar({ appointments = [], onDayClick }: CalendarProps) {
               className={cn(
                 'relative flex flex-col items-center justify-center h-9 w-full rounded-md text-xs transition-colors',
                 inMonth ? 'text-zinc-200' : 'text-zinc-600',
-                today && 'bg-emerald-500 text-white font-bold',
-                !today && inMonth && 'hover:bg-zinc-800',
+                chosen && 'bg-emerald-500 text-zinc-950 font-bold ring-2 ring-emerald-400/30',
+                today && !chosen && 'border border-emerald-500 text-emerald-400 font-bold',
+                !chosen && inMonth && 'hover:bg-zinc-800',
               )}
             >
               {format(day, 'd')}
-              {hasAppt && !today && (
+              {hasAppt && !chosen && (
                 <span className="absolute bottom-1 h-1 w-1 rounded-full bg-emerald-500" />
               )}
             </button>
@@ -82,4 +87,15 @@ export function Calendar({ appointments = [], onDayClick }: CalendarProps) {
       </div>
     </div>
   )
+}
+
+function appointmentDateKey(value: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(parseISO(value))
+  const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? ''
+  return `${get('year')}-${get('month')}-${get('day')}`
 }

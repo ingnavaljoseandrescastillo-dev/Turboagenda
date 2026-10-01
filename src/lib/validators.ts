@@ -72,6 +72,10 @@ export const AppointmentSchema = z.object({
   path: ['client_phone'],
 })
 
+export const InternalAppointmentSchema = AppointmentSchema.omit({ business_id: true }).extend({
+  client_email: z.string().trim().email('Email invalido').max(254),
+})
+
 export const NotificationSettingsSchema = z.object({
   email_notify_client_on_booking: z.boolean(),
   email_notify_business_on_booking: z.boolean(),
@@ -229,6 +233,7 @@ export type ForgotPasswordInput = z.infer<typeof ForgotPasswordSchema>
 export type ResetPasswordInput = z.infer<typeof ResetPasswordSchema>
 export type RegisterInput = z.infer<typeof RegisterSchema>
 export type AppointmentInput = z.infer<typeof AppointmentSchema>
+export type InternalAppointmentInput = z.infer<typeof InternalAppointmentSchema>
 export type NotificationSettingsInput = z.infer<typeof NotificationSettingsSchema>
 export type ManualReminderInput = z.infer<typeof ManualReminderSchema>
 export type ServiceInput = z.infer<typeof ServiceSchema>
