@@ -56,7 +56,7 @@ export const RegisterSchema = z.object({
   phone: z.string().min(9, 'Telefone inválido'),
 })
 
-export const AppointmentSchema = z.object({
+const AppointmentBaseSchema = z.object({
   business_id: z.string().uuid(),
   service_id: z.string().uuid(),
   service_ids: z.array(z.string().uuid()).min(1).max(12).optional(),
@@ -67,12 +67,14 @@ export const AppointmentSchema = z.object({
   client_birthdate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Data de nascimento invalida').optional().or(z.literal('')),
   start_time: z.string().datetime(),
   notes: z.string().max(2000).optional(),
-}).refine((value) => Boolean(value.client_email || value.client_phone), {
+})
+
+export const AppointmentSchema = AppointmentBaseSchema.refine((value) => Boolean(value.client_email || value.client_phone), {
   message: 'Informe email ou telefone para contacto',
   path: ['client_phone'],
 })
 
-export const InternalAppointmentSchema = AppointmentSchema.omit({ business_id: true }).extend({
+export const InternalAppointmentSchema = AppointmentBaseSchema.omit({ business_id: true }).extend({
   client_email: z.string().trim().email('Email invalido').max(254),
 })
 
