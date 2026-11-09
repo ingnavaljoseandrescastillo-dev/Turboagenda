@@ -15,13 +15,14 @@ export function useAvailability() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fetchSlots = useCallback(async (params: AvailabilityParams) => {
+  const fetchSlots = useCallback(async (params: AvailabilityParams, internal = false) => {
     setLoading(true)
     setError(null)
     setSlots([])
     try {
       const query = new URLSearchParams(params as unknown as Record<string, string>).toString()
-      const res = await fetch(`/api/availability?${query}`)
+      const endpoint = internal ? '/api/availability/internal' : '/api/availability'
+      const res = await fetch(`${endpoint}?${query}`)
       const json = await res.json()
       if (!res.ok) throw new Error(json.error ?? 'Erro ao carregar horarios')
       setSlots(json.data?.slots ?? [])

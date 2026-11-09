@@ -4,6 +4,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { formatResponse, getBusinessForUser, handleError, validateAuth } from '@/lib/api-helpers'
 import { sendAppointmentCreatedEmails } from '@/lib/appointment-emails'
 import { formatTimeInTimeZone, normalizeTimeZone } from '@/lib/utils'
+import { getInternalAvailableSlots } from '@/lib/internal-availability'
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,15 +54,13 @@ export async function POST(request: NextRequest) {
     const timeZone = normalizeTimeZone(settings?.time_zone)
     const localDate = dateKey(start, timeZone)
     const localTime = formatTimeInTimeZone(start.toISOString(), timeZone)
-    const { data: availableSlots, error: availabilityError } = await db.rpc('get_available_slots', {
-      p_business_id: business.id,
-      p_service_id: serviceIds[0],
-      p_service_ids: serviceIds,
-      p_employee_id: parsed.data.employee_id,
-      p_date: localDate,
+    const availableSlots = await getInternalAvailableSlots(db, {
+      businessId: business.id,
+      employeeId: parsed.data.employee_id,
+      serviceIds,
+      date: localDate,
     })
-    if (availabilityError) return handleError(availabilityError.message, 500)
-    if (!(availableSlots ?? []).includes(localTime)) return handleError('Este horário já não está disponível.', 409)
+    if (!availableSlots.includes(localTime)) return handleError('Este horário já não está disponível.', 409)
 
     const { data: appointment, error: appointmentError } = await db
       .from('appointments')

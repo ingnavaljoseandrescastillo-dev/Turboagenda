@@ -141,7 +141,7 @@ function InternalAppointmentDialog({
       service_ids: serviceIds.join(','),
       employee_id: employeeId,
       date,
-    })
+    }, true)
   }, [businessId, date, employeeId, fetchSlots, open, serviceIds])
 
   function selectClient(id: string) {
